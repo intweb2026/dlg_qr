@@ -1,0 +1,212 @@
+.delegates-mobile {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  /* .delegates-mobile__card's own top/bottom margin has nothing here to
+     stop it collapsing straight through this element and through <body>
+     (neither has padding or a border), landing as a gap between <html>
+     and <body> where html's own dark background shows through, this
+     opens a new block formatting context so that margin stays inside */
+  overflow: hidden;
+  /* --delegates-bg is set as an inline style in the JSX, a url() written
+     directly here would have CRA's CSS loader try to resolve it as a
+     module under src/ instead of a public/ asset, #ffffff underneath as a
+     fallback while it loads and behind any transparent edge it has */
+  background-color: #ffffff;
+  background-image: var(--delegates-bg);
+  /* the pipe graphic sits on the right side of the source image, center
+     positioning crops it away entirely on narrow/tall screens since cover
+     then centers the crop on the image's own midpoint, right anchors the
+     crop to that edge instead so cover only ever trims from the left,
+     keeping the pipe in view at every width */
+  background-position: right center;
+  background-repeat: no-repeat;
+  /* this element's own height grows with the delegate table, easily many
+     times the screen height, cover sizing without this stretches the
+     image to fit that whole scrollable height instead of the viewport,
+     fixed pins the sizing to the viewport itself so it reads correctly */
+  background-size: cover;
+  background-attachment: fixed;
+  font-family: "Poppins", sans-serif;
+}
+
+.delegates-mobile__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 120px;
+  padding: 0 24px;
+  background: #ffffff;
+}
+
+.delegates-mobile__logo {
+  width: 150px;
+  height: auto;
+}
+
+.delegates-mobile__title_button {
+  /* the button is pulled out of flow and pinned to the left below, leaving
+     the title as the row's only in-flow child so its text-align: center
+     centers it against the row's full width, not just next to the button */
+  position: relative;
+}
+
+.delegates-mobile__back_button {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 29px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.delegates-mobile__back_button-icon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity 0.15s ease;
+}
+
+.delegates-mobile__back_button-icon--hover {
+  opacity: 0;
+}
+
+.delegates-mobile__back_button:hover .delegates-mobile__back_button-icon--normal,
+.delegates-mobile__back_button:focus-visible .delegates-mobile__back_button-icon--normal {
+  opacity: 0;
+}
+
+.delegates-mobile__back_button:hover .delegates-mobile__back_button-icon--hover,
+.delegates-mobile__back_button:focus-visible .delegates-mobile__back_button-icon--hover {
+  opacity: 1;
+}
+
+.delegates-mobile__toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 9.35px;
+  width: 37px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.delegates-mobile__toggle span {
+  display: block;
+  height: 6.9px;
+  width: 100%;
+  background: #278dff;
+}
+
+.delegates-mobile__card {
+  /* the table's own cells and note text have no background of their own,
+     they were relying entirely on .delegates-mobile's flat white page
+     background for contrast, now that that is a photo/illustration this
+     keeps the printed list itself readable on top of it */
+  position: relative;
+  z-index: 1;
+  /* .delegates-mobile is always full width now (see above), below 440px
+     of available room this keeps a 20px gutter either side, above it the
+     card caps at 440px and centers instead of stretching wider and wider
+     with the page, no breakpoint needed for either behaviour */
+  width: calc(100% - 40px);
+  max-width: 840px;
+  margin: 24px auto;
+  padding: 44px 20px 24px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.delegates-mobile__title {
+  margin: 0 0 16px;
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 27px;
+  color: #000000;
+  text-align: center;
+}
+
+.delegates-mobile__table-wrap {
+  border: 1px solid #262626;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.delegates-mobile__table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.delegates-mobile__table th,
+.delegates-mobile__table td {
+  border: 1px solid #262626;
+}
+
+.delegates-mobile__table th {
+  background: #278dff;
+  padding: 10px;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: #ffffff;
+  text-align: left;
+}
+
+.delegates-mobile__table td {
+  padding: 8px 10px;
+  text-align: left;
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  color: #030303;
+  word-break: break-word;
+}
+
+.delegates-mobile__table tbody tr:nth-child(even) {
+  background: #278dff1f;
+}
+
+.delegates-mobile__note {
+  margin: 16px 0 0;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #0a0a0a;
+}
+
+@media (max-width: 360px) {
+  .delegates-mobile__header {
+    padding: 0 16px;
+  }
+
+  .delegates-mobile__logo {
+    width: 120px;
+  }
+
+  .delegates-mobile__card {
+    padding: 32px 12px 20px;
+  }
+
+  .delegates-mobile__table th,
+  .delegates-mobile__table td {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+}

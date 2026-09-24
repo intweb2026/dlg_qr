@@ -1,0 +1,106 @@
+.thank-you-mobile {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* --thank-you-bg is set as an inline style in the JSX, a url() written
+     directly here would have CRA's CSS loader try to resolve it as a
+     module under src/ instead of a public/ asset, #ffffff underneath as a
+     fallback while it loads and behind any transparent edge it has */
+  background-color: #ffffff;
+  background-image: var(--thank-you-bg);
+  /* the pipe graphic sits on the right side of the source image, center
+     positioning crops it away entirely on narrow/tall screens since cover
+     then centers the crop on the image's own midpoint, right anchors the
+     crop to that edge instead so cover only ever trims from the left,
+     keeping the pipe in view at every width */
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  font-family: "Poppins", sans-serif;
+}
+
+.thank-you-mobile__card {
+  /* width matches .delegates-mobile__card in RegisteredDelegatesMobile.css
+     so the two pages' boxes line up: a 20px gutter either side below 440px
+     of available room, an 840px cap that centers instead of stretching
+     wider and wider with the page above it, min-height keeps the box tall
+     even though this card's own content, an icon plus three short lines,
+     is far shorter than the delegate table that normally fills it */
+  position: relative;
+  z-index: 1;
+  width: calc(100% - 40px);
+  max-width: 840px;
+  min-height: 400px;
+  margin: 24px auto;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #0b0b0b;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+
+.thank-you-mobile__check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  background: #14b87f;
+}
+
+.thank-you-mobile__title {
+  margin: 0 0 8px;
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  color: #ffffff;
+}
+
+.thank-you-mobile__subtitle {
+  margin: 0 0 16px;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: #ffffff;
+}
+
+.thank-you-mobile__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.thank-you-mobile__link:hover,
+.thank-you-mobile__link:focus-visible {
+  opacity: 0.75;
+}
+
+@media (max-width: 360px) {
+  .thank-you-mobile__card {
+    min-height: 340px;
+    padding: 32px 12px;
+  }
+}

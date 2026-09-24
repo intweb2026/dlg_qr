@@ -1,0 +1,256 @@
+.ask-question-mobile {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  /* .ask-question-mobile__card's own top/bottom margin has nothing here to
+     stop it collapsing straight through this element and through <body>
+     (neither has padding or a border), landing as a gap between <html>
+     and <body> where html's own dark background shows through, this
+     opens a new block formatting context so that margin stays inside */
+  overflow: hidden;
+  /* --ask-question-bg is set as an inline style in the JSX, a url() written
+     directly here would have CRA's CSS loader try to resolve it as a
+     module under src/ instead of a public/ asset, #ffffff underneath as a
+     fallback while it loads and behind any transparent edge it has */
+  background-color: #0b0b0b;
+  background-image: var(--ask-question-bg);
+  /* the pipe graphic sits on the right side of the source image, center
+     positioning crops it away entirely on narrow/tall screens since cover
+     then centers the crop on the image's own midpoint, right anchors the
+     crop to that edge instead so cover only ever trims from the left,
+     keeping the pipe in view at every width */
+  background-position: right center;
+  background-repeat: no-repeat;
+  /* this element's own height grows with the query textarea, fixed pins
+     the sizing to the viewport itself so it reads correctly regardless */
+  background-size: cover;
+  background-attachment: fixed;
+  font-family: "Poppins", sans-serif;
+}
+
+.ask-question-mobile__header {
+  padding: 32px 0 16px;
+}
+
+.ask-question-mobile__header-inner {
+  /* same width formula as .ask-question-mobile__card below, so the back
+     button (pinned to this row's own left edge) lines up with the card's
+     left edge instead of a fixed page padding that drifts apart from it
+     once the card hits its 840px cap on wider screens; the button is
+     pulled out of flow and pinned to the left, leaving the title as the
+     row's only in-flow child so its text-align: center centers it against
+     the row's full width, not just next to the button */
+  position: relative;
+  width: calc(100% - 40px);
+  max-width: 840px;
+  margin: 0 auto;
+}
+
+.ask-question-mobile__back_button {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #ffffff;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.ask-question-mobile__back_button:hover,
+.ask-question-mobile__back_button:focus-visible {
+  opacity: 0.7;
+}
+
+.ask-question-mobile__title {
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 27px;
+  color: #ffffff;
+  text-align: center;
+}
+
+.ask-question-mobile__card {
+  position: relative;
+  z-index: 1;
+  /* matches .delegates-mobile__card in RegisteredDelegatesMobile.css so the
+     two pages' white boxes line up: a 20px gutter either side below 440px
+     of available room, a 840px cap that centers instead of stretching
+     wider and wider with the page above it */
+  width: calc(100% - 40px);
+  max-width: 840px;
+  margin: 24px auto 24px;
+  padding: 36px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.ask-question-mobile__label {
+  margin: 0 0 20px;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: #000000;
+}
+
+.ask-question-mobile__select-wrap {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.ask-question-mobile__select {
+  width: 100%;
+  height: 48px;
+  padding: 0 40px 0 16px;
+  border: 1px solid #c9c9c9;
+  border-radius: 24px;
+  background: #ffffff;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  color: #1a1a1a;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.ask-question-mobile__select:invalid {
+  color: #8c8c8c;
+}
+
+.ask-question-mobile__select:focus-visible {
+  outline: 2px solid #278dff;
+  outline-offset: 2px;
+}
+
+.ask-question-mobile__select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid #1a1a1a;
+  border-bottom: 2px solid #1a1a1a;
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.ask-question-mobile__textarea {
+  width: 100%;
+  height: 132px;
+  margin-bottom: 28px;
+  padding: 14px 16px;
+  border: 1px solid #c9c9c9;
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1a1a1a;
+  resize: vertical;
+}
+
+.ask-question-mobile__textarea::placeholder {
+  color: #8c8c8c;
+}
+
+.ask-question-mobile__textarea:focus-visible {
+  outline: 2px solid #278dff;
+  outline-offset: 2px;
+}
+
+.ask-question-mobile__error {
+  margin: -8px 0 20px;
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: #d32f2f;
+}
+
+.ask-question-mobile__actions {
+  display: flex;
+  gap: 16px;
+}
+
+.ask-question-mobile__button {
+  flex: 1;
+  height: 48px;
+  border-radius: 24px;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.ask-question-mobile__button:hover,
+.ask-question-mobile__button:focus-visible {
+  opacity: 0.85;
+}
+
+.ask-question-mobile__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ask-question-mobile__button--cancel {
+  border: 1px solid #000000;
+  background: #ffffff;
+  color: #000000;
+}
+
+.ask-question-mobile__button--submit {
+  border: none;
+  background: #278dff;
+  color: #ffffff;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .ask-question-mobile {
+    /* background-attachment: fixed is unreliable on mobile Safari and many
+       Android WebViews, the image can detach from the viewport, jump while
+       scrolling, or stop covering the screen once this form grows taller
+       than one screen, scroll keeps it correctly sized and responsive on
+       every phone and tablet instead */
+    background-attachment: scroll;
+    /* the source graphic is a wide 3000x900 banner whose dot-pattern circle
+       spans nearly its full height, a single-layer cover has nowhere to
+       shrink that circle into on a tall narrow phone screen, so it ends up
+       dominating most of the screen instead of reading as a small corner
+       accent; layering the same image twice fixes that, the top layer is
+       scaled down and pinned to the bottom-right corner for the accent,
+       the bottom layer stays large and anchored left so only its plain
+       gradient portion (before the dots start) is ever visible behind it */
+    background-image: var(--ask-question-bg), var(--ask-question-bg);
+    background-size: 130% 101%, cover;
+    background-position: right bottom, left center;
+    background-repeat: no-repeat, no-repeat;
+  }
+}
+
+@media (max-width: 360px) {
+  .ask-question-mobile__header {
+    padding: 24px 0 16px;
+  }
+
+  .ask-question-mobile__card {
+    padding: 28px 16px 20px;
+  }
+}
