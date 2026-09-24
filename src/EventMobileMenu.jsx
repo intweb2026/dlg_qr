@@ -12,6 +12,8 @@ const iconGlobe = "/images/Web.png";
 const iconLinkedin = "/images/Linkedin.png";
 // const iconQuestion = "/images/Question.png";
 const iconWifi = "/images/wifiicon.png";
+const iconFeedback = "/images/Feedback_icon.png";
+
 
 
 
@@ -20,6 +22,7 @@ const MENU_ITEMS = [
   { label: "Registered Attendees", icon: iconDelegates, to: "/registered-attendees" },
   { label: "Connect on LinkedIn ", icon: iconLinkedin, href: process.env.REACT_APP_LINKEDIN_URL },
   { label: "Wi-Fi Password", icon: iconWifi, to: "/wifipassword" },
+  { label: "Feedback Form", icon: iconFeedback, to: "/feedback-form" },
   { label: "Visit the Event Website", icon: iconGlobe, href: process.env.REACT_APP_EVENT_WEBSITE_URL },
   // { label: "Ask A Question", icon: iconQuestion, to: "/ask-a-question" },
 ];
@@ -45,7 +48,7 @@ export default function EventMobileMenu() {
           <img src={titleLockup} alt="Water Leakage Summit 2026" className="wls-menu__title" />
 
           <p className="wls-menu__subtitle">
-            {"THE PREMIER FORUM FOR SUSTAINABLE\nLITHIUM PRODUCTION IN EUROPE"}
+            {"ADVANCING SUSTAINABLE LITHIUM\nPRODUCTION IN SOUTH AMERICA"}
           </p>
 
           <div className="wls-menu__list">

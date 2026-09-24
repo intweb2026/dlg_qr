@@ -23,15 +23,13 @@
   z-index: 1;
   opacity: 0.8;
   background-image:
-    linear-gradient(
-      97.75deg,
+    linear-gradient(97.75deg,
       rgba(0, 0, 0, 0.32) 8.32%,
       rgba(0, 0, 0, 0.115) 20.75%,
       rgba(39, 141, 255, 0.134) 28.72%,
       rgba(39, 141, 255, 0.166) 32.76%,
       rgba(39, 141, 255, 0.371) 54.14%,
-      rgba(39, 141, 255, 0.64) 97.84%
-    ),
+      rgba(39, 141, 255, 0.64) 97.84%),
     linear-gradient(90deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72));
 }
 
@@ -43,6 +41,8 @@
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
+  padding: 24px 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
@@ -88,11 +88,9 @@
   margin: auto;
   padding: 32px 24px 40px;
   border-radius: 10px;
-  background-image: linear-gradient(
-    153.61deg,
-    rgb(11, 11, 11) 24.87%,
-    rgb(16, 16, 15) 94.74%
-  );
+  background-image: linear-gradient(153.61deg,
+      rgb(11, 11, 11) 24.87%,
+      rgb(16, 16, 15) 94.74%);
   box-shadow: 0 24px 48px 0 rgba(0, 0, 0, 0.35);
   text-align: center;
 }
@@ -191,33 +189,34 @@
 }
 
 @media (min-width: 1920px) {
+
+  /* Sizes scale with viewport height so the whole card fits without scrolling */
   .wls-menu__card {
     width: 548.56px;
-    height: 770px;
     max-width: 548.56px;
-    padding: 57.89px 22.78px 58.81px;
+    padding: clamp(24px, 4vh, 57.89px) 22.78px clamp(24px, 4vh, 58.81px);
   }
 
   .wls-menu__title {
-    width: 210px;
-    height: 121.53px;
+    width: auto;
+    height: clamp(80px, 13vh, 121.53px);
   }
 
   .wls-menu__subtitle {
     font-size: 24px;
     line-height: 25px;
-    margin: 39px 0;
+    margin: clamp(16px, 3vh, 39px) 0;
   }
 
   .wls-menu__item {
     width: 503px;
-    height: 62.48px;
-    margin-bottom: 32.16px;
+    height: clamp(48px, 5.8vh, 62.48px);
+    margin-bottom: clamp(10px, 3.0vh, 32.16px);
   }
 
   .wls-menu__link {
     width: 503px;
-    height: 62.48px;
+    height: 100%;
   }
 
   .wls-menu__card .wls-menu__label {
@@ -257,10 +256,9 @@
     width: auto;
     margin-left: 20px;
     margin-right: 20px;
-    max-height: 530px;
   }
 
-  .wls-menu__label{
+  .wls-menu__label {
     font-size: 13px;
   }
 }
@@ -293,5 +291,33 @@
 
   .wls-menu__link {
     padding: 4px 12px;
+  }
+}
+
+/* Short screens (laptops, small phones): compact spacing so no scroll is needed */
+@media (max-width: 1919px) and (max-height: 720px) {
+  .wls-menu__content {
+    padding: 12px 0;
+  }
+
+  .wls-menu__card {
+    padding: 20px 20px 24px;
+  }
+
+  .wls-menu__title {
+    width: auto;
+    height: 64px;
+  }
+
+  .wls-menu__subtitle {
+    margin: 12px 0;
+  }
+
+  .wls-menu__item {
+    margin-bottom: 10px;
+  }
+
+  .wls-menu__link {
+    min-height: 40px;
   }
 }
