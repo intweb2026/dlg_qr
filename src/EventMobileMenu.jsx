@@ -20,9 +20,9 @@ const iconFeedback = "/images/Feedback_icon.png";
 const MENU_ITEMS = [
   { label: "Explore the Agenda", icon: iconAgenda, href: process.env.REACT_APP_AGENDA_URL },
   { label: "Registered Attendees", icon: iconDelegates, to: "/registered-attendees" },
-  { label: "Connect on LinkedIn ", icon: iconLinkedin, href: process.env.REACT_APP_LINKEDIN_URL },
-  { label: "Wi-Fi Password", icon: iconWifi, to: "/wifipassword" },
   { label: "Feedback Form", icon: iconFeedback, to: "/feedback-form" },
+  { label: "Wi-Fi Password", icon: iconWifi, to: "/wifipassword" },
+  { label: "Connect on LinkedIn ", icon: iconLinkedin, href: process.env.REACT_APP_LINKEDIN_URL },
   { label: "Visit the Event Website", icon: iconGlobe, href: process.env.REACT_APP_EVENT_WEBSITE_URL },
   // { label: "Ask A Question", icon: iconQuestion, to: "/ask-a-question" },
 ];

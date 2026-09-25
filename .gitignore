@@ -2,3 +2,10 @@ node_modules
 build
 .DS_Store
 npm-debug.log*
+
+# Feedback app. backend/.gitignore also covers the backend entries.
+backend/.env
+backend/venv/
+__pycache__/
+# Rebuilt by scripts/scope-feedback-css.js before every npm start and npm run build.
+src/feedback/generated/
