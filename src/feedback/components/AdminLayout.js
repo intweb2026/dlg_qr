@@ -1,27 +1,31 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useToast } from "../context/ToastContext";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+// authentication switched off, these are only used by the signed in user and the sign out button.
+// import { useNavigate } from "react-router-dom";
+// import { useAuth } from "../context/AuthContext";
+// import { useToast } from "../context/ToastContext";
 
 const EVENT_NAME = process.env.REACT_APP_EVENT_NAME || "Summit";
 
 export default function AdminLayout() {
-  const { user, logout } = useAuth();
-  const notify = useToast();
-  const navigate = useNavigate();
+  // authentication switched off
+  // const { user, logout } = useAuth();
+  // const notify = useToast();
+  // const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
   useEffect(() => setOpen(false), [location.pathname]);
 
-  const handleLogout = async () => {
-    await logout();
-    notify("You have signed out of the admin panel.", "info", { title: "Signed out" });
-    navigate("/admin/login");
-  };
+  // authentication switched off
+  // const handleLogout = async () => {
+  //   await logout();
+  //   notify("You have signed out of the admin panel.", "info", { title: "Signed out" });
+  //   navigate("/admin/login");
+  // };
 
   const link = ({ isActive }) => `admin-link${isActive ? " active" : ""}`;
-  const name = user?.full_name || user?.username || "";
+  // const name = user?.full_name || user?.username || "";  // authentication switched off
 
   return (
     <div className="admin-shell">
@@ -49,11 +53,12 @@ export default function AdminLayout() {
               <NavLink className={link} to="/admin/feedback-submission">Submissions</NavLink>
               <NavLink className={link} to="/admin/attendees">Attendees</NavLink>
             </nav>
-            <div className="admin-user">
+            {/* authentication switched off, no signed in user and no sign out button */}
+            {/* <div className="admin-user">
               <span className="admin-avatar" aria-hidden="true">{name.charAt(0).toUpperCase()}</span>
               <span className="admin-user-name">{name}</span>
               <button className="btn btn-sm btn-signout" onClick={handleLogout}>Sign out</button>
-            </div>
+            </div> */}
           </div>
         </div>
       </header>

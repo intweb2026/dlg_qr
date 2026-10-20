@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const MIN_CHARS = 3;
 const MAX_RESULTS = 8;
+const MAX_NAME = 255;
 
 // Lowercase and strip accents, so "jose" finds "José".
 function normalize(text) {
@@ -41,11 +42,17 @@ function initials(name) {
     .join("");
 }
 
+// Collapse repeated spaces, so "  jane   doe " is saved as "jane doe".
+function cleanName(text) {
+  return text.trim().replace(/\s+/g, " ");
+}
+
 /**
  * Attendee picker. The full list is loaded once with the page (see FeedbackForm), and is only
- * filtered and shown after 3 characters are typed. Free text is never accepted as a value.
+ * filtered and shown after 3 characters are typed. When the typed name is not on the list, it can be
+ * added as a new attendee, which the backend creates together with the feedback submission.
  */
-export default function AttendeeSearch({ attendees, loadError, onRetry, value, onChange, invalid }) {
+export default function AttendeeSearch({ attendees, loadError, onRetry, value, onChange, invalid, companyInvalid, emailInvalid }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
@@ -71,6 +78,13 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
   }, [indexed, searching, term]);
 
   const shown = matches.slice(0, MAX_RESULTS);
+  const newName = cleanName(term);
+  // "Add" is always offered, a listed name can belong to someone else from another company.
+  // The backend refuses it when the same name and company are already on the list.
+  const canAdd = searching && newName.length <= MAX_NAME;
+  const sameNameListed = canAdd && matches.some((a) => a._name === normalize(newName));
+  const optionCount = shown.length + (canAdd ? 1 : 0);
+  const addIndex = canAdd ? shown.length : -1;
 
   useEffect(() => {
     setHighlight(-1);
@@ -99,38 +113,85 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
     setOpen(false);
   };
 
+  const addNew = () => {
+    onChange({ attendee_id: null, full_name: newName, company_name: "", email: "", is_new: true });
+    setQuery("");
+    setOpen(false);
+  };
+
+  const choose = (index) => (index === addIndex ? addNew() : pick(shown[index]));
+
   const onKeyDown = (e) => {
     if (e.key === "Escape") {
       setOpen(false);
       return;
     }
-    if (!shown.length) return;
+    if (!optionCount) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setOpen(true);
-      setHighlight((h) => Math.min(h + 1, shown.length - 1));
+      setHighlight((h) => Math.min(h + 1, optionCount - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlight((h) => Math.max(h - 1, 0));
     } else if (e.key === "Enter" && open) {
       e.preventDefault();
-      if (highlight >= 0) pick(shown[highlight]);
+      if (highlight >= 0) choose(highlight);
       else if (shown.length === 1) pick(shown[0]);
     }
   };
 
   if (value) {
     return (
-      <div className="selected-attendee">
-        <span className="attendee-avatar" aria-hidden="true">{initials(value.full_name)}</span>
-        <div className="selected-attendee-text">
-          <div className="selected-attendee-name">{value.full_name}</div>
-          <div className="selected-attendee-company">{value.company_name || "No company listed"}</div>
+      <>
+        <div className="selected-attendee">
+          <span className="attendee-avatar" aria-hidden="true">{initials(value.full_name)}</span>
+          <div className="selected-attendee-text">
+            <div className="selected-attendee-name">{value.full_name}</div>
+            <div className="selected-attendee-company">
+              {value.is_new ? "New attendee, not on the list" : value.company_name || "No company listed"}
+            </div>
+          </div>
+          <button type="button" className="btn btn-sm btn-change" onClick={() => onChange(null)}>
+            Change
+          </button>
         </div>
-        <button type="button" className="btn btn-sm btn-change" onClick={() => onChange(null)}>
-          Change
-        </button>
-      </div>
+        {value.is_new && (
+          <>
+            <input
+              id="q-company"
+              type="text"
+              className={`form-control new-attendee-company${companyInvalid ? " is-invalid" : ""}`}
+              placeholder="Company name"
+              aria-label="Company name"
+              aria-required="true"
+              aria-invalid={!!companyInvalid}
+              maxLength={MAX_NAME}
+              value={value.company_name}
+              onChange={(e) => onChange({ ...value, company_name: e.target.value })}
+            />
+            {companyInvalid ? (
+              <div className="invalid-feedback d-block">Enter your company name to add yourself.</div>
+            ) : (
+              <small className="form-text text-muted">Required, it tells you apart from someone with the same name.</small>
+            )}
+            <input
+              id="q-email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              className={`form-control new-attendee-company${emailInvalid ? " is-invalid" : ""}`}
+              placeholder="Email (optional)"
+              aria-label="Email, optional"
+              aria-invalid={!!emailInvalid}
+              maxLength={MAX_NAME}
+              value={value.email}
+              onChange={(e) => onChange({ ...value, email: e.target.value })}
+            />
+            {emailInvalid && <div className="invalid-feedback d-block">Enter a valid email address, or leave it empty.</div>}
+          </>
+        )}
+      </>
     );
   }
 
@@ -141,7 +202,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
   else if (term.length > 0 && !searching) {
     const left = MIN_CHARS - term.length;
     hint = `Type ${left} more character${left > 1 ? "s" : ""} to see matching names.`;
-  } else hint = "Type at least 3 letters of your name, then pick it from the list.";
+  } else hint = "Type at least 3 letters of your name, then pick it from the list, or add it if it is not there.";
 
   return (
     <div className="attendee-search" ref={wrapRef}>
@@ -164,7 +225,9 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
           aria-expanded={open && searching}
           aria-controls="attendee-results"
           aria-autocomplete="list"
-          aria-activedescendant={highlight >= 0 ? `attendee-opt-${shown[highlight]?.attendee_id}` : undefined}
+          aria-activedescendant={
+            highlight < 0 ? undefined : highlight === addIndex ? "attendee-opt-new" : `attendee-opt-${shown[highlight]?.attendee_id}`
+          }
           aria-describedby="attendee-hint"
           onChange={(e) => {
             setQuery(e.target.value);
@@ -191,13 +254,13 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
       ) : (
         <small className="form-text text-muted" id="attendee-hint">{hint}</small>
       )}
-      {invalid && <div className="invalid-feedback d-block">Select your name from the list.</div>}
+      {invalid && <div className="invalid-feedback d-block">Select your name from the list, or add it as a new attendee.</div>}
 
       {open && searching && (
         <div className="attendee-results" id="attendee-results" role="listbox" ref={listRef}>
           {shown.length === 0 && (
             <div className="attendee-empty">
-              No attendee matches “{term}”. Check the spelling, or ask the registration desk.
+              No attendee matches “{term}”. Check the spelling, or add your name below.
             </div>
           )}
           {shown.map((a, i) => (
@@ -221,6 +284,28 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               </span>
             </div>
           ))}
+          {canAdd && (
+            <div
+              id="attendee-opt-new"
+              data-index={addIndex}
+              role="option"
+              aria-selected={highlight === addIndex}
+              className={`attendee-option attendee-option-new${highlight === addIndex ? " active" : ""}`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                addNew();
+              }}
+              onMouseEnter={() => setHighlight(addIndex)}
+            >
+              <span className="attendee-avatar" aria-hidden="true">+</span>
+              <span className="attendee-option-text">
+                <span className="attendee-option-name">Add “{newName}”</span>
+                <span className="attendee-option-company">
+                  {sameNameListed ? "Same name, I am from another company" : "My name is not on the list"}
+                </span>
+              </span>
+            </div>
+          )}
           {matches.length > MAX_RESULTS && (
             <div className="attendee-more">
               {matches.length - MAX_RESULTS} more match{matches.length - MAX_RESULTS > 1 ? "es" : ""}, keep typing to narrow the list.

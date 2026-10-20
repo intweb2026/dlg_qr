@@ -72,6 +72,9 @@ function DrawTicket({ id }) {
   );
 }
 
+// Light check only, the backend validates the email properly.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function isAnswered(v) {
   if (Array.isArray(v)) return v.length > 0;
   return v !== undefined && v !== null && String(v).trim() !== "";
@@ -87,6 +90,8 @@ export default function FeedbackForm() {
   const [answers, setAnswers] = useState({});
   const [errors, setErrors] = useState({});
   const [confirming, setConfirming] = useState(false);
+  // A refusal shown inside the confirm card, in place of a toast.
+  const [confirmError, setConfirmError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [entryId, setEntryId] = useState(() => readEntryNumber());
 
@@ -138,6 +143,11 @@ export default function FeedbackForm() {
   const validate = () => {
     const next = {};
     if (!attendee) next.attendee = true;
+    else if (attendee.is_new) {
+      if (attendee.company_name.trim().length < 2) next.company = true;
+      const email = attendee.email.trim();
+      if (email && !EMAIL_RE.test(email)) next.email = true;
+    }
     feedbackQuestions.forEach((q) => {
       if (q.required && !isAnswered(answers[q.key])) next[q.key] = true;
     });
@@ -149,6 +159,7 @@ export default function FeedbackForm() {
     e.preventDefault();
     const missing = Object.keys(validate());
     if (missing.length === 0) {
+      setConfirmError(null);
       setConfirming(true);
       return;
     }
@@ -169,7 +180,17 @@ export default function FeedbackForm() {
       if (isAnswered(v)) feedback_data[q.key] = typeof v === "string" ? v.trim() : v;
     });
     try {
-      const { data } = await api.post("/feedback/submit/", { attendee_id: attendee.attendee_id, feedback_data });
+      // A name that is not on the list is sent as new_attendee, the backend creates it with the submission.
+      const who = attendee.is_new
+        ? {
+            new_attendee: {
+              full_name: attendee.full_name,
+              company_name: attendee.company_name.trim(),
+              email: attendee.email.trim() || null,
+            },
+          }
+        : { attendee_id: attendee.attendee_id };
+      const { data } = await api.post("/feedback/submit/", { ...who, feedback_data });
       const id = Number.isInteger(data?.id) ? data.id : null;
       if (id !== null) saveEntryNumber(id);
       setEntryId(id);
@@ -179,6 +200,11 @@ export default function FeedbackForm() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       const code = err?.response?.data?.code;
+      if (attendee.is_new && (code === "already_submitted" || code === "email_exists")) {
+        // Same name and company already submitted, or the email belongs to someone listed, keep the card open and say so there.
+        setConfirmError(errorMessage(err));
+        return;
+      }
       setConfirming(false);
       if (code === "device_submitted") {
         markSubmittedOnDevice();
@@ -186,9 +212,13 @@ export default function FeedbackForm() {
       } else if (err?.response?.status === 403) {
         setView("closed");
       } else {
-        if (code === "already_submitted") {
+        if (code === "already_submitted" && !attendee.is_new) {
           setAttendees((list) => (list || []).filter((a) => a.attendee_id !== attendee.attendee_id));
           setAttendee(null);
+        } else if (code === "attendee_exists") {
+          // The name was added to the list after this page loaded, reload it so it can be picked.
+          setAttendee(null);
+          loadAttendees();
         }
         notify(errorMessage(err), "danger", { title: "Not submitted" });
       }
@@ -227,7 +257,8 @@ export default function FeedbackForm() {
               </ul>
             </>
           )}
-          {view === "success" && <p className="fb-tagline">Your voice helps make each event better.</p>}
+          {/* Moved into the success card, as its last line */}
+          {/* {view === "success" && <p className="fb-tagline">Your voice helps make each event better.</p>} */}
         </header>
 
         <main className="fb-body">
@@ -247,7 +278,7 @@ export default function FeedbackForm() {
             <StatusPanel
               tone="info"
               title="Feedback already received"
-              extra={entryId !== null ? <DrawTicket id={entryId} /> : null}
+              // extra={entryId !== null ? <DrawTicket id={entryId} /> : null}
             >
               You have already submitted your feedback from this device. Thank you for taking part.
             </StatusPanel>
@@ -281,15 +312,18 @@ export default function FeedbackForm() {
                 </svg>
               </span>
               <h2>You’re all set!</h2>
-              <p>Your feedback has been submitted. Here is your number for the draw.</p>
-              <DrawTicket id={entryId} />
-              <p className="fb-success-note">Keep your number handy for the draw.</p>
+              <p>Your feedback has been submitted.</p>
+              {/* <DrawTicket id={entryId} />
+              <p className="fb-success-note">Keep your number handy for the draw.</p> */}
+              <div className="fb-success-quote">
+                <p>Your voice helps make each event better.</p>
+              </div>
             </div>
           )}
 
           {view === "form" && (
             <form className="fb-panel" onSubmit={handleReview} noValidate>
-              <section className={`fb-name${errors.attendee ? " has-error" : ""}`} id="q-attendee">
+              <section className={`fb-name${errors.attendee || errors.company || errors.email ? " has-error" : ""}`} id="q-attendee">
                 <label htmlFor="attendee-search" className="fb-name-label">
                   Your Name {requiredTag(true)}
                 </label>
@@ -300,9 +334,11 @@ export default function FeedbackForm() {
                   value={attendee}
                   onChange={(a) => {
                     setAttendee(a);
-                    setErrors((e) => ({ ...e, attendee: false }));
+                    setErrors((e) => ({ ...e, attendee: false, company: false, email: false }));
                   }}
                   invalid={errors.attendee}
+                  companyInvalid={errors.company}
+                  emailInvalid={errors.email}
                 />
               </section>
 
@@ -423,19 +459,29 @@ export default function FeedbackForm() {
               <button className="btn fb-btn fb-btn-ghost" disabled={submitting} onClick={() => setConfirming(false)}>
                 Go back
               </button>
-              <button className="btn fb-btn fb-btn-primary" disabled={submitting} onClick={handleSubmit}>
+              <button className="btn fb-btn fb-btn-primary" disabled={submitting || !!confirmError} onClick={handleSubmit}>
                 {submitting && <span className="spinner-border spinner-border-sm mr-2" aria-hidden="true" />}
                 {submitting ? "Submitting" : "Submit feedback"}
               </button>
             </>
           }
         >
-          <p className="fb-modal-note">Your feedback will be submitted under this attendee. You can only submit once.</p>
+          {confirmError ? (
+            <p className="fb-modal-error" role="alert">{confirmError}</p>
+          ) : (
+            <p className="fb-modal-note">Your feedback will be submitted under this attendee. You can only submit once.</p>
+          )}
           <dl className="fb-confirm-list mb-0">
             <dt>Name</dt>
             <dd>{attendee.full_name}</dd>
             <dt>Company</dt>
-            <dd>{attendee.company_name || "Not on file"}</dd>
+            <dd>{attendee.company_name.trim() || "---"}</dd>
+            {attendee.is_new && attendee.email.trim() && (
+              <>
+                <dt>Email</dt>
+                <dd className="text-break">{attendee.email.trim()}</dd>
+              </>
+            )}
           </dl>
         </Modal>
       )}

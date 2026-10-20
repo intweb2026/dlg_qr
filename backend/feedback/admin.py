@@ -49,7 +49,8 @@ class AdminTokenAdmin(admin.ModelAdmin):
 
 @admin.register(Attendee)
 class AttendeeAdmin(admin.ModelAdmin):
-    list_display = ("attendee_id", "full_name", "email", "company_name", "created_at")
+    list_display = ("attendee_id", "full_name", "email", "company_name", "is_walk_in", "created_at")
+    list_filter = ("is_walk_in",)
     search_fields = ("full_name", "email", "company_name")
 
 

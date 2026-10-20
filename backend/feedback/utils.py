@@ -1,4 +1,5 @@
 import hashlib
+import unicodedata
 
 
 def get_client_ip(request):
@@ -12,6 +13,13 @@ def device_fingerprint(request):
     """SHA-256 hash derived from client IP and User-Agent."""
     raw = f"{get_client_ip(request)}|{request.META.get('HTTP_USER_AGENT', '')}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def normalize_name(name):
+    """Same matching as the form's search, "  José  SMITH " -> "jose smith"."""
+    text = unicodedata.normalize("NFD", name or "")
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return " ".join(text.lower().split())
 
 
 def pad_length_for(max_id):

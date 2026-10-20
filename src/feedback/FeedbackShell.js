@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import "./generated/feedback.scoped.css";
 import { ToastProvider } from "./context/ToastContext";
-import { AuthProvider } from "./context/AuthContext";
+// import { AuthProvider } from "./context/AuthContext";  // authentication switched off
 
 // Fonts used only by the feedback form and admin. Montserrat is listed again at the weights this app was
 // designed with. The link is removed when the user leaves, so the event pages keep their own fonts.
@@ -32,9 +32,10 @@ export default function FeedbackShell() {
   return (
     <div className="fb-app">
       <ToastProvider>
-        <AuthProvider>
-          <Outlet />
-        </AuthProvider>
+        {/* authentication switched off, restore the AuthProvider around the Outlet with it */}
+        {/* <AuthProvider> */}
+        <Outlet />
+        {/* </AuthProvider> */}
       </ToastProvider>
     </div>
   );

@@ -60,6 +60,8 @@ class Attendee(models.Model):
     full_name = models.CharField(max_length=255, db_index=True)
     email = models.EmailField(max_length=255, unique=True, null=True, blank=True)
     company_name = models.CharField(max_length=255, blank=True, default="")
+    # True when the attendee typed a name that was not on the list and was added on the feedback form.
+    is_walk_in = models.BooleanField("Self-registered", default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

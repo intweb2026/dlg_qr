@@ -10,6 +10,7 @@ export default function AdminAttendees() {
   const notify = useToast();
   const [list, setList] = useState([]);
   const [q, setQ] = useState("");
+  const [walkIn, setWalkIn] = useState("");
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -20,19 +21,19 @@ export default function AdminAttendees() {
 
   const load = useCallback(async () => {
     try {
-      const { data } = await api.get("/admin/attendees/", { params: { q: q || undefined } });
+      const { data } = await api.get("/admin/attendees/", { params: { q: q || undefined, walk_in: walkIn || undefined } });
       setList(data);
     } catch (err) {
       notify(errorMessage(err), "danger");
     }
-  }, [q, notify]);
+  }, [q, walkIn, notify]);
 
   useEffect(() => {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
   }, [load]);
 
-  useEffect(() => setPage(1), [q]);
+  useEffect(() => setPage(1), [q, walkIn]);
   useEffect(() => {
     setPage((p) => Math.min(p, pageCount(list.length)));
   }, [list.length]);
@@ -101,12 +102,12 @@ export default function AdminAttendees() {
       </div>
 
       <div className="stat-grid">
-        <div className="stat-card"><span className="stat-value">{list.length}</span><span className="stat-label">{q ? "Matching" : "Attendees"}</span></div>
+        <div className="stat-card"><span className="stat-value">{list.length}</span><span className="stat-label">{q || walkIn ? "Matching" : "Attendees"}</span></div>
         <div className="stat-card stat-good"><span className="stat-value">{submitted}</span><span className="stat-label">Submitted</span></div>
         <div className="stat-card"><span className="stat-value">{list.length - submitted}</span><span className="stat-label">Pending</span></div>
       </div>
 
-      <div className="row">
+      {/* <div className="row">
         <div className="col-lg-8 mb-3">
           <form className="panel" onSubmit={add}>
             <h2 className="h6 mb-3">Add an attendee</h2>
@@ -137,11 +138,16 @@ export default function AdminAttendees() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className="filter-row">
         <input type="search" className="form-control" placeholder="Search by name, email or company"
           value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search attendees" />
+        <select className="custom-select" value={walkIn} onChange={(e) => setWalkIn(e.target.value)} aria-label="Filter by source">
+          <option value="">All attendees</option>
+          <option value="false">From the list</option>
+          <option value="true">Self-registered</option>
+        </select>
       </div>
 
       <div className="table-card">
@@ -159,15 +165,18 @@ export default function AdminAttendees() {
           <tbody>
             {list.length === 0 && (
               <tr className="empty-row"><td colSpan={6} className="text-center text-muted py-4">
-                {q ? "No attendees match this search." : "No attendees yet. Add one above or import a CSV."}
+                {q || walkIn ? "No attendees match these filters." : "No attendees yet. Add one above or import a CSV."}
               </td></tr>
             )}
             {pageSlice(list, page).map((a) => (
               <tr key={a.attendee_id}>
                 <td data-label="ID" className="id-cell">{a.attendee_id}</td>
-                <td data-label="Name" className="font-weight-bold">{a.full_name}</td>
-                <td data-label="Company">{a.company_name || "Not listed"}</td>
-                <td data-label="Email" className="text-break">{a.email || "Not on file"}</td>
+                <td data-label="Name" className="font-weight-bold">
+                  {a.full_name}
+                  {a.is_walk_in && <span className="badge badge-self-registered ml-2" title="Added on the feedback form">Self-registered</span>}
+                </td>
+                <td data-label="Company">{a.company_name || "---"}</td>
+                <td data-label="Email" className="text-break">{a.email || "---"}</td>
                 <td data-label="Feedback">{a.has_submitted ? <span className="badge badge-active">Submitted</span> : <span className="badge badge-pending">Pending</span>}</td>
                 <td className="text-right actions-cell">
                   <button className="btn btn-sm btn-outline-danger" disabled={a.has_submitted} title={a.has_submitted ? "Suspend the submission instead" : undefined}

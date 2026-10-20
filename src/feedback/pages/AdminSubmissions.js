@@ -251,7 +251,7 @@ export default function AdminSubmissions() {
               <tr key={s.id} className={s.is_suspended ? "row-suspended" : ""}>
                 <td data-label="ID" className="id-cell">{padId(s.id, data.pad_length)}</td>
                 <td data-label="Attendee" className="font-weight-bold">{s.attendee_name}</td>
-                <td data-label="Email" className="text-break">{s.email || "Not on file"}</td>
+                <td data-label="Email" className="text-break">{s.email || "---"}</td>
                 <td data-label="Company">{s.company_name || "Not listed"}</td>
                 <td data-label="Submitted" className="text-nowrap">{formatDate(s.created_at)}</td>
                 <td data-label="Status">
@@ -287,7 +287,7 @@ export default function AdminSubmissions() {
             ))}
           </dl>
           <p className="small text-muted mb-0">
-            Submitted {formatDate(viewing.created_at)}. Device fingerprint {viewing.device_fingerprint.slice(0, 16)}
+            Submitted {formatDate(viewing.created_at)}
           </p>
         </Modal>
       )}
