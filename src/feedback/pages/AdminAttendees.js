@@ -12,7 +12,9 @@ export default function AdminAttendees() {
   const [q, setQ] = useState("");
   const [walkIn, setWalkIn] = useState("");
   const [form, setForm] = useState(EMPTY);
+  // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
   const [saving, setSaving] = useState(false);
+  // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
   const [importing, setImporting] = useState(false);
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState(null);
@@ -38,6 +40,7 @@ export default function AdminAttendees() {
     setPage((p) => Math.min(p, pageCount(list.length)));
   }, [list.length]);
 
+  // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
   const add = async (e) => {
     e.preventDefault();
     if (!form.full_name.trim()) return notify("Enter the attendee's name to add them.", "warning", { title: "Name is required" });
@@ -71,6 +74,7 @@ export default function AdminAttendees() {
 
   const submitted = list.filter((a) => a.has_submitted).length;
 
+  // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
   const importCsv = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;

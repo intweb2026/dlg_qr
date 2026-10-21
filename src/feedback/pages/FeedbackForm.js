@@ -47,6 +47,7 @@ function StatusPanel({ tone, title, children, action, extra }) {
   );
 }
 
+// eslint-disable-next-line no-unused-vars -- kept for when the draw ticket is shown again
 function DrawTicket({ id }) {
   const hasNumber = id !== null && id !== undefined;
   const number = hasNumber ? padId(id, 2) : "";
@@ -93,6 +94,7 @@ export default function FeedbackForm() {
   // A refusal shown inside the confirm card, in place of a toast.
   const [confirmError, setConfirmError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  // eslint-disable-next-line no-unused-vars -- read by the DrawTicket lines, commented out below
   const [entryId, setEntryId] = useState(() => readEntryNumber());
 
   const loadAttendees = useCallback(() => {
