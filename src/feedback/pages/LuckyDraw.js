@@ -96,7 +96,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
   // The winners value is only read by the commented out winner history table, the setter is still used.
   // Restore with the table: const [winners, setWinners] = useState([]);
   const [, setWinners] = useState([]);
-  const [celebrate, setCelebrate] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -107,7 +106,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
 
   const stageRef = useRef(null);
   const timerRef = useRef(null);
-  const celebrateRef = useRef(null);
   const spinRef = useRef(null); // live data for the running spin
   const suspenseRef = useRef(null);
   const nextSpinRef = useRef(false); // set by the top bar Spin button, spins once the reset has rendered
@@ -141,7 +139,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
     loadWinners();
     return () => {
       clearInterval(timerRef.current);
-      clearTimeout(celebrateRef.current);
       clearTimeout(suspenseRef.current);
     };
   }, [loadPool, loadWinners]);
@@ -244,7 +241,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
     setAttempts(next);
     saveDraw({ attempts: next, phase: prev.phase, entryId: prev.entryId, padLength: prev.reels.length, winner: null });
     setEntryId(null);
-    setCelebrate(false);
     setRevealFailed(false);
     setPending(null);
     setPhase("spinning");
@@ -289,9 +285,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
       if (wait > 0) await new Promise((done) => (suspenseRef.current = setTimeout(done, wait)));
       setWinner(data);
       setPhase("revealed");
-      setCelebrate(true);
-      clearTimeout(celebrateRef.current);
-      celebrateRef.current = setTimeout(() => setCelebrate(false), 5500);
       loadWinners();
       loadPool();
     } catch (err) {
@@ -327,13 +320,11 @@ export default function LuckyDraw({ autoFullscreen = false }) {
   const spinNext = () => {
     if (!canStartNew) return;
     clearInterval(timerRef.current);
-    clearTimeout(celebrateRef.current);
     spinRef.current = null;
     setAttempts(0);
     setPhase("idle");
     setEntryId(null);
     setWinner(null);
-    setCelebrate(false);
     setRevealFailed(false);
     saveDraw({ ...EMPTY_DRAW, padLength });
     nextSpinRef.current = true;
@@ -374,6 +365,8 @@ export default function LuckyDraw({ autoFullscreen = false }) {
   // Only used by the attempt chip in the top bar, which is commented out below. Restore both together.
   // const attemptText =
   //   attempts === 0 ? "No spins yet" : maxSpins > 0 ? `Attempt ${attempts} of ${maxSpins}` : `Attempt ${attempts}`;
+  // The confetti runs for as long as the winner is on screen, the saved phase brings it back after a refresh.
+  const celebrate = phase === "revealed" && !!winner;
   const entryText = entryId !== null ? padId(entryId, reels.length) : "";
 
   let srLabel = "Ready to spin";
@@ -423,7 +416,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
         </div>
 
         <p className="draw-kicker">{process.env.REACT_APP_EVENT_NAME || "Summit"}</p>
-        <h1 className="draw-title">Lucky draw</h1>
+        <h1 className="draw-title">Lucky Draw</h1>
 
         <SlotMachine reels={reels} state={phase === "revealing" ? "suspense" : phase} label={srLabel} />
 

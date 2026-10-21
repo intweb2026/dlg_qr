@@ -7,10 +7,10 @@ urlpatterns = [
     path("form-status/", views.form_status, name="form-status"),
     path("attendees/", views.attendee_list, name="attendee-list"),
     path("feedback/submit/", views.feedback_submit, name="feedback-submit"),
-    # Admin auth, authentication switched off
-    # path("auth/login/", views.admin_login, name="admin-login"),
-    # path("auth/me/", views.admin_me, name="admin-me"),
-    # path("auth/logout/", views.admin_logout, name="admin-logout"),
+    # Admin auth
+    path("auth/login/", views.admin_login, name="admin-login"),
+    path("auth/me/", views.admin_me, name="admin-me"),
+    path("auth/logout/", views.admin_logout, name="admin-logout"),
     # Admin panel
     path("admin/settings/", views.SettingsView.as_view(), name="admin-settings"),
     path("admin/submissions/", views.submission_list, name="admin-submissions"),

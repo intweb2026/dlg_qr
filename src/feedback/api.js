@@ -3,48 +3,46 @@ import axios from "axios";
 export const TOKEN_KEY = "adminToken";
 export const UNAUTHORIZED_EVENT = "admin:unauthorized";
 
-// authentication switched off, no admin token is sent, so the public path list is not needed.
-// // Public endpoints never carry the admin token, so a stale token cannot break the attendee form or the lucky draw.
-// const PUBLIC_PATHS = [
-//   "/form-status/",
-//   "/attendees/",
-//   "/feedback/submit/",
-//   "/auth/login/",
-//   "/lucky-draw/pool/",
-//   "/lucky-draw/spin/",
-//   "/lucky-draw/reveal/",
-//   "/lucky-draw/winners/",
-// ];
+// Public endpoints never carry the admin token, so a stale token cannot break the attendee form or the lucky draw.
+const PUBLIC_PATHS = [
+  "/form-status/",
+  "/attendees/",
+  "/feedback/submit/",
+  "/auth/login/",
+  "/lucky-draw/pool/",
+  "/lucky-draw/spin/",
+  "/lucky-draw/reveal/",
+  "/lucky-draw/winners/",
+];
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/api",
   withCredentials: true, // lets the backend set the submission_status cookie
 });
 
-// authentication switched off, the token header and the sign out on 401 are not used.
-// function readToken() {
-//   try {
-//     return localStorage.getItem(TOKEN_KEY);
-//   } catch (e) {
-//     return null;
-//   }
-// }
+function readToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch (e) {
+    return null;
+  }
+}
 
-// api.interceptors.request.use((config) => {
-//   const token = readToken();
-//   if (token && !PUBLIC_PATHS.includes(config.url)) config.headers.Authorization = `Token ${token}`;
-//   return config;
-// });
+api.interceptors.request.use((config) => {
+  const token = readToken();
+  if (token && !PUBLIC_PATHS.includes(config.url)) config.headers.Authorization = `Token ${token}`;
+  return config;
+});
 
-// api.interceptors.response.use(
-//   (res) => res,
-//   (err) => {
-//     if (err?.response?.status === 401 && !PUBLIC_PATHS.includes(err.config?.url)) {
-//       window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
-//     }
-//     return Promise.reject(err);
-//   }
-// );
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err?.response?.status === 401 && !PUBLIC_PATHS.includes(err.config?.url)) {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+    return Promise.reject(err);
+  }
+);
 
 export function errorMessage(err, fallback = "Something went wrong, try again.") {
   const data = err?.response?.data;

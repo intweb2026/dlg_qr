@@ -282,7 +282,7 @@ export default function FeedbackForm() {
               title="Feedback already received"
               // extra={entryId !== null ? <DrawTicket id={entryId} /> : null}
             >
-              You have already submitted your feedback from this device. Thank you for taking part.
+              You have already submitted your feedback. Thank you for taking part.
             </StatusPanel>
           )}
 

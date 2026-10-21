@@ -3,7 +3,7 @@ import io
 import secrets
 
 from django.conf import settings as dj_settings
-# from django.contrib.auth.hashers import make_password  # authentication switched off, only used by admin_login
+from django.contrib.auth.hashers import make_password
 from django.db import IntegrityError, transaction
 from django.db.models import Max, ProtectedError, Q
 from django.utils import timezone
@@ -14,8 +14,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-# from .authentication import IsAdmin  # authentication switched off, every endpoint is AllowAny
-from .models import AdminUser, Attendee, FeedbackSubmission, FormSettings, LuckyDrawWinner
+from .authentication import IsAdmin
+from .models import AdminToken, AdminUser, Attendee, FeedbackSubmission, FormSettings, LuckyDrawWinner
 from .serializers import (
     AttendeeLookupSerializer,
     AttendeeSerializer,
@@ -132,52 +132,49 @@ def feedback_submit(request):
 
 
 # =====================================================================
-# Admin auth, authentication switched off. The admin panel and every API are open without signing in.
-# To switch it back on, uncomment this section, the auth urls, the IsAdmin and AdminToken imports and lines marked
-# "authentication switched off" here, in settings.py, urls.py and the frontend.
+# Admin auth
 # =====================================================================
-# # Hash used when the username does not exist, so the response time does not reveal valid usernames.
-# _DUMMY_HASH = make_password("not-a-real-password")
+# Hash used when the username does not exist, so the response time does not reveal valid usernames.
+_DUMMY_HASH = make_password("not-a-real-password")
 
 
-# @api_view(["POST"])
-# @permission_classes([AllowAny])
-# def admin_login(request):
-#     username = str(request.data.get("username") or "").strip()
-#     password = str(request.data.get("password") or "")
-#     user = AdminUser.objects.filter(username__iexact=username).first() if username else None
-#     if user is None:
-#         AdminUser(password=_DUMMY_HASH).check_password(password)
-#         valid = False
-#     else:
-#         valid = user.check_password(password) and user.is_active
-#     if not valid:
-#         return Response({"detail": "Incorrect username or password."}, status=status.HTTP_400_BAD_REQUEST)
-#     user.last_login = timezone.now()
-#     user.save(update_fields=["last_login"])
-#     token = AdminToken.issue(user)
-#     return Response({"token": token.key, "username": user.username, "full_name": user.full_name})
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def admin_login(request):
+    username = str(request.data.get("username") or "").strip()
+    password = str(request.data.get("password") or "")
+    user = AdminUser.objects.filter(username__iexact=username).first() if username else None
+    if user is None:
+        AdminUser(password=_DUMMY_HASH).check_password(password)
+        valid = False
+    else:
+        valid = user.check_password(password) and user.is_active
+    if not valid:
+        return Response({"detail": "Incorrect username or password."}, status=status.HTTP_400_BAD_REQUEST)
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
+    token = AdminToken.issue(user)
+    return Response({"token": token.key, "username": user.username, "full_name": user.full_name})
 
 
-# @api_view(["GET"])
-# @permission_classes([IsAdmin])
-# def admin_me(request):
-#     return Response({"username": request.user.username, "full_name": request.user.full_name})
+@api_view(["GET"])
+@permission_classes([IsAdmin])
+def admin_me(request):
+    return Response({"username": request.user.username, "full_name": request.user.full_name})
 
 
-# @api_view(["POST"])
-# @permission_classes([IsAdmin])
-# def admin_logout(request):
-#     request.auth.delete()  # only this session, other devices stay signed in
-#     return Response(status=status.HTTP_204_NO_CONTENT)
+@api_view(["POST"])
+@permission_classes([IsAdmin])
+def admin_logout(request):
+    request.auth.delete()  # only this session, other devices stay signed in
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # =====================================================================
 # Admin: settings and submissions
 # =====================================================================
 class SettingsView(APIView):
-    # permission_classes = [IsAdmin]  # authentication switched off
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdmin]
 
     def get(self, request):
         return Response(FormSettingsSerializer(FormSettings.load()).data)
@@ -191,8 +188,7 @@ class SettingsView(APIView):
 
 
 @api_view(["GET"])
-# @permission_classes([IsAdmin])  # authentication switched off
-@permission_classes([AllowAny])
+@permission_classes([IsAdmin])
 def submission_list(request):
     qs = FeedbackSubmission.objects.select_related("attendee").order_by("id")
     q = request.query_params.get("q", "").strip()
@@ -222,8 +218,7 @@ def submission_list(request):
 
 
 @api_view(["PATCH"])
-# @permission_classes([IsAdmin])  # authentication switched off
-@permission_classes([AllowAny])
+@permission_classes([IsAdmin])
 def submission_suspend(request, pk):
     try:
         sub = FeedbackSubmission.objects.select_related("attendee").get(pk=pk)
@@ -241,8 +236,7 @@ def submission_suspend(request, pk):
 # Admin: attendees
 # =====================================================================
 class AttendeeListCreate(APIView):
-    # permission_classes = [IsAdmin]  # authentication switched off
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdmin]
 
     def get(self, request):
         qs = Attendee.objects.select_related("feedback_submission").all()
@@ -262,8 +256,7 @@ class AttendeeListCreate(APIView):
 
 
 class AttendeeDetail(APIView):
-    # permission_classes = [IsAdmin]  # authentication switched off
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdmin]
 
     def get_object(self, pk):
         try:
@@ -295,8 +288,7 @@ class AttendeeDetail(APIView):
 class AttendeeImport(APIView):
     """CSV upload. Header row: full_name, company_name, email (email optional)."""
 
-    # permission_classes = [IsAdmin]  # authentication switched off
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdmin]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):

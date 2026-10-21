@@ -14,7 +14,7 @@ const loadFeedback = () => import("./feedback/entry");
 const feedbackPage = (name) => lazy(() => loadFeedback().then((m) => ({ default: m[name] })));
 const FeedbackShell = feedbackPage("FeedbackShell");
 const FeedbackForm = feedbackPage("FeedbackForm");
-// const AdminLogin = feedbackPage("AdminLogin");  // authentication switched off
+const AdminLogin = feedbackPage("AdminLogin");
 const AdminArea = feedbackPage("AdminArea");
 const AdminSubmissions = feedbackPage("AdminSubmissions");
 const LuckyDraw = feedbackPage("LuckyDraw");
@@ -41,9 +41,7 @@ function App() {
       <Route element={load(FeedbackShell)}>
         <Route path="/feedback-form" element={load(FeedbackForm)} />
         <Route path="/lucky-draw" element={load(LuckyDrawStandalone)} />
-        {/* authentication switched off, the login page sends straight to the admin panel */}
-        {/* <Route path="/admin/login" element={load(AdminLogin)} /> */}
-        <Route path="/admin/login" element={<Navigate to="/admin" replace />} />
+        <Route path="/admin/login" element={load(AdminLogin)} />
         <Route path="/admin" element={load(AdminArea)}>
           <Route index element={<Navigate to="feedback-submission" replace />} />
           <Route path="feedback-submission" element={load(AdminSubmissions)} />

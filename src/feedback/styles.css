@@ -840,7 +840,7 @@ label { font-weight: 500; }
 @media (max-width: 575px), (hover: none) { .draw-footer { display: none; } }
 
 .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 1500; overflow: hidden; }
-.confetti span { position: absolute; top: -20px; border-radius: 1px; animation-name: fall; animation-timing-function: linear; animation-fill-mode: forwards; }
+.confetti span { position: absolute; top: -20px; border-radius: 1px; animation-name: fall; animation-timing-function: linear; animation-iteration-count: infinite; }
 @keyframes fall { to { top: 105vh; transform: translateX(60px) rotate(720deg); } }
 
 @media (prefers-reduced-motion: reduce) {

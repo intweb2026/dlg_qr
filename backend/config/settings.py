@@ -96,9 +96,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ---------------------------------------------------------------- DRF
 # Admin panel login uses feedback.AdminUser (custom model), not django.contrib.auth's User.
 REST_FRAMEWORK = {
-    # authentication switched off, no request is checked for an admin token
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        # "feedback.authentication.AdminTokenAuthentication",
+        "feedback.authentication.AdminTokenAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",

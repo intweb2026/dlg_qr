@@ -107,61 +107,55 @@ class FeedbackFlowTests(APITestCase):
         self.assertEqual(r.status_code, 403)
 
 
-class OpenAdminTests(APITestCase):
-    """Admin endpoints answer without a token while authentication is switched off."""
+class AdminAuthTests(APITestCase):
+    def test_default_admins_exist_and_can_sign_in(self):
+        for username in ("benny", "maxwell", "nolan", "ramon"):
+            r = self.client.post("/api/auth/login/", {"username": username, "password": f"{username}123"}, format="json")
+            self.assertEqual(r.status_code, 200, username)
+            self.assertTrue(AdminToken.objects.filter(key=r.json()["token"], user__username=username).exists())
 
-    def test_admin_endpoints_are_open(self):
-        for url in ("/api/admin/settings/", "/api/admin/submissions/", "/api/admin/attendees/", "/api/lucky-draw/pool/"):
-            self.assertEqual(self.client.get(url).status_code, 200, url)
+    def test_passwords_are_hashed(self):
+        self.assertNotEqual(AdminUser.objects.get(username="benny").password, "benny123")
 
+    def test_wrong_password_and_unknown_user(self):
+        r = self.client.post("/api/auth/login/", {"username": "benny", "password": "nope"}, format="json")
+        self.assertEqual(r.status_code, 400)
+        r = self.client.post("/api/auth/login/", {"username": "ghost", "password": "ghost123"}, format="json")
+        self.assertEqual(r.status_code, 400)
 
-# authentication switched off, restore these tests with it.
-# class AdminAuthTests(APITestCase):
-#     def test_default_admins_exist_and_can_sign_in(self):
-#         for username in ("benny", "maxwell", "nolan", "ramon"):
-#             r = self.client.post("/api/auth/login/", {"username": username, "password": f"{username}123"}, format="json")
-#             self.assertEqual(r.status_code, 200, username)
-#             self.assertTrue(AdminToken.objects.filter(key=r.json()["token"], user__username=username).exists())
+    def test_django_auth_user_cannot_sign_in(self):
+        User.objects.create_user("staffer", password="staffer123", is_staff=True, is_superuser=True)
+        r = self.client.post("/api/auth/login/", {"username": "staffer", "password": "staffer123"}, format="json")
+        self.assertEqual(r.status_code, 400)
 
-#     def test_passwords_are_hashed(self):
-#         self.assertNotEqual(AdminUser.objects.get(username="benny").password, "benny123")
+    def test_inactive_admin_rejected(self):
+        AdminUser.objects.filter(username="nolan").update(is_active=False)
+        r = self.client.post("/api/auth/login/", {"username": "nolan", "password": "nolan123"}, format="json")
+        self.assertEqual(r.status_code, 400)
 
-#     def test_wrong_password_and_unknown_user(self):
-#         r = self.client.post("/api/auth/login/", {"username": "benny", "password": "nope"}, format="json")
-#         self.assertEqual(r.status_code, 400)
-#         r = self.client.post("/api/auth/login/", {"username": "ghost", "password": "ghost123"}, format="json")
-#         self.assertEqual(r.status_code, 400)
+    def test_admin_endpoints_need_token(self):
+        self.assertIn(self.client.get("/api/admin/settings/").status_code, (401, 403))
+        self.client.credentials(HTTP_AUTHORIZATION="Token not-a-real-token")
+        self.assertEqual(self.client.get("/api/admin/settings/").status_code, 401)
 
-#     def test_django_auth_user_cannot_sign_in(self):
-#         User.objects.create_user("staffer", password="staffer123", is_staff=True, is_superuser=True)
-#         r = self.client.post("/api/auth/login/", {"username": "staffer", "password": "staffer123"}, format="json")
-#         self.assertEqual(r.status_code, 400)
+    def test_lucky_draw_stays_public(self):
+        # The /lucky-draw screen at the venue runs without signing in.
+        self.assertEqual(self.client.get("/api/lucky-draw/pool/").status_code, 200)
 
-#     def test_inactive_admin_rejected(self):
-#         AdminUser.objects.filter(username="nolan").update(is_active=False)
-#         r = self.client.post("/api/auth/login/", {"username": "nolan", "password": "nolan123"}, format="json")
-#         self.assertEqual(r.status_code, 400)
-
-#     def test_admin_endpoints_need_token(self):
-#         self.assertIn(self.client.get("/api/admin/settings/").status_code, (401, 403))
-#         self.client.credentials(HTTP_AUTHORIZATION="Token not-a-real-token")
-#         self.assertEqual(self.client.get("/api/admin/settings/").status_code, 401)
-
-#     def test_me_and_logout(self):
-#         token = self.client.post("/api/auth/login/", {"username": "maxwell", "password": "maxwell123"}, format="json").json()["token"]
-#         self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
-#         self.assertEqual(self.client.get("/api/auth/me/").json()["username"], "maxwell")
-#         self.assertEqual(self.client.post("/api/auth/logout/").status_code, 204)
-#         self.assertEqual(self.client.get("/api/auth/me/").status_code, 401)
+    def test_me_and_logout(self):
+        token = self.client.post("/api/auth/login/", {"username": "maxwell", "password": "maxwell123"}, format="json").json()["token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
+        self.assertEqual(self.client.get("/api/auth/me/").json()["username"], "maxwell")
+        self.assertEqual(self.client.post("/api/auth/logout/").status_code, 204)
+        self.assertEqual(self.client.get("/api/auth/me/").status_code, 401)
 
 
 class LuckyDrawTests(APITestCase):
     def setUp(self):
         self.a1 = Attendee.objects.create(full_name="Priya Sharma", email="priya@example.com", company_name="Shell")
         self.a2 = Attendee.objects.create(full_name="James Smith", email="james@example.com", company_name="BP")
-        # authentication switched off, no sign in needed
-        # token = self.client.post("/api/auth/login/", {"username": "benny", "password": "benny123"}, format="json").json()["token"]
-        # self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
+        token = self.client.post("/api/auth/login/", {"username": "benny", "password": "benny123"}, format="json").json()["token"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token}")
 
     def test_spin_duration_setting(self):
         self.assertEqual(self.client.get("/api/admin/settings/").json()["spin_duration_seconds"], 5)
@@ -186,8 +180,7 @@ class LuckyDrawTests(APITestCase):
         reveal = self.client.post("/api/lucky-draw/reveal/", {"submission_id": spin["submission_id"], "attempt_number": 1}, format="json")
         self.assertEqual(reveal.status_code, 201)
         self.assertEqual(reveal.json()["attendee_name"], "James Smith")
-        # self.assertEqual(reveal.json()["drawn_by"], "benny")  # authentication switched off
-        self.assertIsNone(reveal.json()["drawn_by"])
+        self.assertEqual(reveal.json()["drawn_by"], "benny")
         self.assertEqual(LuckyDrawWinner.objects.count(), 1)
 
     def test_reveal_rejects_suspended(self):
