@@ -119,14 +119,7 @@ export default function FeedbackForm() {
     loadAttendees();
     api
       .get("/form-status/")
-      .then(({ data }) => {
-        if (data.submission_status) {
-          markSubmittedOnDevice();
-          setView("already");
-        } else {
-          setView((v) => (v === "closed" || !data.is_active ? "closed" : "form"));
-        }
-      })
+      .then(({ data }) => setView((v) => (v === "closed" || !data.is_active ? "closed" : "form")))
       .catch(() => setView("offline"));
   }, [loadAttendees]);
 
@@ -208,10 +201,7 @@ export default function FeedbackForm() {
         return;
       }
       setConfirming(false);
-      if (code === "device_submitted") {
-        markSubmittedOnDevice();
-        setView("already");
-      } else if (err?.response?.status === 403) {
+      if (err?.response?.status === 403) {
         setView("closed");
       } else {
         if (code === "already_submitted" && !attendee.is_new) {

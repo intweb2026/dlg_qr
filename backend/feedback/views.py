@@ -2,7 +2,6 @@ import csv
 import io
 import secrets
 
-from django.conf import settings as dj_settings
 from django.contrib.auth.hashers import make_password
 from django.db import IntegrityError, transaction
 from django.db.models import Max, ProtectedError, Q
@@ -33,8 +32,7 @@ from .utils import device_fingerprint, normalize_name, pad_length_for
 @permission_classes([AllowAny])
 def form_status(request):
     cfg = FormSettings.load()
-    already = request.COOKIES.get(dj_settings.SUBMISSION_COOKIE_NAME) == "true"
-    return Response({"form_status": cfg.form_status, "is_active": cfg.is_active, "submission_status": already})
+    return Response({"form_status": cfg.form_status, "is_active": cfg.is_active})
 
 
 @api_view(["GET"])
@@ -50,18 +48,12 @@ def attendee_list(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def feedback_submit(request):
-    cookie_name = dj_settings.SUBMISSION_COOKIE_NAME
-
     # 1. Status check
     if not FormSettings.load().is_active:
         return Response({"detail": "Event feedback is closed."}, status=status.HTTP_403_FORBIDDEN)
 
-    # 2. Device check (server-side cookie mirrors the localStorage flag)
-    if request.COOKIES.get(cookie_name) == "true":
-        return Response(
-            {"detail": "You have already submitted your feedback from this device.", "code": "device_submitted"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+    # 2. The one entry per device check is done by the form, with a cookie and localStorage on its own site.
+    # A cookie set here would live on the API domain, which clearing the form site's cookies does not remove.
 
     serializer = FeedbackSubmitSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -121,14 +113,10 @@ def feedback_submit(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    response = Response(
+    return Response(
         {"id": submission.id, "submission_status": True, "detail": "Thank you, your feedback has been submitted."},
         status=status.HTTP_201_CREATED,
     )
-    response.set_cookie(
-        cookie_name, "true", max_age=dj_settings.SUBMISSION_COOKIE_MAX_AGE, samesite="Lax", httponly=False
-    )
-    return response
 
 
 # =====================================================================

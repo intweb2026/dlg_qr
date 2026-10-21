@@ -109,6 +109,3 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001")
 CORS_ALLOW_CREDENTIALS = True
 
-# Cookie set after a successful feedback submission (device restriction)
-SUBMISSION_COOKIE_NAME = "submission_status"
-SUBMISSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365

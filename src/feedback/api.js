@@ -17,7 +17,7 @@ const PUBLIC_PATHS = [
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/api",
-  withCredentials: true, // lets the backend set the submission_status cookie
+  withCredentials: true,
 });
 
 function readToken() {

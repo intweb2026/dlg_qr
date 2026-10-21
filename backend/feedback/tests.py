@@ -28,16 +28,18 @@ class FeedbackFlowTests(APITestCase):
     def test_submit_and_duplicate(self):
         r = self.client.post("/api/feedback/submit/", {"attendee_id": self.a1.pk, "feedback_data": {"overall": 5}}, format="json")
         self.assertEqual(r.status_code, 201)
-        self.assertEqual(r.cookies["submission_status"].value, "true")
+        self.assertNotIn("submission_status", r.cookies)
         fresh = APIClient()
         r2 = fresh.post("/api/feedback/submit/", {"attendee_id": self.a1.pk, "feedback_data": {"overall": 4}}, format="json")
         self.assertEqual(r2.status_code, 400)
         self.assertEqual(r2.json()["code"], "already_submitted")
 
-    def test_same_device_blocked(self):
+    def test_device_check_is_left_to_the_form(self):
+        # Clearing the form site's cookies must open the form again, so the API keeps no device flag of its own.
         self.client.post("/api/feedback/submit/", {"attendee_id": self.a1.pk, "feedback_data": {"x": 1}}, format="json")
+        self.assertNotIn("submission_status", self.client.get("/api/form-status/").json())
         r = self.client.post("/api/feedback/submit/", {"attendee_id": self.a2.pk, "feedback_data": {"x": 1}}, format="json")
-        self.assertEqual(r.json()["code"], "device_submitted")
+        self.assertEqual(r.status_code, 201)
 
     def test_submit_with_new_attendee(self):
         r = self.client.post(
