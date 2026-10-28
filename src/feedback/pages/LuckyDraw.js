@@ -56,11 +56,11 @@ function randomDigit(not) {
 function WinnerName({ name }) {
   let index = 0;
   return (
-    <p className="winner-name is-animated" aria-label={name}>
+    <p className="dlgfb-winner-name dlgfb-is-animated" aria-label={name}>
       {name.split(" ").map((word, w) => (
-        <span className="winner-word" key={w} aria-hidden="true">
+        <span className="dlgfb-winner-word" key={w} aria-hidden="true">
           {word.split("").map((ch) => (
-            <span className="winner-letter" key={index} style={{ animationDelay: `${0.1 + index++ * 0.045}s` }}>
+            <span className="dlgfb-winner-letter" key={index} style={{ animationDelay: `${0.1 + index++ * 0.045}s` }}>
               {ch}
             </span>
           ))}
@@ -375,30 +375,30 @@ export default function LuckyDraw({ autoFullscreen = false }) {
   else if (phase === "revealed" && winner) srLabel = `Winner ${winner.attendee_name}, entry ${entryText}`;
 
   return (
-    <div className="draw-page">
+    <div className="dlgfb-draw-page">
       <section
-        className={`draw-stage phase-${phase}${fullscreen || autoFullscreen ? " is-fullscreen" : ""}${autoFullscreen ? " is-window" : ""}`}
+        className={`dlgfb-draw-stage dlgfb-phase-${phase}${fullscreen || autoFullscreen ? " dlgfb-is-fullscreen" : ""}${autoFullscreen ? " dlgfb-is-window" : ""}`}
         ref={stageRef}
       >
         {/* Inside the stage so the confetti still shows in full screen */}
         {celebrate && <Confetti />}
 
-        <div className="draw-topbar">
-          <div className="draw-meta">
+        <div className="dlgfb-draw-topbar">
+          <div className="dlgfb-draw-meta">
             {/* {pool && pool.count > 0 && (
-              <span className="draw-chip">Range {padId(1, padLength)} to {padId(pool.max_id, padLength)}</span>
+              <span className="dlgfb-draw-chip">Range {padId(1, padLength)} to {padId(pool.max_id, padLength)}</span>
             )}
             {pool?.past_winners > 0 && (
-              <span className="draw-chip">
+              <span className="dlgfb-draw-chip">
                 {pool.past_winners} past winner{pool.past_winners > 1 ? "s" : ""} excluded
               </span>
             )}
-            <span className="draw-chip">{spinSeconds}s spin</span>
-            <span className="draw-chip draw-chip-strong">{attemptText}</span> */}
+            <span className="dlgfb-draw-chip">{spinSeconds}s spin</span>
+            <span className="dlgfb-draw-chip dlgfb-draw-chip-strong">{attemptText}</span> */}
           </div>
-          <div className="draw-actions">
+          <div className="dlgfb-draw-actions">
             {canStartNew && (
-              <button type="button" className="btn-fullscreen btn-next-spin" onClick={spinNext} disabled={poolEmpty} aria-label="Spin for the next prize">
+              <button type="button" className="dlgfb-btn-fullscreen dlgfb-btn-next-spin" onClick={spinNext} disabled={poolEmpty} aria-label="Spin for the next prize">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M20 12a8 8 0 11-2.34-5.66" />
                   <path d="M20 4v4.5h-4.5" />
@@ -406,7 +406,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
                 <span>Spin</span>
               </button>
             )}
-            <button type="button" className={`btn-fullscreen${fullscreen ? " is-on" : ""}`} onClick={toggleFullscreen} aria-pressed={fullscreen}>
+            <button type="button" className={`dlgfb-btn-fullscreen${fullscreen ? " dlgfb-is-on" : ""}`} onClick={toggleFullscreen} aria-pressed={fullscreen}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 {fullscreen ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /> : <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />}
               </svg>
@@ -415,61 +415,61 @@ export default function LuckyDraw({ autoFullscreen = false }) {
           </div>
         </div>
 
-        <p className="draw-kicker">{process.env.REACT_APP_EVENT_NAME || "Summit"}</p>
-        <h1 className="draw-title">Lucky Draw</h1>
+        <p className="dlgfb-draw-kicker">{process.env.REACT_APP_EVENT_NAME || "Summit"}</p>
+        <h1 className="dlgfb-draw-title">Lucky Draw</h1>
 
         <SlotMachine reels={reels} state={phase === "revealing" ? "suspense" : phase} label={srLabel} />
 
-        <div className="spin-progress" aria-hidden="true">
+        <div className="dlgfb-spin-progress" aria-hidden="true">
           {phase === "spinning" && (
-            <span className="spin-progress-bar" key={attempts} style={{ animationDuration: `${spinSeconds}s` }} />
+            <span className="dlgfb-spin-progress-bar" key={attempts} style={{ animationDuration: `${spinSeconds}s` }} />
           )}
         </div>
 
-        <div className="winner-area" aria-live="assertive">
+        <div className="dlgfb-winner-area" aria-live="assertive">
           {/* Before the first spin nothing is shown, only these two problem cases get a message. */}
           {phase === "idle" && ((poolEmpty && pool) || canStartNew) && (
-            <p className="draw-hint">
+            <p className="dlgfb-draw-hint">
               {poolEmpty && pool
                 ? "No eligible entries. Entries appear once attendees submit feedback, and past winners are left out."
                 : "The last spin was interrupted and no spins are left. Press Spin at the top to start the next draw."}
               {/* : `Press Spin to start. The reels stop after ${spinSeconds} seconds and the winner's name is shown.` */}
             </p>
           )}
-          {phase === "spinning" && <p className="draw-hint">Drawing an entry</p>}
+          {phase === "spinning" && <p className="dlgfb-draw-hint">Drawing an entry</p>}
           {phase === "landed" && revealFailed && (
-            <div className="entry-card">
-              <p className="winner-kicker">Entry drawn</p>
-              <p className="entry-number">No. {entryText}</p>
-              <p className="draw-hint mb-0">The name could not be revealed.</p>
+            <div className="dlgfb-entry-card">
+              <p className="dlgfb-winner-kicker">Entry drawn</p>
+              <p className="dlgfb-entry-number">No. {entryText}</p>
+              <p className="dlgfb-draw-hint dlgfb-mb-0">The name could not be revealed.</p>
             </div>
           )}
           {(phase === "revealing" || (phase === "landed" && !revealFailed)) && (
-            <div className="suspense-card">
-              <p className="winner-kicker">Entry No. {entryText}</p>
+            <div className="dlgfb-suspense-card">
+              <p className="dlgfb-winner-kicker">Entry No. {entryText}</p>
               <NameScramble name={pending?.attendee_name} />
-              <p className="suspense-text">
+              <p className="dlgfb-suspense-text">
                 And the winner is
-                <span className="suspense-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>
+                <span className="dlgfb-suspense-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>
               </p>
             </div>
           )}
           {phase === "revealed" && winner && (
-            <div className="winner-card">
-              <p className="winner-kicker">Congratulations!</p>
+            <div className="dlgfb-winner-card">
+              <p className="dlgfb-winner-kicker">Congratulations!</p>
               <WinnerName name={winner.attendee_name} />
-              {winner.company_name && <p className="winner-company">{winner.company_name}</p>}
+              {winner.company_name && <p className="dlgfb-winner-company">{winner.company_name}</p>}
             </div>
           )}
         </div>
 
         {/* The big Spin button is for the first draw only, after a reveal the next spin is in the top bar. */}
-        <div className="draw-controls">
+        <div className="dlgfb-draw-controls">
           {(phase === "idle" || phase === "spinning") && !canStartNew && (
-            <button className="btn btn-draw btn-lg" onClick={spin} disabled={!canSpin}>
+            <button className="dlgfb-btn dlgfb-btn-draw dlgfb-btn-lg" onClick={spin} disabled={!canSpin}>
               {phase === "spinning" ? (
                 <>
-                  <span className="spinner-border spinner-border-sm mr-2" aria-hidden="true" />
+                  <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-mr-2" aria-hidden="true" />
                   Spinning
                 </>
               ) : (
@@ -479,24 +479,24 @@ export default function LuckyDraw({ autoFullscreen = false }) {
           )}
           {/* Only shown when the automatic reveal failed, so the draw is never stuck on a number. */}
           {revealFailed && canReveal && (
-            <button className="btn btn-reveal btn-lg is-ready" onClick={() => setRevealFailed(false)}>
+            <button className="dlgfb-btn dlgfb-btn-reveal dlgfb-btn-lg dlgfb-is-ready" onClick={() => setRevealFailed(false)}>
               Try again
             </button>
           )}
         </div>
 
-        {/* {phase === "revealed" && <p className="draw-note">This draw is finished. Start the next draw for the next prize.</p>} */}
+        {/* {phase === "revealed" && <p className="dlgfb-draw-note">This draw is finished. Start the next draw for the next prize.</p>} */}
       </section>
 
-      {/* <section className="mt-4">
-        <div className="section-head">
-          <h2 className="h5 mb-0">Winner history</h2>
+      {/* <section className="dlgfb-mt-4">
+        <div className="dlgfb-section-head">
+          <h2 className="dlgfb-h5 dlgfb-mb-0">Winner history</h2>
           {winners.length > 0 && (
-            <button className="btn btn-sm btn-outline-secondary" onClick={() => setConfirmClear(true)}>Clear history</button>
+            <button className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-outline-secondary" onClick={() => setConfirmClear(true)}>Clear history</button>
           )}
         </div>
-        <div className="table-card">
-          <table className="table table-stack mb-0">
+        <div className="dlgfb-table-card">
+          <table className="dlgfb-table dlgfb-table-stack dlgfb-mb-0">
             <thead>
               <tr>
                 <th>Entry</th>
@@ -509,16 +509,16 @@ export default function LuckyDraw({ autoFullscreen = false }) {
             </thead>
             <tbody>
               {winners.length === 0 && (
-                <tr className="empty-row"><td colSpan={6} className="text-center text-muted py-4">Revealed winners are listed here.</td></tr>
+                <tr className="dlgfb-empty-row"><td colSpan={6} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">Revealed winners are listed here.</td></tr>
               )}
               {winners.map((w) => (
                 <tr key={w.id}>
-                  <td data-label="Entry" className="id-cell">{padId(w.submission_id, padLength)}</td>
-                  <td data-label="Attendee" className="font-weight-bold">{w.attendee_name}</td>
+                  <td data-label="Entry" className="dlgfb-id-cell">{padId(w.submission_id, padLength)}</td>
+                  <td data-label="Attendee" className="dlgfb-font-weight-bold">{w.attendee_name}</td>
                   <td data-label="Company">{w.company_name || "Not listed"}</td>
                   <td data-label="Attempt">{w.attempt_number}</td>
                   <td data-label="Drawn by">{w.drawn_by || "Unknown"}</td>
-                  <td data-label="Drawn at" className="text-nowrap">{formatDate(w.drawn_at)}</td>
+                  <td data-label="Drawn at" className="dlgfb-text-nowrap">{formatDate(w.drawn_at)}</td>
                 </tr>
               ))}
             </tbody>

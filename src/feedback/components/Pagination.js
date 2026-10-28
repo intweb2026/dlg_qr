@@ -27,26 +27,26 @@ export default function Pagination({ page, total, onChange, noun = "rows" }) {
   const to = Math.min(page * PAGE_SIZE, total);
 
   return (
-    <div className="pager">
-      <span className="pager-summary">
+    <div className="dlgfb-pager">
+      <span className="dlgfb-pager-summary">
         {from} to {to} of {total} {noun}
       </span>
       {pages > 1 && (
         <nav aria-label="Pages">
-          <ul className="pager-list">
+          <ul className="dlgfb-pager-list">
             <li>
-              <button type="button" className="pager-btn" disabled={page === 1} onClick={() => onChange(page - 1)} aria-label="Previous page">
+              <button type="button" className="dlgfb-pager-btn" disabled={page === 1} onClick={() => onChange(page - 1)} aria-label="Previous page">
                 ‹
               </button>
             </li>
             {pageItems(page, pages).map((p) =>
               typeof p === "string" ? (
-                <li key={p} className="pager-gap" aria-hidden="true">…</li>
+                <li key={p} className="dlgfb-pager-gap" aria-hidden="true">…</li>
               ) : (
                 <li key={p}>
                   <button
                     type="button"
-                    className={`pager-btn${p === page ? " active" : ""}`}
+                    className={`dlgfb-pager-btn${p === page ? " dlgfb-active" : ""}`}
                     aria-current={p === page ? "page" : undefined}
                     onClick={() => onChange(p)}
                   >
@@ -56,7 +56,7 @@ export default function Pagination({ page, total, onChange, noun = "rows" }) {
               )
             )}
             <li>
-              <button type="button" className="pager-btn" disabled={page === pages} onClick={() => onChange(page + 1)} aria-label="Next page">
+              <button type="button" className="dlgfb-pager-btn" disabled={page === pages} onClick={() => onChange(page + 1)} aria-label="Next page">
                 ›
               </button>
             </li>

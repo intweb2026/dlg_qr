@@ -144,15 +144,15 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
   if (value) {
     return (
       <>
-        <div className="selected-attendee">
-          <span className="attendee-avatar" aria-hidden="true">{initials(value.full_name)}</span>
-          <div className="selected-attendee-text">
-            <div className="selected-attendee-name">{value.full_name}</div>
-            <div className="selected-attendee-company">
+        <div className="dlgfb-selected-attendee">
+          <span className="dlgfb-attendee-avatar" aria-hidden="true">{initials(value.full_name)}</span>
+          <div className="dlgfb-selected-attendee-text">
+            <div className="dlgfb-selected-attendee-name">{value.full_name}</div>
+            <div className="dlgfb-selected-attendee-company">
               {value.is_new ? "New attendee, not on the list" : value.company_name || "No company listed"}
             </div>
           </div>
-          <button type="button" className="btn btn-sm btn-change" onClick={() => onChange(null)}>
+          <button type="button" className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-change" onClick={() => onChange(null)}>
             Change
           </button>
         </div>
@@ -161,7 +161,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
             <input
               id="q-company"
               type="text"
-              className={`form-control new-attendee-company${companyInvalid ? " is-invalid" : ""}`}
+              className={`dlgfb-form-control dlgfb-new-attendee-company${companyInvalid ? " dlgfb-is-invalid" : ""}`}
               placeholder="Company name"
               aria-label="Company name"
               aria-required="true"
@@ -171,16 +171,16 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               onChange={(e) => onChange({ ...value, company_name: e.target.value })}
             />
             {companyInvalid ? (
-              <div className="invalid-feedback d-block">Enter your company name to add yourself.</div>
+              <div className="dlgfb-invalid-feedback dlgfb-d-block">Enter your company name to add yourself.</div>
             ) : (
-              <small className="form-text text-muted">Required, it tells you apart from someone with the same name.</small>
+              <small className="dlgfb-form-text dlgfb-text-muted">Required, it tells you apart from someone with the same name.</small>
             )}
             <input
               id="q-email"
               type="email"
               inputMode="email"
               autoComplete="email"
-              className={`form-control new-attendee-company${emailInvalid ? " is-invalid" : ""}`}
+              className={`dlgfb-form-control dlgfb-new-attendee-company${emailInvalid ? " dlgfb-is-invalid" : ""}`}
               placeholder="Email (optional)"
               aria-label="Email, optional"
               aria-invalid={!!emailInvalid}
@@ -188,7 +188,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               value={value.email}
               onChange={(e) => onChange({ ...value, email: e.target.value })}
             />
-            {emailInvalid && <div className="invalid-feedback d-block">Enter a valid email address, or leave it empty.</div>}
+            {emailInvalid && <div className="dlgfb-invalid-feedback dlgfb-d-block">Enter a valid email address, or leave it empty.</div>}
           </>
         )}
       </>
@@ -205,16 +205,16 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
   } else hint = "Type at least 3 letters of your name, then pick it from the list, or add it if it is not there.";
 
   return (
-    <div className="attendee-search" ref={wrapRef}>
-      <div className={`search-field${invalid ? " is-invalid" : ""}`}>
-        <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <div className="dlgfb-attendee-search" ref={wrapRef}>
+      <div className={`dlgfb-search-field${invalid ? " dlgfb-is-invalid" : ""}`}>
+        <svg className="dlgfb-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
           <circle cx="11" cy="11" r="6.5" />
           <path d="M16 16l4.5 4.5" />
         </svg>
         <input
           id="attendee-search"
           type="text"
-          className="form-control form-control-lg"
+          className="dlgfb-form-control dlgfb-form-control-lg"
           placeholder={loading ? "Loading attendees" : "Start typing your name"}
           autoComplete="off"
           autoCorrect="off"
@@ -236,9 +236,9 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
         />
-        {loading && <span className="spinner-border spinner-border-sm search-spinner" role="status" aria-label="Loading" />}
+        {loading && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-search-spinner" role="status" aria-label="Loading" />}
         {query && !loading && (
-          <button type="button" className="search-clear" aria-label="Clear search" onClick={() => setQuery("")}>
+          <button type="button" className="dlgfb-search-clear" aria-label="Clear search" onClick={() => setQuery("")}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M7 7l10 10M17 7L7 17" />
             </svg>
@@ -247,19 +247,19 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
       </div>
 
       {loadError ? (
-        <div className="search-error" id="attendee-hint">
+        <div className="dlgfb-search-error" id="attendee-hint">
           <span>The attendee list could not load.</span>
-          <button type="button" className="btn btn-link btn-sm p-0" onClick={onRetry}>Try again</button>
+          <button type="button" className="dlgfb-btn dlgfb-btn-link dlgfb-btn-sm dlgfb-p-0" onClick={onRetry}>Try again</button>
         </div>
       ) : (
-        <small className="form-text text-muted" id="attendee-hint">{hint}</small>
+        <small className="dlgfb-form-text dlgfb-text-muted" id="attendee-hint">{hint}</small>
       )}
-      {invalid && <div className="invalid-feedback d-block">Select your name from the list, or add it as a new attendee.</div>}
+      {invalid && <div className="dlgfb-invalid-feedback dlgfb-d-block">Select your name from the list, or add it as a new attendee.</div>}
 
       {open && searching && (
-        <div className="attendee-results" id="attendee-results" role="listbox" ref={listRef}>
+        <div className="dlgfb-attendee-results" id="attendee-results" role="listbox" ref={listRef}>
           {shown.length === 0 && (
-            <div className="attendee-empty">
+            <div className="dlgfb-attendee-empty">
               No attendee matches “{term}”. Check the spelling, or add your name below.
             </div>
           )}
@@ -270,17 +270,17 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               data-index={i}
               role="option"
               aria-selected={i === highlight}
-              className={`attendee-option${i === highlight ? " active" : ""}`}
+              className={`dlgfb-attendee-option${i === highlight ? " dlgfb-active" : ""}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 pick(a);
               }}
               onMouseEnter={() => setHighlight(i)}
             >
-              <span className="attendee-avatar" aria-hidden="true">{initials(a.full_name)}</span>
-              <span className="attendee-option-text">
-                <span className="attendee-option-name"><Highlight text={a.full_name} term={terms[0]} /></span>
-                <span className="attendee-option-company">{a.company_name || "No company listed"}</span>
+              <span className="dlgfb-attendee-avatar" aria-hidden="true">{initials(a.full_name)}</span>
+              <span className="dlgfb-attendee-option-text">
+                <span className="dlgfb-attendee-option-name"><Highlight text={a.full_name} term={terms[0]} /></span>
+                <span className="dlgfb-attendee-option-company">{a.company_name || "No company listed"}</span>
               </span>
             </div>
           ))}
@@ -290,24 +290,24 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               data-index={addIndex}
               role="option"
               aria-selected={highlight === addIndex}
-              className={`attendee-option attendee-option-new${highlight === addIndex ? " active" : ""}`}
+              className={`dlgfb-attendee-option dlgfb-attendee-option-new${highlight === addIndex ? " dlgfb-active" : ""}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 addNew();
               }}
               onMouseEnter={() => setHighlight(addIndex)}
             >
-              <span className="attendee-avatar" aria-hidden="true">+</span>
-              <span className="attendee-option-text">
-                <span className="attendee-option-name">Add “{newName}”</span>
-                <span className="attendee-option-company">
+              <span className="dlgfb-attendee-avatar" aria-hidden="true">+</span>
+              <span className="dlgfb-attendee-option-text">
+                <span className="dlgfb-attendee-option-name">Add “{newName}”</span>
+                <span className="dlgfb-attendee-option-company">
                   {sameNameListed ? "Same name, I am from another company" : "My name is not on the list"}
                 </span>
               </span>
             </div>
           )}
           {matches.length > MAX_RESULTS && (
-            <div className="attendee-more">
+            <div className="dlgfb-attendee-more">
               {matches.length - MAX_RESULTS} more match{matches.length - MAX_RESULTS > 1 ? "es" : ""}, keep typing to narrow the list.
             </div>
           )}

@@ -21,7 +21,7 @@ export default function Confetti({ pieces = 90 }) {
     [pieces]
   );
   return (
-    <div className="confetti" aria-hidden="true">
+    <div className="dlgfb-confetti" aria-hidden="true">
       {bits.map((b) => (
         <span
           key={b.id}

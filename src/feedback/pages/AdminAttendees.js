@@ -98,64 +98,64 @@ export default function AdminAttendees() {
 
   return (
     <>
-      <div className="page-head">
+      <div className="dlgfb-page-head">
         <div>
           <h1>Attendees</h1>
-          <p className="text-muted mb-0">Everyone listed here can find their name on the feedback form.</p>
+          <p className="dlgfb-text-muted dlgfb-mb-0">Everyone listed here can find their name on the feedback form.</p>
         </div>
       </div>
 
-      <div className="stat-grid">
-        <div className="stat-card"><span className="stat-value">{list.length}</span><span className="stat-label">{q || walkIn ? "Matching" : "Attendees"}</span></div>
-        <div className="stat-card stat-good"><span className="stat-value">{submitted}</span><span className="stat-label">Submitted</span></div>
-        <div className="stat-card"><span className="stat-value">{list.length - submitted}</span><span className="stat-label">Pending</span></div>
+      <div className="dlgfb-stat-grid">
+        <div className="dlgfb-stat-card"><span className="dlgfb-stat-value">{list.length}</span><span className="dlgfb-stat-label">{q || walkIn ? "Matching" : "Attendees"}</span></div>
+        <div className="dlgfb-stat-card dlgfb-stat-good"><span className="dlgfb-stat-value">{submitted}</span><span className="dlgfb-stat-label">Submitted</span></div>
+        <div className="dlgfb-stat-card"><span className="dlgfb-stat-value">{list.length - submitted}</span><span className="dlgfb-stat-label">Pending</span></div>
       </div>
 
-      {/* <div className="row">
-        <div className="col-lg-8 mb-3">
-          <form className="panel" onSubmit={add}>
-            <h2 className="h6 mb-3">Add an attendee</h2>
-            <div className="form-row">
-              <div className="col-md-4 mb-2">
-                <input className="form-control" placeholder="Attendee name" aria-label="Attendee name"
+      {/* <div className="dlgfb-row">
+        <div className="dlgfb-col-lg-8 dlgfb-mb-3">
+          <form className="dlgfb-panel" onSubmit={add}>
+            <h2 className="dlgfb-h6 dlgfb-mb-3">Add an attendee</h2>
+            <div className="dlgfb-form-row">
+              <div className="dlgfb-col-md-4 dlgfb-mb-2">
+                <input className="dlgfb-form-control" placeholder="Attendee name" aria-label="Attendee name"
                   value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
               </div>
-              <div className="col-md-4 mb-2">
-                <input className="form-control" placeholder="Company name" aria-label="Company name"
+              <div className="dlgfb-col-md-4 dlgfb-mb-2">
+                <input className="dlgfb-form-control" placeholder="Company name" aria-label="Company name"
                   value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
               </div>
-              <div className="col-md-4 mb-2">
-                <input type="email" className="form-control" placeholder="Email, optional" aria-label="Email"
+              <div className="dlgfb-col-md-4 dlgfb-mb-2">
+                <input type="email" className="dlgfb-form-control" placeholder="Email, optional" aria-label="Email"
                   value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </div>
             </div>
-            <button className="btn btn-primary btn-sm" disabled={saving}>{saving ? "Adding" : "Add attendee"}</button>
+            <button className="dlgfb-btn dlgfb-btn-primary dlgfb-btn-sm" disabled={saving}>{saving ? "Adding" : "Add attendee"}</button>
           </form>
         </div>
-        <div className="col-lg-4 mb-3">
-          <div className="panel h-100">
-            <h2 className="h6 mb-2">Import from CSV</h2>
-            <p className="small text-muted">Columns full_name, company_name, email. Rows with an existing email are skipped.</p>
-            <div className="custom-file">
-              <input ref={fileRef} type="file" accept=".csv" className="custom-file-input" id="csv-file" onChange={importCsv} disabled={importing} />
-              <label className="custom-file-label" htmlFor="csv-file">{importing ? "Importing" : "Choose CSV file"}</label>
+        <div className="dlgfb-col-lg-4 dlgfb-mb-3">
+          <div className="dlgfb-panel dlgfb-h-100">
+            <h2 className="dlgfb-h6 dlgfb-mb-2">Import from CSV</h2>
+            <p className="dlgfb-small dlgfb-text-muted">Columns full_name, company_name, email. Rows with an existing email are skipped.</p>
+            <div className="dlgfb-custom-file">
+              <input ref={fileRef} type="file" accept=".csv" className="dlgfb-custom-file-input" id="csv-file" onChange={importCsv} disabled={importing} />
+              <label className="dlgfb-custom-file-label" htmlFor="csv-file">{importing ? "Importing" : "Choose CSV file"}</label>
             </div>
           </div>
         </div>
       </div> */}
 
-      <div className="filter-row">
-        <input type="search" className="form-control" placeholder="Search by name, email or company"
+      <div className="dlgfb-filter-row">
+        <input type="search" className="dlgfb-form-control" placeholder="Search by name, email or company"
           value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search attendees" />
-        <select className="custom-select" value={walkIn} onChange={(e) => setWalkIn(e.target.value)} aria-label="Filter by source">
+        <select className="dlgfb-custom-select" value={walkIn} onChange={(e) => setWalkIn(e.target.value)} aria-label="Filter by source">
           <option value="">All attendees</option>
           <option value="false">From the list</option>
           <option value="true">Self-registered</option>
         </select>
       </div>
 
-      <div className="table-card">
-        <table className="table table-hover table-stack mb-0">
+      <div className="dlgfb-table-card">
+        <table className="dlgfb-table dlgfb-table-hover dlgfb-table-stack dlgfb-mb-0">
           <thead>
             <tr>
               <th>ID</th>
@@ -163,27 +163,27 @@ export default function AdminAttendees() {
               <th>Company name</th>
               <th>Email</th>
               <th>Feedback</th>
-              <th className="text-right">Actions</th>
+              <th className="dlgfb-text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {list.length === 0 && (
-              <tr className="empty-row"><td colSpan={6} className="text-center text-muted py-4">
+              <tr className="dlgfb-empty-row"><td colSpan={6} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">
                 {q || walkIn ? "No attendees match these filters." : "No attendees yet. Add one above or import a CSV."}
               </td></tr>
             )}
             {pageSlice(list, page).map((a) => (
               <tr key={a.attendee_id}>
-                <td data-label="ID" className="id-cell">{a.attendee_id}</td>
-                <td data-label="Name" className="font-weight-bold">
+                <td data-label="ID" className="dlgfb-id-cell">{a.attendee_id}</td>
+                <td data-label="Name" className="dlgfb-font-weight-bold">
                   {a.full_name}
-                  {a.is_walk_in && <span className="badge badge-self-registered ml-2" title="Added on the feedback form">Self-registered</span>}
+                  {a.is_walk_in && <span className="dlgfb-badge dlgfb-badge-self-registered dlgfb-ml-2" title="Added on the feedback form">Self-registered</span>}
                 </td>
                 <td data-label="Company">{a.company_name || "---"}</td>
-                <td data-label="Email" className="text-break">{a.email || "---"}</td>
-                <td data-label="Feedback">{a.has_submitted ? <span className="badge badge-active">Submitted</span> : <span className="badge badge-pending">Pending</span>}</td>
-                <td className="text-right actions-cell">
-                  <button className="btn btn-sm btn-outline-danger" disabled={a.has_submitted} title={a.has_submitted ? "Suspend the submission instead" : undefined}
+                <td data-label="Email" className="dlgfb-text-break">{a.email || "---"}</td>
+                <td data-label="Feedback">{a.has_submitted ? <span className="dlgfb-badge dlgfb-badge-active">Submitted</span> : <span className="dlgfb-badge dlgfb-badge-pending">Pending</span>}</td>
+                <td className="dlgfb-text-right dlgfb-actions-cell">
+                  <button className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-outline-danger" disabled={a.has_submitted} title={a.has_submitted ? "Suspend the submission instead" : undefined}
                     onClick={() => setDeleting(a)}>Delete</button>
                 </td>
               </tr>

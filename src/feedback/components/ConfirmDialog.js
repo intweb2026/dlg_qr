@@ -8,17 +8,17 @@ export default function ConfirmDialog({ title, children, confirmLabel = "Confirm
       onClose={() => !busy && onCancel()}
       footer={
         <>
-          <button type="button" className="btn btn-light" disabled={busy} onClick={onCancel}>
+          <button type="button" className="dlgfb-btn dlgfb-btn-light" disabled={busy} onClick={onCancel}>
             Cancel
           </button>
-          <button type="button" className={`btn btn-${tone}`} disabled={busy} onClick={onConfirm} autoFocus>
-            {busy && <span className="spinner-border spinner-border-sm mr-2" aria-hidden="true" />}
+          <button type="button" className={`dlgfb-btn dlgfb-btn-${tone}`} disabled={busy} onClick={onConfirm} autoFocus>
+            {busy && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-mr-2" aria-hidden="true" />}
             {confirmLabel}
           </button>
         </>
       }
     >
-      <p className="mb-0">{children}</p>
+      <p className="dlgfb-mb-0">{children}</p>
     </Modal>
   );
 }

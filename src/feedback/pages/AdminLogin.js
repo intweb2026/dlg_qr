@@ -34,41 +34,41 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-wrap">
-        <div className="login-intro">
-          <span className="admin-brand-mark" aria-hidden="true">{EVENT_NAME.charAt(0)}</span>
-          <p className="event-name mb-1">{EVENT_NAME}</p>
+    <div className="dlgfb-login-page">
+      <div className="dlgfb-login-wrap">
+        <div className="dlgfb-login-intro">
+          <span className="dlgfb-admin-brand-mark" aria-hidden="true">{EVENT_NAME.charAt(0)}</span>
+          <p className="dlgfb-event-name dlgfb-mb-1">{EVENT_NAME}</p>
           <h1>Event admin</h1>
-          <p className="login-intro-copy">Manage feedback, attendees and the lucky draw.</p>
+          <p className="dlgfb-login-intro-copy">Manage feedback, attendees and the lucky draw.</p>
         </div>
-        <form className="login-card" onSubmit={submit} noValidate>
-          <h2 className="h5 mb-1">Sign in</h2>
-          <p className="text-muted small mb-4">Use your admin username and password.</p>
+        <form className="dlgfb-login-card" onSubmit={submit} noValidate>
+          <h2 className="dlgfb-h5 dlgfb-mb-1">Sign in</h2>
+          <p className="dlgfb-text-muted dlgfb-small dlgfb-mb-4">Use your admin username and password.</p>
           {error && (
-            <div className="login-error" role="alert">
+            <div className="dlgfb-login-error" role="alert">
               {error}
             </div>
           )}
-          <div className="form-group">
+          <div className="dlgfb-form-group">
             <label htmlFor="username">Username</label>
-            <input id="username" className="form-control form-control-lg" autoComplete="username" autoCapitalize="none"
+            <input id="username" className="dlgfb-form-control dlgfb-form-control-lg" autoComplete="username" autoCapitalize="none"
               value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required autoFocus />
           </div>
-          <div className="form-group">
+          <div className="dlgfb-form-group">
             <label htmlFor="password">Password</label>
-            <div className="password-field">
-              <input id="password" type={showPassword ? "text" : "password"} className="form-control form-control-lg"
+            <div className="dlgfb-password-field">
+              <input id="password" type={showPassword ? "text" : "password"} className="dlgfb-form-control dlgfb-form-control-lg"
                 autoComplete="current-password" value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-              <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}
+              <button type="button" className="dlgfb-password-toggle" onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}>
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
           </div>
-          <button className="btn btn-primary btn-lg btn-block" disabled={busy || !form.username.trim() || !form.password}>
-            {busy && <span className="spinner-border spinner-border-sm mr-2" aria-hidden="true" />}
+          <button className="dlgfb-btn dlgfb-btn-primary dlgfb-btn-lg dlgfb-btn-block" disabled={busy || !form.username.trim() || !form.password}>
+            {busy && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-mr-2" aria-hidden="true" />}
             {busy ? "Signing in" : "Sign in"}
           </button>
         </form>

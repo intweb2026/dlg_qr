@@ -52,29 +52,29 @@ function ToastItem({ toast, onDismiss }) {
 
   return (
     <div
-      className={`app-toast app-toast-${toast.variant}${leaving ? " is-leaving" : ""}`}
+      className={`dlgfb-app-toast dlgfb-app-toast-${toast.variant}${leaving ? " dlgfb-is-leaving" : ""}`}
       role={urgent ? "alert" : "status"}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <span className="app-toast-icon" aria-hidden="true">
+      <span className="dlgfb-app-toast-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
           {ICONS[toast.variant] || ICONS.info}
         </svg>
       </span>
-      <div className="app-toast-text">
-        {toast.title && <p className="app-toast-title">{toast.title}</p>}
-        <p className="app-toast-message">{toast.message}</p>
+      <div className="dlgfb-app-toast-text">
+        {toast.title && <p className="dlgfb-app-toast-title">{toast.title}</p>}
+        <p className="dlgfb-app-toast-message">{toast.message}</p>
       </div>
-      <button type="button" className="app-toast-close" aria-label="Dismiss notification" onClick={close}>
+      <button type="button" className="dlgfb-app-toast-close" aria-label="Dismiss notification" onClick={close}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
           <path d="M6 6l12 12M18 6L6 18" />
         </svg>
       </button>
       <span
-        className="app-toast-timer"
+        className="dlgfb-app-toast-timer"
         aria-hidden="true"
         style={{ animationDuration: `${toast.timeout}ms`, animationPlayState: paused ? "paused" : "running" }}
       />
@@ -102,7 +102,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={notify}>
       {children}
-      <div className="toast-stack" aria-live="polite">
+      <div className="dlgfb-toast-stack" aria-live="polite">
         {toasts.map((t) => (
           <ToastItem key={t.id} toast={t} onDismiss={dismiss} />
         ))}

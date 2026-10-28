@@ -20,19 +20,19 @@ export default function AdminLayout() {
     navigate("/admin/login");
   };
 
-  const link = ({ isActive }) => `admin-link${isActive ? " active" : ""}`;
+  const link = ({ isActive }) => `dlgfb-admin-link${isActive ? " dlgfb-active" : ""}`;
   const name = user?.full_name || user?.username || "";
 
   return (
-    <div className="admin-shell">
-      <header className="admin-nav">
-        <div className="container admin-nav-inner">
-          <span className="admin-brand">
-            <span className="admin-brand-mark" aria-hidden="true">{EVENT_NAME.charAt(0)}</span>
-            <span>{EVENT_NAME} <span className="admin-brand-sub">Admin</span></span>
+    <div className="dlgfb-admin-shell">
+      <header className="dlgfb-admin-nav">
+        <div className="dlgfb-container dlgfb-admin-nav-inner">
+          <span className="dlgfb-admin-brand">
+            <span className="dlgfb-admin-brand-mark" aria-hidden="true">{EVENT_NAME.charAt(0)}</span>
+            <span>{EVENT_NAME} <span className="dlgfb-admin-brand-sub">Admin</span></span>
           </span>
           <button
-            className={`admin-burger${open ? " open" : ""}`}
+            className={`dlgfb-admin-burger${open ? " dlgfb-open" : ""}`}
             type="button"
             aria-label="Toggle navigation"
             aria-expanded={open}
@@ -43,21 +43,21 @@ export default function AdminLayout() {
             <span />
             <span />
           </button>
-          <div className={`admin-menu${open ? " show" : ""}`} id="admin-menu">
-            <nav className="admin-links" aria-label="Admin">
+          <div className={`dlgfb-admin-menu${open ? " dlgfb-show" : ""}`} id="admin-menu">
+            <nav className="dlgfb-admin-links" aria-label="Admin">
               <NavLink className={link} to="/admin/lucky-draw">Lucky draw</NavLink>
               <NavLink className={link} to="/admin/feedback-submission">Submissions</NavLink>
               <NavLink className={link} to="/admin/attendees">Attendees</NavLink>
             </nav>
-            <div className="admin-user">
-              <span className="admin-avatar" aria-hidden="true">{name.charAt(0).toUpperCase()}</span>
-              <span className="admin-user-name">{name}</span>
-              <button className="btn btn-sm btn-signout" onClick={handleLogout}>Sign out</button>
+            <div className="dlgfb-admin-user">
+              <span className="dlgfb-admin-avatar" aria-hidden="true">{name.charAt(0).toUpperCase()}</span>
+              <span className="dlgfb-admin-user-name">{name}</span>
+              <button className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-signout" onClick={handleLogout}>Sign out</button>
             </div>
           </div>
         </div>
       </header>
-      <main className="container admin-main">
+      <main className="dlgfb-container dlgfb-admin-main">
         <Outlet />
       </main>
     </div>
