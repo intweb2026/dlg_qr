@@ -83,9 +83,9 @@ function SettingsPanel() {
 
   if (!cfg) {
     return (
-      <div className="settings-grid">
-        <div className="panel skeleton-panel"><div className="skeleton skeleton-line w-75" /><div className="skeleton skeleton-line w-50" /></div>
-        <div className="panel skeleton-panel"><div className="skeleton skeleton-line w-75" /><div className="skeleton skeleton-line w-50" /></div>
+      <div className="dlgfb-settings-grid">
+        <div className="dlgfb-panel dlgfb-skeleton-panel"><div className="dlgfb-skeleton dlgfb-skeleton-line dlgfb-w-75" /><div className="dlgfb-skeleton dlgfb-skeleton-line dlgfb-w-50" /></div>
+        <div className="dlgfb-panel dlgfb-skeleton-panel"><div className="dlgfb-skeleton dlgfb-skeleton-line dlgfb-w-75" /><div className="dlgfb-skeleton dlgfb-skeleton-line dlgfb-w-50" /></div>
       </div>
     );
   }
@@ -94,15 +94,15 @@ function SettingsPanel() {
   const dirty = spins !== String(cfg.max_spin_attempts) || seconds !== String(cfg.spin_duration_seconds);
 
   return (
-    <div className="settings-grid">
-      <div className={`panel status-card${active ? " is-open" : " is-closed"}`}>
-        <div className="status-card-text">
-          <span className="panel-label">Feedback form</span>
-          <span className="status-pill">
-            <span className="status-dot" aria-hidden="true" />
+    <div className="dlgfb-settings-grid">
+      <div className={`dlgfb-panel dlgfb-status-card${active ? " dlgfb-is-open" : " dlgfb-is-closed"}`}>
+        <div className="dlgfb-status-card-text">
+          <span className="dlgfb-panel-label">Feedback form</span>
+          <span className="dlgfb-status-pill">
+            <span className="dlgfb-status-dot" aria-hidden="true" />
             {active ? "Open for responses" : "Closed"}
           </span>
-          <p className="panel-help mb-0">
+          <p className="dlgfb-panel-help dlgfb-mb-0">
             {active ? "Attendees can find their name and submit." : "Attendees see a closed message."}
           </p>
         </div>
@@ -111,36 +111,36 @@ function SettingsPanel() {
           role="switch"
           aria-checked={active}
           aria-label="Feedback form open"
-          className={`big-switch${active ? " on" : ""}`}
+          className={`dlgfb-big-switch${active ? " dlgfb-on" : ""}`}
           disabled={savingStatus}
           onClick={toggleForm}
         >
-          <span className="big-switch-knob">
-            {savingStatus && <span className="spinner-border spinner-border-sm" aria-hidden="true" />}
+          <span className="dlgfb-big-switch-knob">
+            {savingStatus && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm" aria-hidden="true" />}
           </span>
         </button>
       </div>
 
-      <form className="panel draw-settings" onSubmit={saveDraw}>
-        <span className="panel-label">Lucky draw</span>
-        <div className="draw-settings-fields">
-          <div className="form-group mb-0">
+      <form className="dlgfb-panel dlgfb-draw-settings" onSubmit={saveDraw}>
+        <span className="dlgfb-panel-label">Lucky draw</span>
+        <div className="dlgfb-draw-settings-fields">
+          <div className="dlgfb-form-group dlgfb-mb-0">
             <label htmlFor="max-spins">Spins allowed per draw</label>
-            <input id="max-spins" type="number" min="0" inputMode="numeric" className="form-control"
+            <input id="max-spins" type="number" min="0" inputMode="numeric" className="dlgfb-form-control"
               value={spins} onChange={(e) => setSpins(e.target.value)} />
-            <small className="form-text text-muted">0 means no limit</small>
+            <small className="dlgfb-form-text dlgfb-text-muted">0 means no limit</small>
           </div>
-          <div className="form-group mb-0">
+          <div className="dlgfb-form-group dlgfb-mb-0">
             <label htmlFor="spin-seconds">Spin duration</label>
-            <div className="input-group">
+            <div className="dlgfb-input-group">
               <input id="spin-seconds" type="number" min={MIN_SPIN_SECONDS} max={MAX_SPIN_SECONDS} inputMode="numeric"
-                className="form-control" value={seconds} onChange={(e) => setSeconds(e.target.value)} />
-              <div className="input-group-append"><span className="input-group-text">seconds</span></div>
+                className="dlgfb-form-control" value={seconds} onChange={(e) => setSeconds(e.target.value)} />
+              <div className="dlgfb-input-group-append"><span className="dlgfb-input-group-text">seconds</span></div>
             </div>
-            <small className="form-text text-muted">Reels stop on their own, 1 to 60</small>
+            <small className="dlgfb-form-text dlgfb-text-muted">Reels stop on their own, 1 to 60</small>
           </div>
         </div>
-        <button className="btn btn-primary btn-sm" disabled={savingDraw || !dirty}>
+        <button className="dlgfb-btn dlgfb-btn-primary dlgfb-btn-sm" disabled={savingDraw || !dirty}>
           {savingDraw ? "Saving" : dirty ? "Save draw settings" : "Saved"}
         </button>
       </form>
@@ -200,33 +200,33 @@ export default function AdminSubmissions() {
 
   return (
     <>
-      <div className="page-head">
+      <div className="dlgfb-page-head">
         <div>
           <h1>Feedback submissions</h1>
-          <p className="text-muted mb-0">Open or close the form, set up the draw and manage entries.</p>
+          <p className="dlgfb-text-muted dlgfb-mb-0">Open or close the form, set up the draw and manage entries.</p>
         </div>
       </div>
 
-      <div className="stat-grid">
-        <div className="stat-card"><span className="stat-value">{stats.total}</span><span className="stat-label">Received</span></div>
-        <div className="stat-card stat-good"><span className="stat-value">{stats.active}</span><span className="stat-label">In the draw</span></div>
-        <div className="stat-card stat-bad"><span className="stat-value">{stats.suspended}</span><span className="stat-label">Suspended</span></div>
+      <div className="dlgfb-stat-grid">
+        <div className="dlgfb-stat-card"><span className="dlgfb-stat-value">{stats.total}</span><span className="dlgfb-stat-label">Received</span></div>
+        <div className="dlgfb-stat-card dlgfb-stat-good"><span className="dlgfb-stat-value">{stats.active}</span><span className="dlgfb-stat-label">In the draw</span></div>
+        <div className="dlgfb-stat-card dlgfb-stat-bad"><span className="dlgfb-stat-value">{stats.suspended}</span><span className="dlgfb-stat-label">Suspended</span></div>
       </div>
 
       <SettingsPanel />
 
-      <div className="filter-row">
-        <input type="search" className="form-control" placeholder="Search by ID, name, email or company"
+      <div className="dlgfb-filter-row">
+        <input type="search" className="dlgfb-form-control" placeholder="Search by ID, name, email or company"
           value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search submissions" />
-        <select className="custom-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by status">
+        <select className="dlgfb-custom-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by status">
           <option value="">All statuses</option>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
         </select>
       </div>
 
-      <div className={`table-card${loading ? " is-loading" : ""}`}>
-        <table className="table table-hover table-stack mb-0">
+      <div className={`dlgfb-table-card${loading ? " dlgfb-is-loading" : ""}`}>
+        <table className="dlgfb-table dlgfb-table-hover dlgfb-table-stack dlgfb-mb-0">
           <thead>
             <tr>
               <th>ID</th>
@@ -235,34 +235,34 @@ export default function AdminSubmissions() {
               <th>Company</th>
               <th>Submitted at</th>
               <th>Status</th>
-              <th className="text-right">Actions</th>
+              <th className="dlgfb-text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading && data.results.length === 0 && (
-              <tr className="empty-row"><td colSpan={7} className="text-center text-muted py-4">Loading submissions</td></tr>
+              <tr className="dlgfb-empty-row"><td colSpan={7} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">Loading submissions</td></tr>
             )}
             {!loading && data.results.length === 0 && (
-              <tr className="empty-row"><td colSpan={7} className="text-center text-muted py-4">
+              <tr className="dlgfb-empty-row"><td colSpan={7} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">
                 {q || statusFilter ? "No submissions match these filters." : "No feedback has been submitted yet. Share the form link with attendees."}
               </td></tr>
             )}
             {rows.map((s) => (
-              <tr key={s.id} className={s.is_suspended ? "row-suspended" : ""}>
-                <td data-label="ID" className="id-cell">{padId(s.id, data.pad_length)}</td>
-                <td data-label="Attendee" className="font-weight-bold">{s.attendee_name}</td>
-                <td data-label="Email" className="text-break">{s.email || "---"}</td>
+              <tr key={s.id} className={s.is_suspended ? "dlgfb-row-suspended" : ""}>
+                <td data-label="ID" className="dlgfb-id-cell">{padId(s.id, data.pad_length)}</td>
+                <td data-label="Attendee" className="dlgfb-font-weight-bold">{s.attendee_name}</td>
+                <td data-label="Email" className="dlgfb-text-break">{s.email || "---"}</td>
                 <td data-label="Company">{s.company_name || "Not listed"}</td>
-                <td data-label="Submitted" className="text-nowrap">{formatDate(s.created_at)}</td>
+                <td data-label="Submitted" className="dlgfb-text-nowrap">{formatDate(s.created_at)}</td>
                 <td data-label="Status">
-                  <span className={`badge ${s.is_suspended ? "badge-suspended" : "badge-active"}`}>
+                  <span className={`dlgfb-badge ${s.is_suspended ? "dlgfb-badge-suspended" : "dlgfb-badge-active"}`}>
                     {s.is_suspended ? "Suspended" : "Active"}
                   </span>
                 </td>
-                <td className="text-right text-nowrap actions-cell">
-                  <button className="btn btn-sm btn-light mr-2" onClick={() => setViewing(s)}>View</button>
+                <td className="dlgfb-text-right dlgfb-text-nowrap dlgfb-actions-cell">
+                  <button className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-light dlgfb-mr-2" onClick={() => setViewing(s)}>View</button>
                   <button
-                    className={`btn btn-sm ${s.is_suspended ? "btn-outline-success" : "btn-outline-danger"}`}
+                    className={`dlgfb-btn dlgfb-btn-sm ${s.is_suspended ? "dlgfb-btn-outline-success" : "dlgfb-btn-outline-danger"}`}
                     disabled={busyId === s.id}
                     onClick={() => toggleSuspend(s)}
                   >
@@ -277,16 +277,16 @@ export default function AdminSubmissions() {
       <Pagination page={page} total={data.results.length} onChange={setPage} noun="submissions" />
 
       {viewing && (
-        <Modal title={`Entry ${padId(viewing.id, data.pad_length)}, ${viewing.attendee_name}`} onClose={() => setViewing(null)} size="modal-lg">
-          <dl className="answer-list">
+        <Modal title={`Entry ${padId(viewing.id, data.pad_length)}, ${viewing.attendee_name}`} onClose={() => setViewing(null)} size="dlgfb-modal-lg">
+          <dl className="dlgfb-answer-list">
             {Object.entries(viewing.feedback_data || {}).map(([key, val]) => (
-              <div key={key} className="answer-row">
+              <div key={key} className="dlgfb-answer-row">
                 <dt>{questionLabel(key)}</dt>
                 <dd>{formatAnswer(val)}</dd>
               </div>
             ))}
           </dl>
-          <p className="small text-muted mb-0">
+          <p className="dlgfb-small dlgfb-text-muted dlgfb-mb-0">
             Submitted {formatDate(viewing.created_at)}
           </p>
         </Modal>

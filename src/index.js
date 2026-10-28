@@ -2,14 +2,9 @@ import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./index.css";
-import EventMobileMenu from "./EventMobileMenu";
-import RegisteredDelegatesMobile from "./RegisteredDelegatesMobile";
-import AskAQuestionMobile from "./AskAQuestionMobile";
-import ThankYouMobile from "./ThankYouMobile";
-import WifiPasswordMobile from "./WifiPasswordMobile";
 
-// Feedback form and admin (src/feedback). They share one bundle that is only downloaded when one of
-// these routes is opened, so the event pages load exactly as before.
+// Feedback form, admin and lucky draw (src/feedback). They share one bundle that is only downloaded when one of
+// these routes is opened, so the empty home page loads nothing extra.
 const loadFeedback = () => import("./feedback/entry");
 const feedbackPage = (name) => lazy(() => loadFeedback().then((m) => ({ default: m[name] })));
 const FeedbackShell = feedbackPage("FeedbackShell");
@@ -32,11 +27,9 @@ const load = (Page) => (
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<EventMobileMenu />} />
-      <Route path="/registered-attendees" element={<RegisteredDelegatesMobile />} />
-      <Route path="/ask-a-question" element={<AskAQuestionMobile />} />
-      <Route path="/thank-you" element={<ThankYouMobile />} />
-      <Route path="/wifipassword" element={<WifiPasswordMobile />} />
+      {/* The home page and any other address outside the feedback routes show nothing. */}
+      <Route path="/" element={null} />
+      <Route path="*" element={null} />
 
       <Route element={load(FeedbackShell)}>
         <Route path="/feedback-form" element={load(FeedbackForm)} />

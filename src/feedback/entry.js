@@ -24,7 +24,7 @@ export function AdminArea() {
 // The draw API is public, so no sign in is needed here.
 export function LuckyDrawStandalone() {
   return (
-    <main className="container draw-standalone">
+    <main className="dlgfb-container dlgfb-draw-standalone">
       <LuckyDraw autoFullscreen />
     </main>
   );

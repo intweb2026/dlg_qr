@@ -25,7 +25,7 @@ export default function NameScramble({ name }) {
   }, [shape]);
 
   return (
-    <p className="name-scramble" aria-hidden="true">
+    <p className="dlgfb-name-scramble" aria-hidden="true">
       {text}
     </p>
   );

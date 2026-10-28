@@ -33,8 +33,8 @@ const PANEL_ICONS = {
 
 function StatusPanel({ tone, title, children, action, extra }) {
   return (
-    <div className={`fb-card fb-status fb-status-${tone}`} role="status">
-      <span className="fb-status-icon" aria-hidden="true">
+    <div className={`dlgfb-form-card dlgfb-form-status dlgfb-form-status-${tone}`} role="status">
+      <span className="dlgfb-form-status-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {PANEL_ICONS[tone]}
         </svg>
@@ -52,23 +52,23 @@ function DrawTicket({ id }) {
   const hasNumber = id !== null && id !== undefined;
   const number = hasNumber ? padId(id, 2) : "";
   return (
-    <div className="fb-ticket">
-      <div className="fb-ticket-main">
-        <div className="fb-ticket-text">
-          <span className="fb-ticket-kicker">Your draw number</span>
-          <span className="fb-ticket-title">Entry confirmed</span>
-          <span className="fb-ticket-sub">{hasNumber ? "Keep this number handy" : "You are in the lucky draw"}</span>
+    <div className="dlgfb-form-ticket">
+      <div className="dlgfb-form-ticket-main">
+        <div className="dlgfb-form-ticket-text">
+          <span className="dlgfb-form-ticket-kicker">Your draw number</span>
+          <span className="dlgfb-form-ticket-title">Entry confirmed</span>
+          <span className="dlgfb-form-ticket-sub">{hasNumber ? "Keep this number handy" : "You are in the lucky draw"}</span>
         </div>
         {hasNumber && (
           <span
-            className={`fb-ticket-number${number.length > 3 ? " is-long" : number.length === 3 ? " is-mid" : ""}`}
+            className={`dlgfb-form-ticket-number${number.length > 3 ? " dlgfb-is-long" : number.length === 3 ? " dlgfb-is-mid" : ""}`}
             aria-label={`Draw number ${number}`}
           >
             {number}
           </span>
         )}
       </div>
-      <div className="fb-ticket-foot">Thank you for taking part</div>
+      <div className="dlgfb-form-ticket-foot">Thank you for taking part</div>
     </div>
   );
 }
@@ -223,26 +223,26 @@ export default function FeedbackForm() {
   let number = 1;
 
   const requiredTag = (required) =>
-    required ? <span className="fb-tag fb-tag-req">Required</span> : <span className="fb-tag fb-tag-opt">Optional</span>;
+    required ? <span className="dlgfb-form-tag dlgfb-form-tag-req">Required</span> : <span className="dlgfb-form-tag dlgfb-form-tag-opt">Optional</span>;
 
   return (
-    <div className="fb-page">
-      <div className="fb-shell">
-        <header className="fb-header">
-          <div className="fb-header-bar">
+    <div className="dlgfb-form-page">
+      <div className="dlgfb-form-shell">
+        <header className="dlgfb-form-header">
+          <div className="dlgfb-form-header-bar">
             {HOME_URL && (
-              <a className="fb-back" href={HOME_URL} aria-label="Go back">
+              <a className="dlgfb-form-back" href={HOME_URL} aria-label="Go back">
                 <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
                   <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </a>
             )}
-            <h1 className={`fb-title${view === "success" ? " sr-only" : ""}`}>Feedback Form</h1>
+            <h1 className={`dlgfb-form-title${view === "success" ? " dlgfb-sr-only" : ""}`}>Feedback Form</h1>
           </div>
           {showIntro && (
             <>
-              <p className="fb-intro">Your answers help shape next year. Every complete submission goes into the lucky draw at the closing session.</p>
-              <ul className="fb-chips">
+              <p className="dlgfb-form-intro">Your answers help shape next year. Every complete submission goes into the lucky draw at the closing session.</p>
+              <ul className="dlgfb-form-chips">
                 {/* <li>About 1 Minute</li> */}
                 <li>{REQUIRED_TOTAL} Answers Required</li>
                 <li>One Entry Per Attendee</li>
@@ -250,17 +250,17 @@ export default function FeedbackForm() {
             </>
           )}
           {/* Moved into the success card, as its last line */}
-          {/* {view === "success" && <p className="fb-tagline">Your voice helps make each event better.</p>} */}
+          {/* {view === "success" && <p className="dlgfb-form-tagline">Your voice helps make each event better.</p>} */}
         </header>
 
-        <main className="fb-body">
+        <main className="dlgfb-form-body">
           {view === "loading" && (
-            <div className="fb-panel" aria-busy="true">
-              <span className="sr-only">Loading</span>
+            <div className="dlgfb-form-panel" aria-busy="true">
+              <span className="dlgfb-sr-only">Loading</span>
               {[0, 1, 2].map((i) => (
-                <div className="fb-skeleton-block" key={i}>
-                  <div className="skeleton skeleton-line w-50" />
-                  <div className="skeleton skeleton-box" />
+                <div className="dlgfb-form-skeleton-block" key={i}>
+                  <div className="dlgfb-skeleton dlgfb-skeleton-line dlgfb-w-50" />
+                  <div className="dlgfb-skeleton dlgfb-skeleton-box" />
                 </div>
               ))}
             </div>
@@ -287,7 +287,7 @@ export default function FeedbackForm() {
               tone="offline"
               title="The form could not load"
               action={
-                <button type="button" className="btn fb-btn fb-btn-primary mt-3" onClick={() => window.location.reload()}>
+                <button type="button" className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-primary dlgfb-mt-3" onClick={() => window.location.reload()}>
                   Try again
                 </button>
               }
@@ -297,8 +297,8 @@ export default function FeedbackForm() {
           )}
 
           {view === "success" && (
-            <div className="fb-card fb-success" role="status">
-              <span className="fb-success-icon" aria-hidden="true">
+            <div className="dlgfb-form-card dlgfb-form-success" role="status">
+              <span className="dlgfb-form-success-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M6 12.5l4 4L18 8" />
                 </svg>
@@ -306,17 +306,17 @@ export default function FeedbackForm() {
               <h2>You’re all set!</h2>
               <p>Your feedback has been submitted.</p>
               {/* <DrawTicket id={entryId} />
-              <p className="fb-success-note">Keep your number handy for the draw.</p> */}
-              <div className="fb-success-quote">
+              <p className="dlgfb-form-success-note">Keep your number handy for the draw.</p> */}
+              <div className="dlgfb-form-success-quote">
                 <p>Your voice helps make each event better.</p>
               </div>
             </div>
           )}
 
           {view === "form" && (
-            <form className="fb-panel" onSubmit={handleReview} noValidate>
-              <section className={`fb-name${errors.attendee || errors.company || errors.email ? " has-error" : ""}`} id="q-attendee">
-                <label htmlFor="attendee-search" className="fb-name-label">
+            <form className="dlgfb-form-panel" onSubmit={handleReview} noValidate>
+              <section className={`dlgfb-form-name${errors.attendee || errors.company || errors.email ? " dlgfb-has-error" : ""}`} id="q-attendee">
+                <label htmlFor="attendee-search" className="dlgfb-form-name-label">
                   Your Name {requiredTag(true)}
                 </label>
                 <AttendeeSearch
@@ -340,27 +340,27 @@ export default function FeedbackForm() {
                 const labelled = q.type === "select" || q.type === "textarea";
                 const LabelTag = labelled ? "label" : "div";
                 return (
-                  <section className={`fb-q${invalid ? " has-error" : ""}`} key={q.key} id={`q-${q.key}`}>
-                    <LabelTag className="fb-q-head" id={labelId} htmlFor={labelled ? q.key : undefined}>
-                      <span className="fb-q-num">{number++}.</span>
-                      <span className="fb-q-text">
+                  <section className={`dlgfb-form-q${invalid ? " dlgfb-has-error" : ""}`} key={q.key} id={`q-${q.key}`}>
+                    <LabelTag className="dlgfb-form-q-head" id={labelId} htmlFor={labelled ? q.key : undefined}>
+                      <span className="dlgfb-form-q-num">{number++}.</span>
+                      <span className="dlgfb-form-q-text">
                         {q.label} {requiredTag(q.required)}
                       </span>
                     </LabelTag>
 
                     {q.type === "radio" && (
-                      <div className={`fb-options${invalid ? " is-invalid" : ""}`} role="radiogroup" aria-labelledby={labelId}>
+                      <div className={`dlgfb-form-options${invalid ? " dlgfb-is-invalid" : ""}`} role="radiogroup" aria-labelledby={labelId}>
                         {q.options.map((opt) => (
-                          <label key={opt} className={`fb-radio${answers[q.key] === opt ? " is-selected" : ""}`}>
+                          <label key={opt} className={`dlgfb-form-radio${answers[q.key] === opt ? " dlgfb-is-selected" : ""}`}>
                             <input
                               type="radio"
-                              className="sr-only"
+                              className="dlgfb-sr-only"
                               name={q.key}
                               value={opt}
                               checked={answers[q.key] === opt}
                               onChange={() => setAnswer(q.key, opt)}
                             />
-                            <span className="fb-radio-mark" aria-hidden="true" />
+                            <span className="dlgfb-form-radio-mark" aria-hidden="true" />
                             <span>{opt}</span>
                           </label>
                         ))}
@@ -368,10 +368,10 @@ export default function FeedbackForm() {
                     )}
 
                     {q.type === "select" && (
-                      <div className={`fb-select${invalid ? " is-invalid" : ""}`}>
+                      <div className={`dlgfb-form-select${invalid ? " dlgfb-is-invalid" : ""}`}>
                         <select
                           id={q.key}
-                          className={answers[q.key] ? "" : "is-empty"}
+                          className={answers[q.key] ? "" : "dlgfb-is-empty"}
                           value={answers[q.key] || ""}
                           onChange={(e) => setAnswer(q.key, e.target.value)}
                         >
@@ -384,28 +384,28 @@ export default function FeedbackForm() {
                             </option>
                           ))}
                         </select>
-                        <svg className="fb-select-caret" viewBox="0 0 12 8" aria-hidden="true">
+                        <svg className="dlgfb-form-select-caret" viewBox="0 0 12 8" aria-hidden="true">
                           <path d="M0 0h12L6 8z" />
                         </svg>
                       </div>
                     )}
 
                     {q.type === "checkbox" && (
-                      <div className={`fb-checks${invalid ? " is-invalid" : ""}`} role="group" aria-labelledby={labelId}>
+                      <div className={`dlgfb-form-checks${invalid ? " dlgfb-is-invalid" : ""}`} role="group" aria-labelledby={labelId}>
                         {q.options.map((opt) => (
                           <label
                             key={opt}
-                            className={`fb-check${Array.isArray(answers[q.key]) && answers[q.key].includes(opt) ? " is-selected" : ""}`}
+                            className={`dlgfb-form-check${Array.isArray(answers[q.key]) && answers[q.key].includes(opt) ? " dlgfb-is-selected" : ""}`}
                           >
                             <input
                               type="checkbox"
-                              className="sr-only"
+                              className="dlgfb-sr-only"
                               name={q.key}
                               value={opt}
                               checked={Array.isArray(answers[q.key]) && answers[q.key].includes(opt)}
                               onChange={() => toggleOption(q, opt)}
                             />
-                            <span className="fb-check-mark" aria-hidden="true">
+                            <span className="dlgfb-form-check-mark" aria-hidden="true">
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M5 12.5l4.5 4.5L19 7.5" />
                               </svg>
@@ -419,7 +419,7 @@ export default function FeedbackForm() {
                     {q.type === "textarea" && (
                       <textarea
                         id={q.key}
-                        className={`fb-textarea${invalid ? " is-invalid" : ""}`}
+                        className={`dlgfb-form-textarea${invalid ? " dlgfb-is-invalid" : ""}`}
                         rows={3}
                         maxLength={2000}
                         placeholder="Type here..."
@@ -428,12 +428,12 @@ export default function FeedbackForm() {
                       />
                     )}
 
-                    {invalid && <div className="fb-error">Answer this question to continue.</div>}
+                    {invalid && <div className="dlgfb-form-error">Answer this question to continue.</div>}
                   </section>
                 );
               })}
 
-              <button type="submit" className="fb-submit">
+              <button type="submit" className="dlgfb-form-submit">
                 Submit
               </button>
             </form>
@@ -444,26 +444,26 @@ export default function FeedbackForm() {
       {confirming && attendee && (
         <Modal
           title="Confirm it is you"
-          className="fb-modal"
+          className="dlgfb-form-modal"
           onClose={() => !submitting && setConfirming(false)}
           footer={
             <>
-              <button className="btn fb-btn fb-btn-ghost" disabled={submitting} onClick={() => setConfirming(false)}>
+              <button className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-ghost" disabled={submitting} onClick={() => setConfirming(false)}>
                 Go back
               </button>
-              <button className="btn fb-btn fb-btn-primary" disabled={submitting || !!confirmError} onClick={handleSubmit}>
-                {submitting && <span className="spinner-border spinner-border-sm mr-2" aria-hidden="true" />}
+              <button className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-primary" disabled={submitting || !!confirmError} onClick={handleSubmit}>
+                {submitting && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-mr-2" aria-hidden="true" />}
                 {submitting ? "Submitting" : "Submit feedback"}
               </button>
             </>
           }
         >
           {confirmError ? (
-            <p className="fb-modal-error" role="alert">{confirmError}</p>
+            <p className="dlgfb-form-modal-error" role="alert">{confirmError}</p>
           ) : (
-            <p className="fb-modal-note">Your feedback will be submitted under this attendee. You can only submit once.</p>
+            <p className="dlgfb-form-modal-note">Your feedback will be submitted under this attendee. You can only submit once.</p>
           )}
-          <dl className="fb-confirm-list mb-0">
+          <dl className="dlgfb-form-confirm-list dlgfb-mb-0">
             <dt>Name</dt>
             <dd>{attendee.full_name}</dd>
             <dt>Company</dt>
@@ -471,7 +471,7 @@ export default function FeedbackForm() {
             {attendee.is_new && attendee.email.trim() && (
               <>
                 <dt>Email</dt>
-                <dd className="text-break">{attendee.email.trim()}</dd>
+                <dd className="dlgfb-text-break">{attendee.email.trim()}</dd>
               </>
             )}
           </dl>
