@@ -5,7 +5,7 @@
   "description": "API for the event feedback form, admin panel and lucky draw.",
   "main": "src/server.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=24.2.0"
   },
   "scripts": {
     "start": "node src/server.js",
