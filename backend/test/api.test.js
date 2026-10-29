@@ -1,5 +1,5 @@
 // API tests, run with: npm test
-// They use the test events in test/events, each with its own database, created and dropped here.
+// They use the test events in test/events.json, each with its own database, created and dropped here.
 // The test databases use the login of the first entry in databases.json, written to a temporary logins file.
 // Most tests run against testa, the isolation tests also use testb.
 const assert = require("node:assert/strict");
@@ -8,7 +8,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { after, before, beforeEach, describe, test } = require("node:test");
 
-process.env.EVENTS_DIR = path.join(__dirname, "events");
+process.env.EVENTS_FILE = path.join(__dirname, "events.json");
 const testLogin = Object.values(JSON.parse(fs.readFileSync(path.join(__dirname, "..", "databases.json"), "utf8")))[0];
 const LOGINS_FILE = path.join(os.tmpdir(), `feedback-test-databases-${process.pid}.json`);
 fs.writeFileSync(

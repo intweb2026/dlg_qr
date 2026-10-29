@@ -3,7 +3,7 @@ import { Outlet, useParams } from "react-router-dom";
 import api, { setEventCode } from "../feedback/api";
 
 // The event comes from the first part of the address, /dle26/feedback-form is event dle26.
-// Its config (name, media, links, menu, questions) is loaded once from the API, see backend/events/<code>.json.
+// Its config (name, media, links, menu, questions) is loaded once from the API, see backend/events.json.
 const EventContext = createContext(null);
 
 export function useEvent() {

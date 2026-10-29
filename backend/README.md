@@ -4,18 +4,25 @@ Node.js (Express) API for the event site, the feedback form, the admin panel and
 
 ## Events
 
-Every event is one file in `events/`, named after its code, for example `events/dle26.json`. The code is the first part of every address, `/dle26/feedback-form` on the site and `/api/events/dle26/...` on the API.
+Every event is one entry in `events.json`, keyed by its code. The code is the first part of every address, `/dle26/feedback-form` on the site and `/api/events/dle26/...` on the API.
 
-- `code` must match the file name, lower case letters, digits and dashes.
+- The key is the event code, lower case letters, digits and dashes.
 - `database` is the event's own MySQL database. Every event needs a different one. Its login is in `databases.json`, see below.
 - `active` set to `false` hides the event without deleting anything.
-- Everything else, name, media, links and Wi-Fi, is sent to the site by `GET /api/events/<code>/`. The database name is never sent. Do not put passwords or private keys in an event file, the site shows its contents.
+- Everything else, name, media, links and Wi-Fi, is sent to the site by `GET /api/events/<code>/`. The database name is never sent. Do not put passwords or private keys in an event entry, the site shows its contents.
 
-Copy `events/dle26.json` as a starting point.
+```json
+{
+  "dle26": { "database": "feedback_db", "name": "Direct Lithium Extraction 2026", "media": { ... } },
+  "afs26": { "database": "feedback_afs26", "name": "...", "media": { ... } }
+}
+```
+
+Copy the `dle26` entry as a starting point.
 
 ## Database logins
 
-`databases.json` holds the login for every event database, keyed by the database name from the event file. Each database can sit on a different server with a different user.
+`databases.json` holds the login for every event database, keyed by the database name from `events.json`. Each database can sit on a different server with a different user.
 
 ```json
 {
@@ -38,11 +45,11 @@ npm run migrate           # creates each event's database, tables, settings row 
 npm start                 # http://localhost:8000/api/events/<code>/
 ```
 
-Use `npm run dev` to restart on file changes. Restart the API after adding or changing an event file.
+Use `npm run dev` to restart on file changes. Restart the API after changing `events.json`.
 
 ## Add an event
 
-1. Add `events/<code>.json` with a new `code` and `database`, and add that database's login to `databases.json`.
+1. Add an entry to `events.json` with a new code as its key and a new `database`, and add that database's login to `databases.json`.
 2. Put its media in `public/images/<code>/` and `public/videos/<code>/` in the site, and point `media` at them.
 3. Run `npm run migrate -- --event <code>`, then restart the API.
 4. Open `/<code>` on the site.
@@ -59,7 +66,7 @@ Every command except `migrate` needs `--event <code>`.
 | `npm run admin-user -- --event <code> list` | Lists the event's admin accounts |
 | `npm run admin-user -- --event <code> set <username> --password <pw> [--name <name>]` | Creates an account or changes its password or name |
 | `npm run admin-user -- --event <code> disable <username>` | Blocks sign in and signs the account out everywhere, `enable` undoes it |
-| `npm test` | Runs the API tests on temporary databases for the test events in `test/events`, with the login of the first entry in `databases.json` |
+| `npm test` | Runs the API tests on temporary databases for the test events in `test/events.json`, with the login of the first entry in `databases.json` |
 
 Admin accounts belong to one event, because each event has its own database. A new event database gets four admin accounts, benny, maxwell, nolan and ramon, with the password `<username>123`. Change them with `admin-user set` before the event.
 

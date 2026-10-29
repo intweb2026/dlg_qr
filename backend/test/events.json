@@ -1,0 +1,15 @@
+{
+  "off": {
+    "database": "feedback_off_test",
+    "active": false,
+    "name": "Switched off event"
+  },
+  "testa": {
+    "database": "feedback_testa_test",
+    "name": "Test event a"
+  },
+  "testb": {
+    "database": "feedback_testb_test",
+    "name": "Test event b"
+  }
+}

@@ -19,7 +19,7 @@ The bare home page `/` shows a "500 Internal Server Error" page. An unknown code
 
 ## Events
 
-Each event is one file, `backend/events/<code>.json`, with its name, media, links and Wi-Fi, and the name of its own MySQL database. See `backend/README.md` to add an event.
+Each event is one entry in `backend/events.json`, keyed by its code, with its name, media, links and Wi-Fi, and the name of its own MySQL database. See `backend/README.md` to add an event.
 
 The home menu and the feedback questions are the same for every event. Change them in `src/EventMobileMenu.jsx` and `src/feedback/config/feedbackQuestions.js`.
 

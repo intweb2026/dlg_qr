@@ -30,7 +30,7 @@ const load = (Page) => (
 );
 
 // Every page sits under the event code, /dle26 is the event home and /dle26/feedback-form its feedback form.
-// The event's content comes from backend/events/<code>.json. The bare home page / shows a 500 error page.
+// The event's content comes from backend/events.json. The bare home page / shows a 500 error page.
 function App() {
   return (
     <Routes>

@@ -1,0 +1,27 @@
+{
+  "dle26": {
+    "database": "feedback_db",
+    "active": true,
+    "name": "Direct Lithium Extraction 2026",
+    "title": "Direct Lithium Extraction Europe 2026",
+    "tagline": "ADVANCING SUSTAINABLE LITHIUM\nPRODUCTION IN SOUTH AMERICA",
+    "media": {
+      "logo": "/images/dle26/DLE_Logo.png",
+      "heroVideo": "/videos/dle26/DLE.mp4",
+      "heroPoster": "/images/dle26/dle_hero.jpeg",
+      "background": "/images/dle26/DLE-Folder-BG.png",
+      "venueLogo": "/images/dle26/dlg_hotel.png",
+      "wifiQr": "/images/dle26/dlg_wifi_qr.jpeg"
+    },
+    "links": {
+      "agenda": "https://www.europe.direct-lithium-extraction-show.com/agenda",
+      "linkedin": "https://www.linkedin.com/company/critical-minerals-events-by-iq-hub",
+      "website": "https://www.europe.direct-lithium-extraction-show.com/"
+    },
+    "wifi": {
+      "venueName": "Emperador",
+      "network": "EMPERADOR",
+      "password": "eventos09"
+    }
+  }
+}
