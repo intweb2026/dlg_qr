@@ -3,8 +3,18 @@ const express = require("express");
 
 const { authenticate } = require("./auth");
 const config = require("./config");
+const { withDatabase } = require("./db");
+const { getEvent } = require("./events");
 const routes = require("./routes");
 const { ValidationError } = require("./validation");
+
+/** Finds the event from the code in the address, and runs the rest of the request against its database. */
+function resolveEvent(req, res, next) {
+  const event = getEvent(req.params.eventCode);
+  if (!event) return res.status(404).json({ detail: "Event not found." });
+  req.event = event;
+  return withDatabase(event.database, next);
+}
 
 /** Rejects requests whose Host header is not in ALLOWED_HOSTS, as Django did. "*" allows any host. */
 function hostMatches(host, pattern) {
@@ -37,7 +47,7 @@ function createApp() {
   app.use(allowedHosts);
   app.use(cors({ origin: config.corsAllowedOrigins, credentials: true }));
   app.use(express.json({ limit: "2.5mb" }));
-  app.use("/api", authenticate, routes);
+  app.use("/api/events/:eventCode", resolveEvent, authenticate, routes);
   app.use((req, res) => res.status(404).json({ detail: "Not found." }));
   app.use(errorHandler);
   return app;

@@ -1,8 +1,8 @@
 // Create sample attendees for local testing (and the default form settings row).
-// Usage: npm run seed:attendees -- --count 50
+// Usage: npm run seed:attendees -- --event dle26 --count 50
 const { query } = require("../src/db");
 const { loadSettings } = require("../src/models");
-const { choice, intArg, parseArgs, run } = require("./cli");
+const { choice, inEvent, intArg, parseArgs, run } = require("./cli");
 
 const FIRST = ["Aarav", "Priya", "James", "Olivia", "Mohammed", "Sofia", "Liam", "Ananya", "Noah", "Emma",
   "Rohan", "Isabella", "Lucas", "Meera", "Ethan", "Chloe", "Arjun", "Mia", "Daniel", "Zara"];
@@ -11,7 +11,7 @@ const LAST = ["Sharma", "Patel", "Smith", "Johnson", "Khan", "Garcia", "Brown", 
 const COMPANIES = ["Shell", "BP", "Siemens Energy", "Aramco", "TotalEnergies", "Honeywell", "Schneider Electric",
   "ABB", "Wood PLC", "Baker Hughes", "Petrofac", "Equinor", "Worley", "SLB", "Halliburton"];
 
-run(async () => {
+run(() => inEvent(parseArgs(), async () => {
   const count = intArg(parseArgs(), "count", 50);
   await loadSettings();
   let created = 0;
@@ -26,4 +26,4 @@ run(async () => {
     created += result.affectedRows;
   }
   console.log(`Created ${created} attendees.`);
-});
+}));

@@ -14,3 +14,52 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Bare home page /, see src/ServerError.jsx */
+.server-error {
+  min-height: 100vh;
+  padding: 32px 24px;
+  background: #ffffff;
+  color: #000000;
+  text-align: center;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.server-error__title {
+  margin: 0 0 16px;
+  font-size: 32px;
+}
+
+.server-error__rule {
+  margin: 0 0 16px;
+  border: 0;
+  border-top: 1px solid #c0c0c0;
+}
+
+.server-error__text {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Shown when the event code in the address does not exist, see src/event/EventContext.js */
+.event-status {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: #ffffff;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.event-status__title {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+.event-status__text {
+  margin: 0;
+  color: #b5b5b5;
+}

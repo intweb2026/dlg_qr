@@ -2,11 +2,11 @@ import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./index.css";
+import EventLayout from "./event/EventContext";
 import EventMobileMenu from "./EventMobileMenu";
 import RegisteredDelegatesMobile from "./RegisteredDelegatesMobile";
-import AskAQuestionMobile from "./AskAQuestionMobile";
-import ThankYouMobile from "./ThankYouMobile";
 import WifiPasswordMobile from "./WifiPasswordMobile";
+import ServerError from "./ServerError";
 
 // Feedback form and admin (src/feedback). They share one bundle that is only downloaded when one of
 // these routes is opened, so the event pages load exactly as before.
@@ -29,26 +29,32 @@ const load = (Page) => (
   </Suspense>
 );
 
+// Every page sits under the event code, /dle26 is the event home and /dle26/feedback-form its feedback form.
+// The event's content comes from backend/events/<code>.json. The bare home page / shows a 500 error page.
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<EventMobileMenu />} />
-      <Route path="/registered-attendees" element={<RegisteredDelegatesMobile />} />
-      <Route path="/ask-a-question" element={<AskAQuestionMobile />} />
-      <Route path="/thank-you" element={<ThankYouMobile />} />
-      <Route path="/wifipassword" element={<WifiPasswordMobile />} />
+      <Route path="/" element={<ServerError />} />
 
-      <Route element={load(FeedbackShell)}>
-        <Route path="/feedback-form" element={load(FeedbackForm)} />
-        <Route path="/lucky-draw" element={load(LuckyDrawStandalone)} />
-        <Route path="/admin/login" element={load(AdminLogin)} />
-        <Route path="/admin" element={load(AdminArea)}>
-          <Route index element={<Navigate to="feedback-submission" replace />} />
-          <Route path="feedback-submission" element={load(AdminSubmissions)} />
-          <Route path="lucky-draw" element={load(LuckyDraw)} />
-          <Route path="attendees" element={load(AdminAttendees)} />
-          <Route path="*" element={load(NotFound)} />
+      <Route path="/:eventCode" element={<EventLayout />}>
+        <Route index element={<EventMobileMenu />} />
+        <Route path="registered-attendees" element={<RegisteredDelegatesMobile />} />
+        <Route path="wifipassword" element={<WifiPasswordMobile />} />
+
+        <Route element={load(FeedbackShell)}>
+          <Route path="feedback-form" element={load(FeedbackForm)} />
+          <Route path="lucky-draw" element={load(LuckyDrawStandalone)} />
+          <Route path="admin/login" element={load(AdminLogin)} />
+          <Route path="admin" element={load(AdminArea)}>
+            <Route index element={<Navigate to="feedback-submission" replace />} />
+            <Route path="feedback-submission" element={load(AdminSubmissions)} />
+            <Route path="lucky-draw" element={load(LuckyDraw)} />
+            <Route path="attendees" element={load(AdminAttendees)} />
+            <Route path="*" element={load(NotFound)} />
+          </Route>
         </Route>
+
+        <Route path="*" element={null} />
       </Route>
     </Routes>
   );

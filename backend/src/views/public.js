@@ -1,10 +1,16 @@
 const { query, transaction } = require("../db");
+const { publicConfig } = require("../events");
 const { attendeeLookupJson, getAttendee, isActive, loadSettings } = require("../models");
 const { collapseSpaces, deviceFingerprint, normalizeName } = require("../utils");
 const v = require("../validation");
 
 const CLOSED = { detail: "Event feedback is closed." };
 const ALREADY_SUBMITTED = { detail: "Feedback has already been submitted for this attendee.", code: "already_submitted" };
+
+/** The event's settings for the site, its name, media, links and Wi-Fi. */
+function eventConfig(req, res) {
+  res.json(publicConfig(req.event));
+}
 
 async function formStatus(req, res) {
   const cfg = await loadSettings();
@@ -21,6 +27,14 @@ async function attendeeList(req, res) {
      WHERE s.id IS NULL ORDER BY a.full_name`
   );
   return res.json(rows.map(attendeeLookupJson));
+}
+
+/** The Registered Attendees page. Name and company only, walk-ins added on the feedback form are left out. */
+async function registeredAttendees(req, res) {
+  const rows = await query(
+    "SELECT full_name, company_name FROM attendees WHERE is_walk_in = 0 ORDER BY company_name, full_name"
+  );
+  return res.json(rows.map((a) => ({ name: a.full_name, company: a.company_name })));
 }
 
 // A name typed on the form that is not on the attendee list. Company is required, it tells apart people with the same name.
@@ -145,4 +159,4 @@ async function feedbackSubmit(req, res) {
   return res.status(201).json({ id: submissionId, submission_status: true, detail: "Thank you, your feedback has been submitted." });
 }
 
-module.exports = { formStatus, attendeeList, feedbackSubmit };
+module.exports = { eventConfig, formStatus, attendeeList, registeredAttendees, feedbackSubmit };

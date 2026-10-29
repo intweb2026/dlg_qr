@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import api, { errorMessage, padId } from "../api";
+import { useEvent } from "../../event/EventContext";
+import api, { errorMessage, eventKey, padId } from "../api";
 import SlotMachine from "../components/SlotMachine";
 import Confetti from "../components/Confetti";
 import NameScramble from "../components/NameScramble";
@@ -7,7 +8,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import { useToast } from "../context/ToastContext";
 
 // Survives a page refresh, so a landed number or a finished draw is never lost mid-event.
-const DRAW_KEY = "luckyDrawState";
+const drawKey = () => eventKey("luckyDrawState");
 const TICK_MS = 30;
 const FAST_MS = 55; // digit change speed at full spin
 const WAIT_MS = 240; // speed while waiting on a slow network after the timer ends
@@ -17,7 +18,7 @@ const EMPTY_DRAW = { attempts: 0, phase: "idle", entryId: null, padLength: 2, wi
 
 function readDraw() {
   try {
-    const saved = JSON.parse(sessionStorage.getItem(DRAW_KEY) || "null");
+    const saved = JSON.parse(sessionStorage.getItem(drawKey()) || "null");
     if (saved && ["idle", "landed", "revealed"].includes(saved.phase)) return { ...EMPTY_DRAW, ...saved };
   } catch (e) {
     /* ignore */
@@ -27,7 +28,7 @@ function readDraw() {
 
 function saveDraw(state) {
   try {
-    sessionStorage.setItem(DRAW_KEY, JSON.stringify(state));
+    sessionStorage.setItem(drawKey(), JSON.stringify(state));
   } catch (e) {
     /* ignore */
   }
@@ -82,6 +83,7 @@ function WinnerName({ name }) {
  */
 export default function LuckyDraw({ autoFullscreen = false }) {
   const notify = useToast();
+  const eventName = useEvent().config.name;
   const [initial] = useState(readDraw);
   const [pool, setPool] = useState(null);
   const [attempts, setAttempts] = useState(initial.attempts);
@@ -415,7 +417,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
           </div>
         </div>
 
-        <p className="dlgfb-draw-kicker">{process.env.REACT_APP_EVENT_NAME || "Summit"}</p>
+        <p className="dlgfb-draw-kicker">{eventName}</p>
         <h1 className="dlgfb-draw-title">Lucky Draw</h1>
 
         <SlotMachine reels={reels} state={phase === "revealing" ? "suspense" : phase} label={srLabel} />

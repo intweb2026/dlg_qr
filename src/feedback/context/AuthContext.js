@@ -1,11 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import api, { TOKEN_KEY, UNAUTHORIZED_EVENT } from "../api";
+import api, { tokenKey, UNAUTHORIZED_EVENT } from "../api";
 
 const AuthContext = createContext(null);
 
 function clearToken() {
   try {
-    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(tokenKey());
   } catch (e) {
     /* storage blocked */
   }
@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let token = null;
     try {
-      token = localStorage.getItem(TOKEN_KEY);
+      token = localStorage.getItem(tokenKey());
     } catch (e) {
       /* storage blocked */
     }
@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password) => {
     const res = await api.post("/auth/login/", { username, password });
-    localStorage.setItem(TOKEN_KEY, res.data.token);
+    localStorage.setItem(tokenKey(), res.data.token);
     setUser({ username: res.data.username, full_name: res.data.full_name });
   }, []);
 

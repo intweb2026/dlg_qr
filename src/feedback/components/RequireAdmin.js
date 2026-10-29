@@ -1,9 +1,11 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { useEventPath } from "../../event/EventContext";
 import { useAuth } from "../context/AuthContext";
 
 export default function RequireAdmin({ children }) {
   const { user, checking } = useAuth();
   const location = useLocation();
+  const eventPath = useEventPath();
   if (checking) {
     return (
       <div className="dlgfb-page-loader">
@@ -13,6 +15,6 @@ export default function RequireAdmin({ children }) {
       </div>
     );
   }
-  if (!user) return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />;
+  if (!user) return <Navigate to={eventPath("/admin/login")} replace state={{ from: location.pathname }} />;
   return children;
 }

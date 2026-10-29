@@ -1,0 +1,14 @@
+{
+  "feedback_db": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "root",
+    "password": "your_mysql_password"
+  },
+  "feedback_afs26": {
+    "host": "db2.your-domain.com",
+    "port": 3306,
+    "user": "afs26_user",
+    "password": "afs26_password"
+  }
+}

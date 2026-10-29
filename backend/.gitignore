@@ -1,4 +1,6 @@
 .env
+# Database logins, one per event database. databases.example.json shows the format.
+databases.json
 node_modules/
 # Left over from the old Django backend, safe to delete.
 venv/

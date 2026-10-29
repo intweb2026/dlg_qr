@@ -1,14 +1,14 @@
 // Manage admin panel accounts, this replaces the Django admin screen for admin_users.
 //
-//   npm run admin-user -- list
-//   npm run admin-user -- set <username> --password <new password> [--name "Full Name"]
-//   npm run admin-user -- disable <username>
-//   npm run admin-user -- enable <username>
+//   npm run admin-user -- --event dle26 list
+//   npm run admin-user -- --event dle26 set <username> --password <new password> [--name "Full Name"]
+//   npm run admin-user -- --event dle26 disable <username>
+//   npm run admin-user -- --event dle26 enable <username>
 //
 // "set" creates the account when it does not exist. Disabling an account also signs it out everywhere.
 const { query } = require("../src/db");
 const { makePassword } = require("../src/passwords");
-const { parseArgs, run } = require("./cli");
+const { inEvent, parseArgs, run } = require("./cli");
 
 async function findUser(username) {
   const [user] = await query("SELECT * FROM admin_users WHERE username = ?", [username]);
@@ -47,13 +47,13 @@ async function setActive(username, active) {
   console.log(`${active ? "Enabled" : "Disabled"} admin user ${user.username}.`);
 }
 
-run(async () => {
+run(() => inEvent(parseArgs(), async () => {
   const args = parseArgs();
   const [command, username] = args._;
   if (command === "list") return list();
   if (!username || !["set", "disable", "enable"].includes(command)) {
-    throw new Error("Usage: npm run admin-user -- list | set <username> --password <pw> [--name <name>] | disable <username> | enable <username>");
+    throw new Error("Usage: npm run admin-user -- --event <code> list | set <username> --password <pw> [--name <name>] | disable <username> | enable <username>");
   }
   if (command === "set") return set(username, args);
   return setActive(username, command === "enable");
-});
+}));

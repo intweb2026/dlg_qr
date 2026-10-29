@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useEventPath } from "../../event/EventContext";
 import api, { errorMessage, padId } from "../api";
 import AttendeeSearch from "../components/AttendeeSearch";
 import Modal from "../components/Modal";
@@ -6,8 +8,6 @@ import feedbackQuestions from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
 import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryNumber, saveEntryNumber } from "../utils/device";
 
-// Link for the back arrow, the event home page. The arrow is hidden while this is empty.
-const HOME_URL = (process.env.REACT_APP_EVENT_HOME_URL || "").trim();
 const REQUIRED_TOTAL = feedbackQuestions.filter((q) => q.required).length + 1; // plus the name
 
 const PANEL_ICONS = {
@@ -83,6 +83,7 @@ function isAnswered(v) {
 
 export default function FeedbackForm() {
   const notify = useToast();
+  const eventPath = useEventPath();
   // loading | already | closed | form | success | offline
   const [view, setView] = useState("loading");
   const [attendees, setAttendees] = useState(null);
@@ -230,13 +231,11 @@ export default function FeedbackForm() {
       <div className="dlgfb-form-shell">
         <header className="dlgfb-form-header">
           <div className="dlgfb-form-header-bar">
-            {HOME_URL && (
-              <a className="dlgfb-form-back" href={HOME_URL} aria-label="Go back">
-                <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
-                  <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </a>
-            )}
+            <Link className="dlgfb-form-back" to={eventPath()} aria-label="Go back">
+              <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+                <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
             <h1 className={`dlgfb-form-title${view === "success" ? " dlgfb-sr-only" : ""}`}>Feedback Form</h1>
           </div>
           {showIntro && (

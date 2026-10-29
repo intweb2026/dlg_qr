@@ -1,87 +1,38 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./RegisteredDelegatesMobile.css";
-import { backButtonBlack, backButtonBlue } from "./mediaassets";
+import { useEvent, useEventPath } from "./event/EventContext";
+import api from "./feedback/api";
 
-const DEFAULT_DELEGATES = [
-  { delegate: "Alexander Koester", company: "EPC Engineering & Technologies GmbH" },
-  { delegate: "Alexandre Constant", company: "Saint-Gobain Coating Solutions" },
-  { delegate: "Anca Savalache", company: "Avocet Battery Materials" },
-  { delegate: "Andreas Kuhlmann", company: "Forschungszentrum Jülich GmbH" },
-  { delegate: "Andrew Walker", company: "Evove Ltd" },
-  { delegate: "Antoinette Manyaga", company: "US embassy Cameroon" },
-  { delegate: "Anton Dr. Kaiser", company: "TIB Chemicals AG" },
-  { delegate: "Anya Oppenheimer", company: "Syngenta" },
-  { delegate: "Christian Heubner", company: "Fraunhofer IKTS" },
-  { delegate: "Christoph Maurer", company: "OSMO Membrane Systems" },
-  { delegate: "Daniel Espinoza", company: "Lithium Ark" },
-  { delegate: "Dominic Wells", company: "Project Blue" },
-  { delegate: "Dr. Liviu Mantescu", company: "Watergenics GmbH" },
-  { delegate: "Emmanuel Markun", company: "ArcelorMittal" },
-  { delegate: "Frank Jackel", company: "Metals hub" },
-  { delegate: "Frederic Nicolle", company: "Future Pipe Industries B.V." },
-  { delegate: "Hans van 't Spijker", company: "Witteveen+Bos Raadgevende ingenieurs B.V." },
-  { delegate: "Hao Zeng", company: "Zhejiang ENCO Machinery Co.ltd" },
-  { delegate: "Hartmut Rapp", company: "TIB Chemicals AG" },
-  { delegate: "Hasan Coskun", company: "Koyuncu Nakliye Pazarlama ve Tic. A.S." },
-  { delegate: "Irina Melkonyan", company: "Wood Mackenzie" },
-  { delegate: "Jaco BESTER", company: "Specialty Electronic Materials Netherlands B.v." },
-  { delegate: "James Patterson", company: "ETH Zurich" },
-  { delegate: "James W. Patterson", company: "ETH Zurich" },
-  { delegate: "Joanne Ye", company: "Zhejiang Dongou Filter Manufacturing Co., Ltd" },
-  { delegate: "Jon López Díaz", company: "EagleBurgmann" },
-  { delegate: "Josko Kandido", company: "Venarion Commodities" },
-  { delegate: "Karol Kerrane", company: "EPC Engineering & Technologies GmbH" },
-  { delegate: "Kateryna Omelchuk", company: "Eramet" },
-  { delegate: "Kaustubh Deshpande", company: "iMOTO" },
-  { delegate: "Kewei Wu", company: "Zhejiang ENCO Machinery Co.ltd" },
-  { delegate: "Lars Hafermann", company: "EPC Engineering & Technologies GmbH" },
-  { delegate: "Laura Fazio Bellacchio", company: "European Metals" },
-  { delegate: "Laurent Labous", company: "Ipsinov Consulting" },
-  { delegate: "Libby Banks", company: "Evove Ltd" },
-  { delegate: "Liviu Mantescu", company: "Watergenics" },
-  { delegate: "Luis Santillana", company: "Lithium Ark" },
-  { delegate: "Mareike Partsch", company: "Fraunhofer IKTS" },
-  { delegate: "Marten Huck", company: "Forschungszentrum Jülich GmbH" },
-  { delegate: "Mehmet Soner CINAR", company: "Koyuncu Nakliye Pazarlama ve Tic. A.S." },
-  { delegate: "Micha Zauner", company: "Deutsche E-Metalle AG" },
-  { delegate: "Michael Strobel", company: "P3" },
-  { delegate: "Mustafa M. Demir", company: "Izmir Institute of Technology" },
-  { delegate: "Natália Olahová", company: "ILF Consulting Engineers Austria GmbH" },
-  { delegate: "Osman ŞEN", company: "OSM Grup Enerji Mühendislik İnşaat A.Ş." },
-  { delegate: "Paul-Louis Wöhrlin", company: "Fraunhofer ISE" },
-  { delegate: "Paw Juul", company: "Lithium Harvest" },
-  { delegate: "Pinar Yanar Sozal", company: "OSM Grup Enerji Mühendislik İnşaat A.Ş." },
-  { delegate: "Raven Liu", company: "Huawei" },
-  { delegate: "René Odenthak", company: "Evonik Operations GmbH" },
-  { delegate: "Ross Wilkie", company: "Avocet Battery Materials" },
-  { delegate: "Ryan Law", company: "Geothermal Engineering Ltd" },
-  { delegate: "Salvatore Pinizzotto", company: "Xida Communications" },
-  { delegate: "Simon Gillibrand", company: "Savannah Group" },
-  { delegate: "Steffen Garbe", company: "Phlair GmbH" },
-  { delegate: "Stephan Wipperfürth", company: "Future Pipe Industries B.V." },
-  { delegate: "Stewart Dickson", company: "Weardale Lithum" },
-  { delegate: "Stöckl Yannick", company: "TIB Chemicals AG" },
-  { delegate: "Süreyya ŞEN", company: "OSM Grup Enerji Mühendislik İnşaat A.Ş." },
-  { delegate: "Tom Frising", company: "Axens" },
-  { delegate: "Tommaso Ferrari", company: "Turboden" },
-  { delegate: "Yağmur ŞEN", company: "OSM Grup Enerji Mühendislik İnşaat A.Ş." },
-  { delegate: "Yasin ŞEN", company: "OSM Grup Enerji Mühendislik İnşaat A.Ş." },
-  { delegate: "Yefan Pan", company: "Zhejiang ENCO Machinery Co.ltd" },
-];
+const backButtonBlack = "/images/common/back_button_black.png";
+const backButtonBlue = "/images/common/back_button_blue.png";
 
-export default function RegisteredDelegatesMobile({
-  delegates = DEFAULT_DELEGATES,
-  printedOn = process.env.REACT_APP_PRINTED_ON,
-}) {
+// The list comes live from the event's attendees table, walk-ins added on the feedback form are left out.
+export default function RegisteredDelegatesMobile() {
   const navigate = useNavigate();
+  const { config } = useEvent();
+  const eventPath = useEventPath();
+  const [delegates, setDelegates] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/registered-attendees/")
+      .then(({ data }) => setDelegates(data))
+      .catch(() => setFailed(true));
+  }, []);
+
+  let message = null;
+  if (failed) message = "The attendee list could not be loaded, try again later.";
+  else if (!delegates) message = "Loading attendees...";
+  else if (!delegates.length) message = "No attendees registered yet.";
 
   return (
     <div
       className="delegates-mobile"
       style={{
 
-        "--delegates-bg": `url(${process.env.PUBLIC_URL}/images/DLE-Folder-BG.png)`,
+        "--delegates-bg": `url(${config.media?.background})`,
       }}
     >
 
@@ -91,7 +42,7 @@ export default function RegisteredDelegatesMobile({
             type="button"
             className="delegates-mobile__back_button"
             aria-label="Go back"
-            onClick={() => navigate("/")}
+            onClick={() => navigate(eventPath())}
           >
             <img
               src={backButtonBlack}
@@ -116,19 +67,20 @@ export default function RegisteredDelegatesMobile({
               </tr>
             </thead>
             <tbody>
-              {delegates.map((row, index) => (
-                <tr key={`${row.company}-${row.delegate}-${index}`}>
+              {message && (
+                <tr>
+                  <td colSpan={2}>{message}</td>
+                </tr>
+              )}
+              {(delegates || []).map((row, index) => (
+                <tr key={`${row.company}-${row.name}-${index}`}>
                   <td>{row.company}</td>
-                  <td>{row.delegate}</td>
+                  <td>{row.name}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-
-        <p className="delegates-mobile__note">
-          This attendee list was last updated on {printedOn}. Registrations received after this date are not included. The latest list will be available online and will include all registered participants.
-        </p>
       </div>
     </div>
   );

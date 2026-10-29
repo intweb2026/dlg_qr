@@ -1,22 +1,23 @@
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useEvent, useEventPath } from "../../event/EventContext";
 import { errorMessage } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-
-const EVENT_NAME = process.env.REACT_APP_EVENT_NAME || "Summit";
 
 export default function AdminLogin() {
   const { user, login } = useAuth();
   const notify = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const EVENT_NAME = useEvent().config.name;
+  const eventPath = useEventPath();
   const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to="/admin/lucky-draw" replace />;
+  if (user) return <Navigate to={eventPath("/admin/lucky-draw")} replace />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -25,7 +26,7 @@ export default function AdminLogin() {
     try {
       await login(form.username.trim(), form.password);
       notify("You are signed in to the admin panel.", "success", { title: "Welcome back" });
-      navigate(location.state?.from || "/admin/lucky-draw", { replace: true });
+      navigate(location.state?.from || eventPath("/admin/lucky-draw"), { replace: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {

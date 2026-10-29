@@ -1,33 +1,67 @@
 # Feedback API
 
-Node.js (Express) API for the feedback form, admin panel and lucky draw in `src/feedback`. It replaces the old Django backend and keeps the same `/api/...` routes, responses and MySQL tables, so an existing database works as it is.
+Node.js (Express) API for the event site, the feedback form, the admin panel and the lucky draw. One copy of the code serves every event. Each event has its own settings file and its own MySQL database, and each database can have its own server and login.
+
+## Events
+
+Every event is one file in `events/`, named after its code, for example `events/dle26.json`. The code is the first part of every address, `/dle26/feedback-form` on the site and `/api/events/dle26/...` on the API.
+
+- `code` must match the file name, lower case letters, digits and dashes.
+- `database` is the event's own MySQL database. Every event needs a different one. Its login is in `databases.json`, see below.
+- `active` set to `false` hides the event without deleting anything.
+- Everything else, name, media, links and Wi-Fi, is sent to the site by `GET /api/events/<code>/`. The database name is never sent. Do not put passwords or private keys in an event file, the site shows its contents.
+
+Copy `events/dle26.json` as a starting point.
+
+## Database logins
+
+`databases.json` holds the login for every event database, keyed by the database name from the event file. Each database can sit on a different server with a different user.
+
+```json
+{
+  "feedback_db": { "host": "127.0.0.1", "port": 3306, "user": "root", "password": "..." },
+  "feedback_afs26": { "host": "db2.your-domain.com", "port": 3306, "user": "afs26_user", "password": "..." }
+}
+```
+
+The file is ignored by git, so passwords never reach GitHub. Copy `databases.example.json` to start one on a new server. The API stops at start up when an active event has no login. The user needs rights to create its database for `npm run migrate`, or create the database first.
 
 ## Run it
 
-Node 20 or newer and MySQL 8.
+Node 24.2 or newer and MySQL 8.
 
 ```
-cp .env.example .env      # then fill in the MySQL details
+cp .env.example .env
+cp databases.example.json databases.json   # then fill in each database's login
 npm install
-npm run migrate           # creates missing tables, the settings row and the default admins
-npm start                 # http://localhost:8000/api
+npm run migrate           # creates each event's database, tables, settings row and default admins
+npm start                 # http://localhost:8000/api/events/<code>/
 ```
 
-Use `npm run dev` to restart on file changes.
+Use `npm run dev` to restart on file changes. Restart the API after adding or changing an event file.
+
+## Add an event
+
+1. Add `events/<code>.json` with a new `code` and `database`, and add that database's login to `databases.json`.
+2. Put its media in `public/images/<code>/` and `public/videos/<code>/` in the site, and point `media` at them.
+3. Run `npm run migrate -- --event <code>`, then restart the API.
+4. Open `/<code>` on the site.
 
 ## Commands
 
+Every command except `migrate` needs `--event <code>`.
+
 | Command | What it does |
 | --- | --- |
-| `npm run migrate` | Creates missing tables from `db/schema.sql`, safe to run again |
-| `npm run seed:attendees -- --count 50` | Adds sample attendees |
-| `npm run seed:demo -- --attendees 100 --feedback 50` | Adds demo attendees and feedback |
-| `npm run admin-user -- list` | Lists admin accounts |
-| `npm run admin-user -- set <username> --password <pw> [--name <name>]` | Creates an account or changes its password or name |
-| `npm run admin-user -- disable <username>` | Blocks sign in and signs the account out everywhere, `enable` undoes it |
-| `npm test` | Runs the API tests on a temporary `<DB_NAME>_test` database |
+| `npm run migrate` | Creates missing databases and tables for every event, safe to run again. Add `-- --event <code>` for one event |
+| `npm run seed:attendees -- --event <code> --count 50` | Adds sample attendees |
+| `npm run seed:demo -- --event <code> --attendees 100 --feedback 50` | Adds demo attendees and feedback |
+| `npm run admin-user -- --event <code> list` | Lists the event's admin accounts |
+| `npm run admin-user -- --event <code> set <username> --password <pw> [--name <name>]` | Creates an account or changes its password or name |
+| `npm run admin-user -- --event <code> disable <username>` | Blocks sign in and signs the account out everywhere, `enable` undoes it |
+| `npm test` | Runs the API tests on temporary databases for the test events in `test/events`, with the login of the first entry in `databases.json` |
 
-A fresh database gets four admin accounts, benny, maxwell, nolan and ramon, with the password `<username>123`. Change them with `admin-user set` before the event.
+Admin accounts belong to one event, because each event has its own database. A new event database gets four admin accounts, benny, maxwell, nolan and ramon, with the password `<username>123`. Change them with `admin-user set` before the event.
 
 ## Production
 

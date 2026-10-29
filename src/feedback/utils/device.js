@@ -1,20 +1,23 @@
-const KEY = "submission_status";
+import { eventKey, getEventCode } from "../api";
+
+// Every key includes the event code, so submitting feedback for one event leaves the others open on this device.
+const submittedKey = () => eventKey("submission_status");
+const cookieName = () => `submission_status_${getEventCode()}`;
+const entryKey = () => eventKey("draw_entry_number");
 
 export function hasSubmittedOnDevice() {
   try {
-    if (localStorage.getItem(KEY) === "true") return true;
+    if (localStorage.getItem(submittedKey()) === "true") return true;
   } catch (e) {
     /* storage blocked, fall back to cookie */
   }
-  return document.cookie.split(";").some((c) => c.trim() === `${KEY}=true`);
+  return document.cookie.split(";").some((c) => c.trim() === `${cookieName()}=true`);
 }
-
-const ENTRY_KEY = "draw_entry_number";
 
 // The draw number is kept on the device, so it can be shown again after a refresh.
 export function saveEntryNumber(id) {
   try {
-    localStorage.setItem(ENTRY_KEY, String(id));
+    localStorage.setItem(entryKey(), String(id));
   } catch (e) {
     /* ignore */
   }
@@ -22,7 +25,7 @@ export function saveEntryNumber(id) {
 
 export function readEntryNumber() {
   try {
-    const value = localStorage.getItem(ENTRY_KEY);
+    const value = localStorage.getItem(entryKey());
     return value && /^\d+$/.test(value) ? Number(value) : null;
   } catch (e) {
     return null;
@@ -31,9 +34,9 @@ export function readEntryNumber() {
 
 export function markSubmittedOnDevice() {
   try {
-    localStorage.setItem(KEY, "true");
+    localStorage.setItem(submittedKey(), "true");
   } catch (e) {
     /* ignore */
   }
-  document.cookie = `${KEY}=true; max-age=${60 * 60 * 24 * 365}; path=/; SameSite=Lax`;
+  document.cookie = `${cookieName()}=true; max-age=${60 * 60 * 24 * 365}; path=/; SameSite=Lax`;
 }

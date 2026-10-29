@@ -24,9 +24,12 @@ function route(path, handlers) {
 // Numeric ids only, anything else is a 404 like Django's <int:pk>.
 router.param("pk", (req, res, next, pk) => (/^\d+$/.test(pk) ? next() : res.status(404).json({ detail: "Not found." })));
 
+// Every path below sits under /api/events/<code>, see app.js.
 // Public
+route("/", { get: pub.eventConfig });
 route("/form-status/", { get: pub.formStatus });
 route("/attendees/", { get: pub.attendeeList });
+route("/registered-attendees/", { get: pub.registeredAttendees });
 route("/feedback/submit/", { post: pub.feedbackSubmit });
 // Admin auth
 route("/auth/login/", { post: auth.login });

@@ -1,10 +1,10 @@
 // Add demo attendees and feedback submissions for testing the form, admin panel and lucky draw.
-// Usage: npm run seed:demo -- --attendees 100 --feedback 50
+// Usage: npm run seed:demo -- --event dle26 --attendees 100 --feedback 50
 const crypto = require("crypto");
 
 const { transaction } = require("../src/db");
 const { loadSettings } = require("../src/models");
-const { choice, intArg, parseArgs, run, shuffle, weightedChoice } = require("./cli");
+const { choice, inEvent, intArg, parseArgs, run, shuffle, weightedChoice } = require("./cli");
 
 const FIRST = [
   "Aisha", "Benjamin", "Carlos", "Deepika", "Elena", "Farhan", "Grace", "Hiroshi", "Ingrid", "Jamal",
@@ -106,7 +106,7 @@ async function createFeedback(q, count) {
   return created;
 }
 
-run(async () => {
+run(() => inEvent(parseArgs(), async () => {
   const args = parseArgs();
   const attendees = intArg(args, "attendees", 100);
   const feedback = intArg(args, "feedback", 50);
@@ -121,4 +121,4 @@ run(async () => {
       `Totals now ${totals.attendees} attendees, ${totals.submissions} submissions.`;
   });
   console.log(message);
-});
+}));

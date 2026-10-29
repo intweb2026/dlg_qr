@@ -1,54 +1,72 @@
 // API tests, run with: npm test
-// They use a separate <DB_NAME>_test database on the MySQL server from .env, created and dropped here.
+// They use the test events in test/events, each with its own database, created and dropped here.
+// The test databases use the login of the first entry in databases.json, written to a temporary logins file.
+// Most tests run against testa, the isolation tests also use testb.
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const { after, before, beforeEach, describe, test } = require("node:test");
 
-require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
-process.env.DB_NAME = `${process.env.DB_NAME || "feedback_db"}_test`;
-
-const mysql = require("mysql2/promise");
+process.env.EVENTS_DIR = path.join(__dirname, "events");
+const testLogin = Object.values(JSON.parse(fs.readFileSync(path.join(__dirname, "..", "databases.json"), "utf8")))[0];
+const LOGINS_FILE = path.join(os.tmpdir(), `feedback-test-databases-${process.pid}.json`);
+fs.writeFileSync(
+  LOGINS_FILE,
+  JSON.stringify({ feedback_testa_test: testLogin, feedback_testb_test: testLogin, feedback_off_test: testLogin })
+);
+process.env.DATABASES_FILE = LOGINS_FILE;
 
 const { createApp } = require("../src/app");
-const config = require("../src/config");
-const { pool, query } = require("../src/db");
+const db = require("../src/db");
+const { allEvents } = require("../src/events");
 const { migrate } = require("../src/migrate");
 
-let server;
-let base;
+const EVENT_A = allEvents().find((e) => e.code === "testa");
+const EVENT_B = allEvents().find((e) => e.code === "testb");
 
-async function adminConnection() {
-  const { database, ...rest } = config.db;
-  return mysql.createConnection(rest);
+let server;
+let root;
+
+/** query() against testa, the event most tests use. */
+const query = (sql, params) => db.withDatabase(EVENT_A.database, () => db.query(sql, params));
+const queryB = (sql, params) => db.withDatabase(EVENT_B.database, () => db.query(sql, params));
+
+async function dropDatabases() {
+  for (const event of allEvents()) {
+    const conn = await db.serverConnection(event.database);
+    await conn.query(`DROP DATABASE IF EXISTS \`${event.database}\``);
+    await conn.end();
+  }
 }
 
 before(async () => {
-  const conn = await adminConnection();
-  await conn.query(`DROP DATABASE IF EXISTS \`${config.db.database}\``);
-  await conn.query(`CREATE DATABASE \`${config.db.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci`);
-  await conn.end();
-  await migrate();
+  await dropDatabases();
+  await migrate(EVENT_A);
+  await migrate(EVENT_B);
   server = createApp().listen(0);
-  base = `http://127.0.0.1:${server.address().port}/api`;
+  root = `http://127.0.0.1:${server.address().port}/api/events`;
 });
 
 after(async () => {
   server.close();
-  await pool.end();
-  const conn = await adminConnection();
-  await conn.query(`DROP DATABASE IF EXISTS \`${config.db.database}\``);
-  await conn.end();
+  await db.closeAll();
+  await dropDatabases();
+  fs.rmSync(LOGINS_FILE, { force: true });
 });
 
 beforeEach(async () => {
-  for (const table of ["lucky_draw_winners", "feedback_submissions", "attendees", "admin_tokens"]) {
-    await query(`DELETE FROM ${table}`);
+  for (const q of [query, queryB]) {
+    for (const table of ["lucky_draw_winners", "feedback_submissions", "attendees", "admin_tokens"]) {
+      await q(`DELETE FROM ${table}`);
+    }
+    await q("UPDATE form_settings SET form_status = 'active', max_spin_attempts = 0, spin_duration_seconds = 5");
+    await q("UPDATE admin_users SET is_active = 1");
   }
-  await query("UPDATE form_settings SET form_status = 'active', max_spin_attempts = 0, spin_duration_seconds = 5");
-  await query("UPDATE admin_users SET is_active = 1");
 });
 
-async function api(method, url, { body, token, form, headers = {} } = {}) {
+/** Calls the API of an event, testa unless event is given. */
+async function api(method, url, { body, token, form, headers = {}, event = "testa" } = {}) {
   const init = { method, headers: { ...headers } };
   if (token) init.headers.Authorization = `Token ${token}`;
   if (form) init.body = form;
@@ -56,7 +74,7 @@ async function api(method, url, { body, token, form, headers = {} } = {}) {
     init.headers["Content-Type"] = "application/json";
     init.body = JSON.stringify(body);
   }
-  const res = await fetch(base + url, init);
+  const res = await fetch(`${root}/${event}${url}`, init);
   const text = await res.text();
   return { status: res.status, data: text ? JSON.parse(text) : null, headers: res.headers };
 }
@@ -83,8 +101,8 @@ async function count(table, where = "1", params = []) {
   return row.n;
 }
 
-async function login(username) {
-  return (await api("POST", "/auth/login/", { body: { username, password: `${username}123` } })).data.token;
+async function login(username, event = "testa") {
+  return (await api("POST", "/auth/login/", { body: { username, password: `${username}123` }, event })).data.token;
 }
 
 describe("feedback flow", () => {
@@ -458,5 +476,84 @@ describe("lucky draw", () => {
     const r = await api("POST", "/lucky-draw/spin/");
     assert.equal(r.status, 400);
     assert.equal(r.data.detail, "No eligible submissions in the pool.");
+  });
+});
+
+describe("events", () => {
+  test("event config is public and leaves out the database", async () => {
+    const r = await api("GET", "/");
+    assert.equal(r.status, 200);
+    assert.equal(r.data.code, "testa");
+    assert.equal(r.data.name, "Test event a");
+    assert.ok(!("database" in r.data));
+  });
+
+  test("codes are matched without case", async () => {
+    assert.equal((await api("GET", "/form-status/", { event: "TESTA" })).status, 200);
+  });
+
+  test("unknown and switched off events are not found", async () => {
+    for (const event of ["nope", "off"]) {
+      const r = await api("GET", "/form-status/", { event });
+      assert.equal(r.status, 404, event);
+      assert.equal(r.data.detail, "Event not found.");
+    }
+    const r = await fetch(`${root.replace(/\/events$/, "")}/form-status/`);
+    assert.equal(r.status, 404);
+  });
+
+  test("attendees and submissions stay in their own event", async () => {
+    const a1 = await createAttendee("Priya Sharma", "priya@example.com", "Shell");
+    await queryB(
+      "INSERT INTO attendees (full_name, email, company_name, is_walk_in, created_at) VALUES ('James Smith', 'james@example.com', 'BP', 0, UTC_TIMESTAMP(6))"
+    );
+    assert.deepEqual((await api("GET", "/attendees/")).data.map((a) => a.full_name), ["Priya Sharma"]);
+    assert.deepEqual((await api("GET", "/attendees/", { event: "testb" })).data.map((a) => a.full_name), ["James Smith"]);
+
+    // The same email can register for both events.
+    const r = await api("POST", "/feedback/submit/", {
+      event: "testb",
+      body: { new_attendee: { full_name: "Priya Sharma", company_name: "Shell", email: "priya@example.com" }, feedback_data: { x: 1 } },
+    });
+    assert.equal(r.status, 201);
+
+    assert.equal((await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } })).status, 201);
+    assert.equal((await api("GET", "/lucky-draw/pool/")).data.count, 1);
+    assert.equal((await api("GET", "/lucky-draw/pool/", { event: "testb" })).data.count, 1);
+    assert.equal((await api("GET", "/attendees/")).data.length, 0);
+  });
+
+  test("registered attendees list names and companies, without walk-ins or emails", async () => {
+    await createAttendee("Priya Sharma", "priya@example.com", "Shell");
+    await query(
+      "INSERT INTO attendees (full_name, email, company_name, is_walk_in, created_at) VALUES ('Walk In', NULL, 'Acme', 1, UTC_TIMESTAMP(6))"
+    );
+    await queryB(
+      "INSERT INTO attendees (full_name, email, company_name, is_walk_in, created_at) VALUES ('James Smith', NULL, 'BP', 0, UTC_TIMESTAMP(6))"
+    );
+    // Still shown while the feedback form is closed.
+    await query("UPDATE form_settings SET form_status = 'inactive'");
+    const r = await api("GET", "/registered-attendees/");
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.data, [{ name: "Priya Sharma", company: "Shell" }]);
+    assert.deepEqual((await api("GET", "/registered-attendees/", { event: "testb" })).data, [{ name: "James Smith", company: "BP" }]);
+  });
+
+  test("settings belong to one event", async () => {
+    const token = await login("benny");
+    await api("PATCH", "/admin/settings/", { token, body: { form_status: "inactive" } });
+    assert.equal((await api("GET", "/form-status/")).data.is_active, false);
+    assert.equal((await api("GET", "/form-status/", { event: "testb" })).data.is_active, true);
+  });
+
+  test("an admin token only works for the event it was issued for", async () => {
+    const token = await login("benny");
+    assert.equal((await api("GET", "/auth/me/", { token })).status, 200);
+    const r = await api("GET", "/auth/me/", { token, event: "testb" });
+    assert.equal(r.status, 401);
+    // Each event has its own admin accounts, signing in to testb gives a different token.
+    const tokenB = await login("benny", "testb");
+    assert.notEqual(tokenB, token);
+    assert.equal((await api("GET", "/admin/settings/", { token: tokenB, event: "testb" })).status, 200);
   });
 });

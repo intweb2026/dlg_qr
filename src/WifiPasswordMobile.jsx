@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./WifiPasswordMobile.css";
-
-const venueLogo = "/images/dlg_hotel.png";
-
-const WIFI_NETWORK = process.env.REACT_APP_WIFI_NETWORK || "Event Wi-Fi";
-const WIFI_PASSWORD = process.env.REACT_APP_WIFI_PASSWORD || "ChangeMe123";
+import { useEvent, useEventPath } from "./event/EventContext";
 
 export default function WifiPasswordMobile() {
   const navigate = useNavigate();
+  const { config } = useEvent();
+  const eventPath = useEventPath();
   const [copiedField, setCopiedField] = useState(null);
+  // The network, password and venue come from "wifi" in the event file, the logo and QR code from "media".
+  const { network: WIFI_NETWORK = "", password: WIFI_PASSWORD = "", venueName = "" } = config.wifi || {};
+  const media = config.media || {};
 
   const handleCopy = async (field, value) => {
     try {
@@ -25,7 +26,7 @@ export default function WifiPasswordMobile() {
     <div
       className="wifi-mobile"
       style={{
-        "--wifi-bg": `url(${process.env.PUBLIC_URL}/images/DLE-Folder-BG.png)`,
+        "--wifi-bg": `url(${media.background})`,
       }}
     >
       <div className="wifi-mobile__header">
@@ -34,7 +35,7 @@ export default function WifiPasswordMobile() {
             type="button"
             className="wifi-mobile__back_button"
             aria-label="Go back"
-            onClick={() => navigate("/")}
+            onClick={() => navigate(eventPath())}
           >
             <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
               <path
@@ -52,10 +53,10 @@ export default function WifiPasswordMobile() {
       </div>
 
       <div className="wifi-mobile__card">
-        <img src={venueLogo} alt="Emperador" className="wifi-mobile__logo" />
+        {media.venueLogo && <img src={media.venueLogo} alt={venueName} className="wifi-mobile__logo" />}
 
         <img
-          src="/images/dlg_wifi_qr.jpeg"
+          src={media.wifiQr}
           alt="Wi-Fi QR code"
           className="wifi-mobile__icon"
         />

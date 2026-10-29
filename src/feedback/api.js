@@ -1,12 +1,13 @@
 import axios from "axios";
 
-export const TOKEN_KEY = "adminToken";
 export const UNAUTHORIZED_EVENT = "admin:unauthorized";
 
 // Public endpoints never carry the admin token, so a stale token cannot break the attendee form or the lucky draw.
 const PUBLIC_PATHS = [
+  "/",
   "/form-status/",
   "/attendees/",
+  "/registered-attendees/",
   "/feedback/submit/",
   "/auth/login/",
   "/lucky-draw/pool/",
@@ -15,6 +16,24 @@ const PUBLIC_PATHS = [
   "/lucky-draw/winners/",
 ];
 
+// The event whose API every call goes to, set by EventProvider from the code in the address.
+let eventCode = null;
+
+export function setEventCode(code) {
+  eventCode = code;
+}
+
+export function getEventCode() {
+  return eventCode;
+}
+
+/** Browser storage key for this event, so each event keeps its own sign in, submission and draw state. */
+export function eventKey(name) {
+  return `${name}:${eventCode}`;
+}
+
+export const tokenKey = () => eventKey("adminToken");
+
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/api",
   withCredentials: true,
@@ -22,22 +41,25 @@ const api = axios.create({
 
 function readToken() {
   try {
-    return localStorage.getItem(TOKEN_KEY);
+    return localStorage.getItem(tokenKey());
   } catch (e) {
     return null;
   }
 }
 
+// Paths are written without the event, for example "/form-status/", and sent to /events/<code>/form-status/.
 api.interceptors.request.use((config) => {
+  config.path = config.url;
+  config.url = `/events/${encodeURIComponent(eventCode)}${config.url}`;
   const token = readToken();
-  if (token && !PUBLIC_PATHS.includes(config.url)) config.headers.Authorization = `Token ${token}`;
+  if (token && !PUBLIC_PATHS.includes(config.path)) config.headers.Authorization = `Token ${token}`;
   return config;
 });
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err?.response?.status === 401 && !PUBLIC_PATHS.includes(err.config?.url)) {
+    if (err?.response?.status === 401 && !PUBLIC_PATHS.includes(err.config?.path)) {
       window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
     }
     return Promise.reject(err);

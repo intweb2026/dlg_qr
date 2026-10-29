@@ -1,5 +1,6 @@
 // Small helpers shared by the command line scripts.
-const { pool } = require("../src/db");
+const { closeAll, withDatabase } = require("../src/db");
+const { allEvents } = require("../src/events");
 
 /** "--count 20 --name Ana" -> {count: "20", name: "Ana"}, a bare "--flag" -> {flag: true}, the rest -> _ */
 function parseArgs(argv = process.argv.slice(2)) {
@@ -22,6 +23,21 @@ function intArg(args, name, fallback) {
   const n = Number(args[name]);
   if (!Number.isInteger(n) || n < 0) throw new Error(`--${name} must be a whole number.`);
   return n;
+}
+
+/** The event named by --event <code>, including inactive ones. */
+function eventArg(args) {
+  const codes = allEvents().map((e) => e.code);
+  if (typeof args.event !== "string") throw new Error(`Choose an event with --event <code>, one of: ${codes.join(", ")}`);
+  const event = allEvents().find((e) => e.code === args.event.toLowerCase());
+  if (!event) throw new Error(`No event called ${args.event}, the events are: ${codes.join(", ")}`);
+  return event;
+}
+
+/** Runs fn against the database of the event named by --event. */
+function inEvent(args, fn) {
+  const event = eventArg(args);
+  return withDatabase(event.database, () => fn(event));
 }
 
 function choice(list) {
@@ -52,7 +68,7 @@ function run(main) {
       console.error(err.message);
       process.exitCode = 1;
     })
-    .finally(() => pool.end());
+    .finally(() => closeAll());
 }
 
-module.exports = { parseArgs, intArg, choice, weightedChoice, shuffle, run };
+module.exports = { parseArgs, intArg, eventArg, inEvent, choice, weightedChoice, shuffle, run };
