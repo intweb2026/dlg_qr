@@ -472,6 +472,14 @@
   transition: all 0.25s ease;
 }
 
+@media (min-width: 1920px) {
+    .container .card {
+        width: 548.56px;
+        max-width: 548.56px;
+        padding: 57.89px 22.78px 58.81px;
+    }
+}
+
 @media (max-width: 980px) {
   .container .logo img {
     height: fit-content;
