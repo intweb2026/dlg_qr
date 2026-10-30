@@ -145,7 +145,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
     return (
       <>
         <div className="dlgfb-selected-attendee">
-          <span className="dlgfb-attendee-avatar" aria-hidden="true">{initials(value.full_name)}</span>
+          {/* <span className="dlgfb-attendee-avatar" aria-hidden="true">{initials(value.full_name)}</span> */}
           <div className="dlgfb-selected-attendee-text">
             <div className="dlgfb-selected-attendee-name">{value.full_name}</div>
             <div className="dlgfb-selected-attendee-company">
@@ -277,7 +277,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               }}
               onMouseEnter={() => setHighlight(i)}
             >
-              <span className="dlgfb-attendee-avatar" aria-hidden="true">{initials(a.full_name)}</span>
+              {/* <span className="dlgfb-attendee-avatar" aria-hidden="true">{initials(a.full_name)}</span> */}
               <span className="dlgfb-attendee-option-text">
                 <span className="dlgfb-attendee-option-name"><Highlight text={a.full_name} term={terms[0]} /></span>
                 <span className="dlgfb-attendee-option-company">{a.company_name || "No company listed"}</span>

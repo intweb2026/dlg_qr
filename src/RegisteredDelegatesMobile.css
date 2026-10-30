@@ -210,3 +210,117 @@
     font-size: 11px;
   }
 }
+
+/* New CSS */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: #ffffff;
+  font-family: "Poppins", sans-serif;
+}
+
+.page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  overflow: hidden;
+  background-color: #278dff;
+  background-image: url(../public/images/dle26/DLE_bg_pattern.png);
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: auto 100%;
+  background-attachment: fixed;
+}
+
+.page .card {
+  position: relative;
+  z-index: 1;
+  width: calc(100% - 40px);
+  max-width: 840px;
+  margin: 24px auto;
+  padding: 44px 20px 24px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.page .title-container {
+  position: relative;
+  flex: 1;
+  text-align: center;
+}
+
+.page a.back_btn {
+  display: flex;
+  position: absolute;
+}
+
+.page .back_btn img {
+  width: 33px;
+  height: 29px;
+  filter: brightness(0);
+  transition: filter 0.15s ease;
+}
+
+.page .back_btn:hover img {
+  filter: brightness(1);
+}
+
+.page .title {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 27px;
+  color: #000000;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.page .table-wrap {
+  border: 1px solid #262626;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.page table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.page th {
+  background: #278dff;
+  font-weight: 700;
+  font-size: 13px;
+  color: #0b0b0b;
+  padding: 10px;
+}
+
+.page th,
+.page td {
+  border: 1px solid #262626;
+  padding: 10px;
+  text-align: left;
+  font-size: 12px;
+}
+
+.page td {
+  font-weight: 600;
+  color: #030303;
+  word-break: break-word;
+  padding: 8px 10px;
+}
+
+.page .note {
+  margin: 16px 0 0;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #0a0a0a;
+}
