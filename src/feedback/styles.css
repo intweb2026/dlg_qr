@@ -627,7 +627,7 @@ body.dlgfb-body-active { overflow-x: hidden; }
 }
 .dlgfb-app .dlgfb-login-wrap { width: 100%; max-width: 420px; }
 .dlgfb-app .dlgfb-login-intro { color: #fff; text-align: center; margin-bottom: 1.5rem; }
-.dlgfb-app .dlgfb-login-intro .dlgfb-admin-brand-mark { width: 3rem; height: 3rem; font-size: 1.7rem; border-radius: 12px; margin-bottom: 0.9rem; }
+.dlgfb-app .dlgfb-login-intro .dlgfb-login-logo { display: block; height: 4.5rem; width: auto; max-width: 100%; object-fit: contain; margin: 0 auto 0.9rem; }
 .dlgfb-app .dlgfb-login-intro h1 { font-family: var(--font-display); font-weight: 800; font-size: 2.6rem; line-height: 1; margin-bottom: 0.4rem; }
 .dlgfb-app .dlgfb-login-intro-copy { color: #c8d0de; margin: 0; }
 .dlgfb-app .dlgfb-login-card { background: #fff; border-radius: 16px; padding: 2rem; box-shadow: var(--shadow-lg); animation: dlgfb-rise 0.35s var(--ease) both; }

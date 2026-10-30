@@ -29,7 +29,7 @@ export default function AdminLayout() {
       <header className="dlgfb-admin-nav">
         <div className="dlgfb-container dlgfb-admin-nav-inner">
           <span className="dlgfb-admin-brand">
-            <span className="dlgfb-admin-brand-mark" aria-hidden="true">{EVENT_NAME.charAt(0)}</span>
+            {/* <span className="dlgfb-admin-brand-mark" aria-hidden="true">{EVENT_NAME.charAt(0)}</span> */}
             <span>{EVENT_NAME} <span className="dlgfb-admin-brand-sub">Admin</span></span>
           </span>
           <button

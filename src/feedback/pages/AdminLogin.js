@@ -10,7 +10,7 @@ export default function AdminLogin() {
   const notify = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const EVENT_NAME = useEvent().config.name;
+  const logo = useEvent().config.media?.logo;
   const eventPath = useEventPath();
   const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -38,8 +38,7 @@ export default function AdminLogin() {
     <div className="dlgfb-login-page">
       <div className="dlgfb-login-wrap">
         <div className="dlgfb-login-intro">
-          <span className="dlgfb-admin-brand-mark" aria-hidden="true">{EVENT_NAME.charAt(0)}</span>
-          <p className="dlgfb-event-name dlgfb-mb-1">{EVENT_NAME}</p>
+          {logo && <img src={logo} alt="" className="dlgfb-login-logo" />}
           <h1>Event admin</h1>
           <p className="dlgfb-login-intro-copy">Manage feedback, attendees and the lucky draw.</p>
         </div>
