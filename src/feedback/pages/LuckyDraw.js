@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useEvent } from "../../event/EventContext";
 import api, { errorMessage, eventKey, padId } from "../api";
 import SlotMachine from "../components/SlotMachine";
 import Confetti from "../components/Confetti";
@@ -15,6 +14,27 @@ const WAIT_MS = 240; // speed while waiting on a slow network after the timer en
 const SUSPENSE_MS = 3000; // suspense between the reels stopping and the name showing
 
 const EMPTY_DRAW = { attempts: 0, phase: "idle", entryId: null, padLength: 2, winner: null };
+
+const THEMES = ["default", "white", "black"];
+const themeKey = () => eventKey("luckyDrawTheme");
+
+function readTheme() {
+  try {
+    const saved = sessionStorage.getItem(themeKey());
+    if (THEMES.includes(saved)) return saved;
+  } catch (e) {
+    /* ignore */
+  }
+  return "default";
+}
+
+function saveTheme(theme) {
+  try {
+    sessionStorage.setItem(themeKey(), theme);
+  } catch (e) {
+    /* ignore */
+  }
+}
 
 function readDraw() {
   try {
@@ -54,17 +74,26 @@ function randomDigit(not) {
 
 // The winner's name, letter by letter so each one can drop in after the one before it.
 // Letters sit inside a span per word, so a long name wraps between words, never inside one.
+// --p0 and --p1 place each letter along the name, so the White and Black themes can run one gradient across all letters.
 function WinnerName({ name }) {
+  const total = Math.max(1, name.replace(/ /g, "").length);
   let index = 0;
   return (
     <p className="dlgfb-winner-name dlgfb-is-animated" aria-label={name}>
       {name.split(" ").map((word, w) => (
         <span className="dlgfb-winner-word" key={w} aria-hidden="true">
-          {word.split("").map((ch) => (
-            <span className="dlgfb-winner-letter" key={index} style={{ animationDelay: `${0.1 + index++ * 0.045}s` }}>
-              {ch}
-            </span>
-          ))}
+          {word.split("").map((ch) => {
+            const i = index++;
+            return (
+              <span
+                className="dlgfb-winner-letter"
+                key={i}
+                style={{ animationDelay: `${0.1 + i * 0.045}s`, "--p0": i / total, "--p1": (i + 1) / total }}
+              >
+                {ch}
+              </span>
+            );
+          })}
         </span>
       ))}
     </p>
@@ -83,8 +112,8 @@ function WinnerName({ name }) {
  */
 export default function LuckyDraw({ autoFullscreen = false }) {
   const notify = useToast();
-  const eventName = useEvent().config.name;
   const [initial] = useState(readDraw);
+  const [theme, setTheme] = useState(readTheme);
   const [pool, setPool] = useState(null);
   const [attempts, setAttempts] = useState(initial.attempts);
   // idle | spinning | landed | revealing | revealed
@@ -357,6 +386,12 @@ export default function LuckyDraw({ autoFullscreen = false }) {
     }
   };
 
+  const cycleTheme = () => {
+    const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+    setTheme(next);
+    saveTheme(next);
+  };
+
   const toggleFullscreen = () => {
     const el = stageRef.current;
     if (!el) return;
@@ -379,7 +414,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
   return (
     <div className="dlgfb-draw-page">
       <section
-        className={`dlgfb-draw-stage dlgfb-phase-${phase}${fullscreen || autoFullscreen ? " dlgfb-is-fullscreen" : ""}${autoFullscreen ? " dlgfb-is-window" : ""}`}
+        className={`dlgfb-draw-stage dlgfb-theme-${theme} dlgfb-phase-${phase}${fullscreen || autoFullscreen ? " dlgfb-is-fullscreen" : ""}${autoFullscreen ? " dlgfb-is-window" : ""}`}
         ref={stageRef}
       >
         {/* Inside the stage so the confetti still shows in full screen */}
@@ -408,6 +443,19 @@ export default function LuckyDraw({ autoFullscreen = false }) {
                 <span>Spin</span>
               </button>
             )}
+            <button
+              type="button"
+              className="dlgfb-btn-fullscreen dlgfb-btn-theme"
+              onClick={cycleTheme}
+              aria-label={`Change theme, current theme ${theme}`}
+              title={`Theme: ${theme}`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 3a9 9 0 000 18z" fill="currentColor" />
+              </svg>
+              <span>Theme</span>
+            </button>
             <button type="button" className={`dlgfb-btn-fullscreen${fullscreen ? " dlgfb-is-on" : ""}`} onClick={toggleFullscreen} aria-pressed={fullscreen}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 {fullscreen ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /> : <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />}
@@ -417,8 +465,9 @@ export default function LuckyDraw({ autoFullscreen = false }) {
           </div>
         </div>
 
-        <p className="dlgfb-draw-kicker">{eventName}</p>
-        <h1 className="dlgfb-draw-title">Lucky Draw</h1>
+        <h1 className="dlgfb-draw-title">
+          {phase === "revealed" && winner ? "Congratulations!" : "Raffle Draw"}
+        </h1>
 
         <SlotMachine reels={reels} state={phase === "revealing" ? "suspense" : phase} label={srLabel} />
 
@@ -458,7 +507,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
           )}
           {phase === "revealed" && winner && (
             <div className="dlgfb-winner-card">
-              <p className="dlgfb-winner-kicker">Congratulations!</p>
               <WinnerName name={winner.attendee_name} />
               {winner.company_name && <p className="dlgfb-winner-company">{winner.company_name}</p>}
             </div>

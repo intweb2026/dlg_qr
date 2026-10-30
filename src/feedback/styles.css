@@ -456,7 +456,7 @@ body.dlgfb-body-active {
 }
 
 /* ------------------------------------------------------------------ public form */
-/* Colours follow the event QR site, the event's theme.secondary (--theme-secondary, #278dff by default). Everything here is scoped to .fb-page so the admin keeps its look. */
+/* Colours follow the event QR site, brand blue #278dff. Everything here is scoped to .fb-page so the admin keeps its look. */
 .dlgfb-app .dlgfb-event-name {
   color: var(--brass-light);
   font-weight: 700;
@@ -493,8 +493,8 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-page {
-  --fb-blue: var(--theme-secondary);
-  --fb-blue-dark: var(--theme-secondary-dark);
+  --fb-blue: #278dff;
+  --fb-blue-dark: #1f7ae6;
   --fb-navy: #163f86;
   --fb-tint: #eaf2fc;
   --fb-surface: #f3f5f8;
@@ -521,7 +521,7 @@ body.dlgfb-body-active {
   min-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
-  background-color: var(--theme-secondary);
+  background-color: #278dff;
   background-image: url(../../public/images/dle26/DLE_bg_pattern.png);
   background-position: right center;
   background-repeat: no-repeat;
@@ -805,7 +805,7 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-form-radio input:focus-visible+.dlgfb-form-radio-mark,
 .dlgfb-app .dlgfb-form-check input:focus-visible+.dlgfb-form-check-mark {
-  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.35);
+  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.35);
 }
 
 .dlgfb-app .dlgfb-is-invalid .dlgfb-form-radio-mark,
@@ -876,7 +876,7 @@ body.dlgfb-body-active {
   outline: none;
   border-color: var(--fb-blue);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
+  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.2);
 }
 
 .dlgfb-app .dlgfb-form-select.dlgfb-is-invalid select,
@@ -899,7 +899,7 @@ body.dlgfb-body-active {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  box-shadow: 0 6px 16px rgba(var(--theme-secondary-rgb), 0.35);
+  box-shadow: 0 6px 16px rgba(39, 141, 255, 0.35);
   cursor: pointer;
   transition: background-color 0.15s, transform 0.1s;
 }
@@ -1078,7 +1078,7 @@ body.dlgfb-body-active {
   background: #fff;
   border: 1.5px solid var(--fb-blue);
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(var(--theme-secondary-rgb), 0.18);
+  box-shadow: 0 8px 20px rgba(39, 141, 255, 0.18);
 }
 
 .dlgfb-app .dlgfb-form-ticket::before {
@@ -1468,7 +1468,7 @@ body.dlgfb-body-active {
 .dlgfb-app .dlgfb-form-page .dlgfb-search-field .dlgfb-form-control:focus {
   border-color: var(--fb-blue);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
+  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.2);
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-search-field .dlgfb-form-control:disabled {
@@ -1516,7 +1516,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-attendee-option-name mark {
-  background: rgba(var(--theme-secondary-rgb), 0.18);
+  background: rgba(39, 141, 255, 0.18);
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-attendee-option-company,
@@ -1526,7 +1526,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-attendee-avatar {
-  background: var(--theme-secondary);
+  background: #278dff;
   color: #fff;
 }
 
@@ -1632,7 +1632,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-confirm-row.dlgfb-is-editing {
-  border-color: var(--theme-secondary);
+  border-color: #278dff;
 }
 
 .dlgfb-app .dlgfb-form-confirm-label {
@@ -1659,8 +1659,8 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-confirm-input:focus {
-  border-color: var(--theme-secondary);
-  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
+  border-color: #278dff;
+  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.2);
 }
 
 .dlgfb-app .dlgfb-form-confirm-input.dlgfb-is-invalid {
@@ -1684,13 +1684,13 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-form-confirm-edit:hover:not(:disabled),
 .dlgfb-app .dlgfb-form-confirm-edit:focus-visible {
-  color: var(--theme-secondary);
+  color: #278dff;
   background: #eaf2fc;
 }
 
 .dlgfb-app .dlgfb-is-editing .dlgfb-form-confirm-edit {
   color: #fff;
-  background: var(--theme-secondary);
+  background: #278dff;
 }
 
 .dlgfb-app .dlgfb-form-confirm-edit:disabled {
@@ -1713,25 +1713,25 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-btn:focus {
-  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.3);
+  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.3);
 }
 
 .dlgfb-app .dlgfb-form-btn-primary {
-  background: var(--theme-secondary);
-  border: 1px solid var(--theme-secondary);
+  background: #278dff;
+  border: 1px solid #278dff;
   color: #fff;
 }
 
 .dlgfb-app .dlgfb-form-btn-primary:hover,
 .dlgfb-app .dlgfb-form-btn-primary:not(:disabled):active {
-  background: var(--theme-secondary-dark);
-  border-color: var(--theme-secondary-dark);
+  background: #1f7ae6;
+  border-color: #1f7ae6;
   color: #fff;
 }
 
 .dlgfb-app .dlgfb-form-btn-primary:disabled {
-  background: var(--theme-secondary);
-  border-color: var(--theme-secondary);
+  background: #278dff;
+  border-color: #278dff;
   color: #fff;
   opacity: 0.6;
 }
@@ -1743,8 +1743,8 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-btn-ghost:hover {
-  border-color: var(--theme-secondary);
-  color: var(--theme-secondary);
+  border-color: #278dff;
+  color: #278dff;
 }
 
 /* Tablet and desktop. The mobile design above is the reference, these rules only widen and enlarge it. */
@@ -2819,28 +2819,16 @@ body.dlgfb-body-active {
   margin-bottom: 0.9rem;
 }
 
-/* The event logo, kept inside the column and at a sensible height whatever size the file is. */
-.dlgfb-app .dlgfb-login-logo {
-  display: block;
-  max-width: min(235px, 60%);
-  max-height: 110px;
-  width: auto;
-  height: auto;
-  margin: 0 auto 1.25rem;
-  object-fit: contain;
-}
-
 .dlgfb-app .dlgfb-login-intro h1 {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(2rem, 8vw, 2.6rem);
-  line-height: 1.1;
-  margin-bottom: 0.9rem;
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 0.4rem;
 }
 
 .dlgfb-app .dlgfb-login-intro-copy {
   color: #c8d0de;
-  line-height: 1.5;
   margin: 0;
 }
 
@@ -2910,45 +2898,6 @@ body.dlgfb-body-active {
 @media (max-width: 420px) {
   .dlgfb-app .dlgfb-login-card {
     padding: 1.5rem 1.25rem;
-  }
-
-  .dlgfb-app .dlgfb-login-intro {
-    margin-bottom: 1.25rem;
-  }
-
-  .dlgfb-app .dlgfb-login-intro h1 {
-    margin-bottom: 0.7rem;
-  }
-
-  .dlgfb-app .dlgfb-login-intro-copy {
-    font-size: 0.95rem;
-  }
-
-  .dlgfb-app .dlgfb-login-logo {
-    max-height: 80px;
-    margin-bottom: 1rem;
-  }
-}
-
-/* Phones turned sideways, start at the top so the form scrolls instead of being squeezed. */
-@media (max-height: 560px) and (orientation: landscape) {
-  .dlgfb-app .dlgfb-login-page {
-    align-items: flex-start;
-    padding: 1rem;
-  }
-
-  .dlgfb-app .dlgfb-login-intro {
-    margin-bottom: 1rem;
-  }
-
-  .dlgfb-app .dlgfb-login-logo {
-    max-height: 56px;
-    margin-bottom: 0.6rem;
-  }
-
-  .dlgfb-app .dlgfb-login-intro h1 {
-    font-size: 1.9rem;
-    margin-bottom: 0.5rem;
   }
 }
 
@@ -3819,6 +3768,303 @@ body.dlgfb-body-active {
   .dlgfb-app .dlgfb-draw-footer {
     display: none;
   }
+}
+
+/* ------------------------------------------------------------------ lucky draw themes
+   Every theme shares Montserrat and these sizes, the dlgfb-theme-* class on the stage only picks colours.
+   --font-display is changed on the stage alone, so the rest of the app keeps Big Shoulders Display. */
+.dlgfb-app .dlgfb-draw-stage {
+  --font-display: "Montserrat", "Segoe UI", Arial, sans-serif;
+  font-family: var(--font-display);
+}
+
+.dlgfb-app .dlgfb-draw-title {
+  font-size: clamp(1.6rem, 5vw, 2.6rem);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  margin-top: 1.5rem;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen .dlgfb-draw-title {
+  font-size: clamp(2rem, 3.2vw, 3.4rem);
+  margin-top: 0;
+}
+
+.dlgfb-app .dlgfb-draw-stage .dlgfb-slot-machine {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.dlgfb-app .dlgfb-slot-digit {
+  font-size: clamp(1.9rem, 6.5vw, 3.6rem);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen .dlgfb-slot-digit {
+  font-size: clamp(2.6rem, 7.5vw, 5.2rem);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-phase-revealed .dlgfb-slot-digit {
+  font-size: clamp(1.3rem, 4vw, 2.1rem);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen.dlgfb-phase-revealed .dlgfb-slot-digit {
+  font-size: clamp(1.6rem, 4.4vw, 2.8rem);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-phase-revealed .dlgfb-winner-name {
+  font-size: clamp(1.9rem, 5.5vw, 3.2rem);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen.dlgfb-phase-revealed .dlgfb-winner-name {
+  font-size: clamp(2.4rem, 4.2vw, 4.6rem);
+}
+
+.dlgfb-app .dlgfb-winner-company {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-phase-revealed .dlgfb-winner-company {
+  font-size: clamp(1rem, 3vw, 1.8rem);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen.dlgfb-phase-revealed .dlgfb-winner-company {
+  font-size: clamp(1.3rem, 2.4vw, 2.6rem);
+}
+
+.dlgfb-app .dlgfb-name-scramble {
+  font-size: clamp(1.6rem, 5vw, 2.8rem);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen .dlgfb-name-scramble {
+  font-size: clamp(2.2rem, 4.5vw, 4.4rem);
+}
+
+.dlgfb-app .dlgfb-suspense-text {
+  font-size: clamp(1.1rem, 3.2vw, 1.6rem);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen .dlgfb-suspense-text {
+  font-size: clamp(1.4rem, 2.6vw, 2.4rem);
+}
+
+.dlgfb-app .dlgfb-entry-number {
+  font-size: clamp(1.6rem, 4.5vw, 2.2rem);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen .dlgfb-entry-number {
+  font-size: clamp(1.9rem, 3.5vw, 2.8rem);
+}
+
+/* Top bar buttons, Default colours */
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen {
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--brass);
+  border-color: var(--brass);
+  color: var(--ink);
+}
+
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen:hover,
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen.dlgfb-is-on:hover {
+  background: #fff;
+  border-color: #fff;
+  color: var(--ink);
+}
+
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen.dlgfb-is-on {
+  background: var(--brass-light);
+  border-color: var(--brass-light);
+}
+
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-draw {
+  border-radius: 4px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* White and Black */
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white,
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black {
+  --draw-title: #3C9BFF;
+  --draw-button: #4286f8;
+  --draw-button-hover: #2f74ea;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white {
+  --name-from: #181e35;
+  --name-to: #4589e3;
+  background:
+    radial-gradient(120% 55% at 50% 112%, rgba(255, 255, 255, 0.95), transparent 62%),
+    radial-gradient(120% 55% at 50% -12%, rgba(255, 255, 255, 0.95), transparent 62%),
+    #e6e6e6;
+  color: #181e35;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black {
+  --name-from: #ffffff;
+  --name-to: #4b95f9;
+  background: radial-gradient(ellipse at 50% 32%, #1f1f23 0%, #0a0a0b 60%, #000 100%);
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white::backdrop {
+  background: #e6e6e6;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black::backdrop {
+  background: #000;
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-draw-title,
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-winner-kicker {
+  color: var(--draw-title);
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-fullscreen,
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-fullscreen.dlgfb-is-on {
+  background: var(--draw-button);
+  border-color: var(--draw-button);
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-fullscreen:hover,
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-fullscreen.dlgfb-is-on:hover {
+  background: var(--draw-button-hover);
+  border-color: var(--draw-button-hover);
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-draw {
+  background: var(--draw-button);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(66, 134, 248, 0.35);
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-draw:disabled {
+  box-shadow: none;
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-draw:hover:not(:disabled) {
+  background: var(--draw-button-hover);
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-reveal.dlgfb-is-ready {
+  background: var(--draw-button);
+  border-color: var(--draw-button);
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-spin-progress-bar {
+  background: var(--draw-button);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-spin-progress {
+  background: rgba(24, 30, 53, 0.12);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-spin-progress {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-slot-machine {
+  background: #f4f6f9;
+  box-shadow: 0 6px 18px rgba(24, 30, 53, 0.14);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-slot-reel {
+  background: linear-gradient(180deg, #3a3e62 0%, #2b2e4c 45%, #15172a 100%);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-slot-digit {
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-slot-machine {
+  background: #0b0d14;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-slot-reel {
+  background: linear-gradient(180deg, #fff 0%, #eef0f3 55%, #99a2ab 100%);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-slot-digit {
+  color: #2c2d31;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-draw-hint {
+  color: #475569;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-draw-hint {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-suspense-text,
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-entry-number {
+  color: #181e35;
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-name-scramble {
+  color: var(--draw-title);
+  text-shadow: 0 0 18px rgba(75, 149, 249, 0.55), 0 0 40px rgba(75, 149, 249, 0.3);
+}
+
+/* The full screen stage scrolls on short screens, so the oversized beams are pinned to the screen to stay out of that scroll area */
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen.dlgfb-phase-revealing::before {
+  position: fixed;
+}
+
+/* The winner flash keeps its full grown size after fading out, so the winner screen does not scroll. Its content is smaller than the spin screen's and fits. */
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen.dlgfb-phase-revealed {
+  overflow-y: hidden;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white.dlgfb-phase-revealing::before {
+  background: repeating-conic-gradient(from 0deg, rgba(75, 149, 249, 0.1) 0deg 7deg, transparent 7deg 24deg);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black.dlgfb-phase-revealing::before {
+  background: repeating-conic-gradient(from 0deg, rgba(75, 149, 249, 0.14) 0deg 7deg, transparent 7deg 24deg);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-winner-card::before {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(75, 149, 249, 0.25) 30%, transparent 65%);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-winner-card::before {
+  background: radial-gradient(circle, rgba(172, 210, 252, 0.7) 0%, rgba(75, 149, 249, 0.3) 30%, transparent 65%);
+}
+
+/* Left to right name gradient. Each letter paints its own slice, since the letters animate one by one. */
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-winner-letter {
+  background: linear-gradient(90deg, var(--name-from), var(--name-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-winner-letter {
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--name-to) calc(var(--p0, 0) * 100%), var(--name-from)),
+        color-mix(in srgb, var(--name-to) calc(var(--p1, 1) * 100%), var(--name-from)));
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+}
+
+.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-winner-company {
+  display: inline-block;
+  padding: 0 0.04em 0.12em;
+  background: linear-gradient(90deg, var(--name-from), var(--name-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .dlgfb-app .dlgfb-confetti {
