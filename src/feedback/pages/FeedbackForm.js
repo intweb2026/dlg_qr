@@ -10,6 +10,8 @@ import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryNumber, saveEntry
 
 const REQUIRED_TOTAL = feedbackQuestions.filter((q) => q.required).length + 1; // plus the name
 
+const checkedIcon = "/images/common/checked.png" 
+
 const PANEL_ICONS = {
   info: (
     <>
@@ -81,6 +83,84 @@ function isAnswered(v) {
   return v !== undefined && v !== null && String(v).trim() !== "";
 }
 
+const EDIT_ICON = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" />
+  </svg>
+);
+
+const SAVE_ICON = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </svg>
+);
+
+// One row of the confirm popup. The edit button turns the value into a text box in the same place,
+// Enter or the tick saves it, Escape puts the old value back.
+function ConfirmRow({ label, value, editing, disabled, onEdit, onSave, onCancel }) {
+  const [draft, setDraft] = useState(value);
+  const [invalid, setInvalid] = useState(false);
+
+  useEffect(() => {
+    if (editing) {
+      setDraft(value);
+      setInvalid(false);
+    }
+  }, [editing, value]);
+
+  const save = () => {
+    const next = draft.trim().replace(/\s+/g, " ");
+    if (Array.from(next).length < 2) {
+      setInvalid(true);
+      return;
+    }
+    onSave(next);
+  };
+
+  return (
+    <div className={`dlgfb-form-confirm-row${editing ? " dlgfb-is-editing" : ""}`}>
+      <span className="dlgfb-form-confirm-label">{label} -</span>
+      {editing ? (
+        <input
+          className={`dlgfb-form-confirm-input${invalid ? " dlgfb-is-invalid" : ""}`}
+          value={draft}
+          maxLength={255}
+          autoFocus
+          aria-label={label}
+          aria-invalid={invalid}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setInvalid(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              save();
+            } else if (e.key === "Escape") {
+              // Escape here only cancels the edit, not the whole popup.
+              e.nativeEvent.stopImmediatePropagation();
+              onCancel();
+            }
+          }}
+        />
+      ) : (
+        <span className="dlgfb-form-confirm-value">{value || "---"}</span>
+      )}
+      <button
+        type="button"
+        className="dlgfb-form-confirm-edit"
+        aria-label={editing ? `Save ${label}` : `Edit ${label}`}
+        disabled={disabled}
+        onClick={editing ? save : onEdit}
+      >
+        {editing ? SAVE_ICON : EDIT_ICON}
+      </button>
+      {editing && invalid && <span className="dlgfb-form-confirm-error">Enter at least 2 characters.</span>}
+    </div>
+  );
+}
+
 export default function FeedbackForm() {
   const notify = useToast();
   const eventPath = useEventPath();
@@ -94,9 +174,10 @@ export default function FeedbackForm() {
   const [confirming, setConfirming] = useState(false);
   // A refusal shown inside the confirm card, in place of a toast.
   const [confirmError, setConfirmError] = useState(null);
+  // The confirm popup field being edited, "full_name" or "company_name", or null.
+  const [editingField, setEditingField] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  // eslint-disable-next-line no-unused-vars -- read by the DrawTicket lines, commented out below
-  const [entryId, setEntryId] = useState(() => readEntryNumber());
+    const [entryId, setEntryId] = useState(() => readEntryNumber());
 
   const loadAttendees = useCallback(() => {
     setAttendeesError(false);
@@ -156,6 +237,7 @@ export default function FeedbackForm() {
     const missing = Object.keys(validate());
     if (missing.length === 0) {
       setConfirmError(null);
+      setEditingField(null);
       setConfirming(true);
       return;
     }
@@ -227,7 +309,7 @@ export default function FeedbackForm() {
     required ? <span className="dlgfb-form-tag dlgfb-form-tag-req">Required</span> : <span className="dlgfb-form-tag dlgfb-form-tag-opt">Optional</span>;
 
   return (
-    <div className="dlgfb-form-page">
+    <div className="dlgfb-form-page feedback-form-page">
       <div className="dlgfb-form-shell">
         <header className="dlgfb-form-header">
           <div className="dlgfb-form-header-bar">
@@ -248,8 +330,7 @@ export default function FeedbackForm() {
               </ul>
             </>
           )}
-          {/* Moved into the success card, as its last line */}
-          {/* {view === "success" && <p className="dlgfb-form-tagline">Your voice helps make each event better.</p>} */}
+          {view === "success" && <p className="dlgfb-form-tagline">Your voice helps make each event better.</p>}
         </header>
 
         <main className="dlgfb-form-body">
@@ -298,17 +379,22 @@ export default function FeedbackForm() {
           {view === "success" && (
             <div className="dlgfb-form-card dlgfb-form-success" role="status">
               <span className="dlgfb-form-success-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <img src={checkedIcon} alt="Success" />
+                {/* <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M6 12.5l4 4L18 8" />
-                </svg>
+                </svg> */}
               </span>
               <h2>You’re all set!</h2>
-              <p>Your feedback has been submitted.</p>
-              {/* <DrawTicket id={entryId} />
-              <p className="dlgfb-form-success-note">Keep your number handy for the draw.</p> */}
-              <div className="dlgfb-form-success-quote">
-                <p>Your voice helps make each event better.</p>
-              </div>
+              {entryId !== null && entryId !== undefined && (
+                <>
+                  <p className="dlgfb-form-raffle-kicker">Your raffle ticket number is</p>
+                  <p className="dlgfb-form-raffle-number">{padId(entryId, 2)}</p>
+                  <p className="dlgfb-form-raffle-note">
+                    The winning number will be announced shortly; please stay in the room, as the prize can only be claimed by a winner who is present.
+                  </p>
+                </>
+              )}
+              <p className="dlgfb-form-raffle-foot">You’re entered in the draw. Good luck!</p>
             </div>
           )}
 
@@ -442,7 +528,7 @@ export default function FeedbackForm() {
 
       {confirming && attendee && (
         <Modal
-          title="Confirm it is you"
+          title="Your Display Name"
           className="dlgfb-form-modal"
           onClose={() => !submitting && setConfirming(false)}
           footer={
@@ -450,9 +536,13 @@ export default function FeedbackForm() {
               <button className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-ghost" disabled={submitting} onClick={() => setConfirming(false)}>
                 Go back
               </button>
-              <button className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-primary" disabled={submitting || !!confirmError} onClick={handleSubmit}>
+              <button
+                className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-primary"
+                disabled={submitting || !!confirmError || editingField !== null}
+                onClick={handleSubmit}
+              >
                 {submitting && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-mr-2" aria-hidden="true" />}
-                {submitting ? "Submitting" : "Submit feedback"}
+                {submitting ? "Submitting" : "Submit"}
               </button>
             </>
           }
@@ -460,20 +550,39 @@ export default function FeedbackForm() {
           {confirmError ? (
             <p className="dlgfb-form-modal-error" role="alert">{confirmError}</p>
           ) : (
-            <p className="dlgfb-form-modal-note">Your feedback will be submitted under this attendee. You can only submit once.</p>
+            <p className="dlgfb-form-modal-note">
+              <strong>Disclaimer</strong> - The host will call out your name and company name, and they will appear on the screen,
+              exactly as shown below. Use the edit button to change them. Only one submission is allowed per person.
+            </p>
           )}
-          <dl className="dlgfb-form-confirm-list dlgfb-mb-0">
-            <dt>Name</dt>
-            <dd>{attendee.full_name}</dd>
-            <dt>Company</dt>
-            <dd>{attendee.company_name.trim() || "---"}</dd>
+          <div className="dlgfb-form-confirm-list dlgfb-mb-0">
+            {[
+              { key: "full_name", label: "Display Name" },
+              { key: "company_name", label: "Company Name" },
+            ].map(({ key, label }) => (
+              <ConfirmRow
+                key={key}
+                label={label}
+                value={attendee[key].trim()}
+                editing={editingField === key}
+                disabled={submitting || (editingField !== null && editingField !== key)}
+                onEdit={() => setEditingField(key)}
+                onCancel={() => setEditingField(null)}
+                onSave={(next) => {
+                  setAttendee((a) => ({ ...a, [key]: next }));
+                  setEditingField(null);
+                  // A refusal was about the old name or company, check again with the new one.
+                  setConfirmError(null);
+                }}
+              />
+            ))}
             {attendee.is_new && attendee.email.trim() && (
-              <>
-                <dt>Email</dt>
-                <dd className="dlgfb-text-break">{attendee.email.trim()}</dd>
-              </>
+              <div className="dlgfb-form-confirm-row">
+                <span className="dlgfb-form-confirm-label">Email -</span>
+                <span className="dlgfb-form-confirm-value dlgfb-text-break">{attendee.email.trim()}</span>
+              </div>
             )}
-          </dl>
+          </div>
         </Modal>
       )}
     </div>
