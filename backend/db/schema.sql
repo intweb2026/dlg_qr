@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS `feedback_submissions` (
   `id` int NOT NULL AUTO_INCREMENT,
   `device_fingerprint` varchar(255) NOT NULL,
   `feedback_data` json NOT NULL,
+  -- Name and company as confirmed on the Your Display Name popup, edited or not.
+  `userAliesName` varchar(255) NOT NULL DEFAULT '',
+  `userComapnyAliesName` varchar(255) NOT NULL DEFAULT '',
   `is_suspended` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` datetime(6) NOT NULL,
   `attendee_id` int NOT NULL,

@@ -32,10 +32,18 @@ function settingsJson(row) {
   };
 }
 
+// The name and company confirmed on the form, used for the lucky draw. Submissions saved before
+// the alias columns existed have them blank and fall back to the attendee list.
+const ALIAS_NAME = "COALESCE(NULLIF(s.userAliesName, ''), a.full_name)";
+const ALIAS_COMPANY = "COALESCE(NULLIF(s.userComapnyAliesName, ''), a.company_name)";
+
 // ------------------------------------------------------------------ Attendees
+// The alias is null until the attendee submits.
 const ATTENDEE_SELECT = `
   SELECT a.attendee_id, a.full_name, a.email, a.company_name, a.is_walk_in, a.created_at,
-         s.id IS NOT NULL AS has_submitted
+         s.id IS NOT NULL AS has_submitted,
+         IF(s.id IS NULL, NULL, ${ALIAS_NAME}) AS alias_name,
+         IF(s.id IS NULL, NULL, ${ALIAS_COMPANY}) AS company_alias_name
   FROM attendees a
   LEFT JOIN feedback_submissions s ON s.attendee_id = a.attendee_id`;
 
@@ -58,6 +66,8 @@ function attendeeJson(row) {
     company_name: row.company_name,
     is_walk_in: Boolean(row.is_walk_in),
     has_submitted: Boolean(row.has_submitted),
+    alias_name: row.alias_name ?? null,
+    company_alias_name: row.company_alias_name ?? null,
     created_at: isoDate(row.created_at),
   };
 }
@@ -75,6 +85,7 @@ function attendeeLookupJson(row) {
 // ------------------------------------------------------------------ Feedback submissions
 const SUBMISSION_SELECT = `
   SELECT s.id, s.attendee_id, a.full_name AS attendee_name, a.email, a.company_name, a.is_walk_in,
+         ${ALIAS_NAME} AS alias_name, ${ALIAS_COMPANY} AS company_alias_name,
          s.feedback_data, s.is_suspended, s.device_fingerprint, s.created_at
   FROM feedback_submissions s
   JOIN attendees a ON a.attendee_id = s.attendee_id`;
@@ -98,6 +109,8 @@ function submissionJson(row) {
     company_name: row.company_name,
     is_walk_in: Boolean(row.is_walk_in),
     feedback_data: typeof row.feedback_data === "string" ? JSON.parse(row.feedback_data) : row.feedback_data,
+    alias_name: row.alias_name,
+    company_alias_name: row.company_alias_name,
     is_suspended: Boolean(row.is_suspended),
     device_fingerprint: row.device_fingerprint,
     created_at: isoDate(row.created_at),
@@ -119,8 +132,9 @@ async function isEligible(id) {
   return rows.length > 0;
 }
 
+// Winners are shown by the alias the attendee confirmed, the list name stays off the public draw.
 const WINNER_SELECT = `
-  SELECT w.id, w.submission_id, a.full_name AS attendee_name, a.company_name, a.email,
+  SELECT w.id, w.submission_id, ${ALIAS_NAME} AS attendee_name, ${ALIAS_COMPANY} AS company_name, a.email,
          w.attempt_number, u.username AS drawn_by, w.drawn_at
   FROM lucky_draw_winners w
   JOIN feedback_submissions s ON s.id = w.submission_id
@@ -145,6 +159,8 @@ module.exports = {
   loadSettings,
   isActive,
   settingsJson,
+  ALIAS_NAME,
+  ALIAS_COMPANY,
   ATTENDEE_SELECT,
   getAttendee,
   emailTaken,

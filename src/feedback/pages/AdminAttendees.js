@@ -145,7 +145,7 @@ export default function AdminAttendees() {
       </div> */}
 
       <div className="dlgfb-filter-row">
-        <input type="search" className="dlgfb-form-control" placeholder="Search by name, email or company"
+        <input type="search" className="dlgfb-form-control" placeholder="Search by name, display name, email or company"
           value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search attendees" />
         <select className="dlgfb-custom-select" value={walkIn} onChange={(e) => setWalkIn(e.target.value)} aria-label="Filter by source">
           <option value="">All attendees</option>
@@ -161,6 +161,8 @@ export default function AdminAttendees() {
               <th>ID</th>
               <th>Attendee name</th>
               <th>Company name</th>
+              <th>Display name</th>
+              <th>Display company</th>
               <th>Email</th>
               <th>Feedback</th>
               <th className="dlgfb-text-right">Actions</th>
@@ -168,7 +170,7 @@ export default function AdminAttendees() {
           </thead>
           <tbody>
             {list.length === 0 && (
-              <tr className="dlgfb-empty-row"><td colSpan={6} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">
+              <tr className="dlgfb-empty-row"><td colSpan={8} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">
                 {q || walkIn ? "No attendees match these filters." : "No attendees yet. Add one above or import a CSV."}
               </td></tr>
             )}
@@ -180,6 +182,9 @@ export default function AdminAttendees() {
                   {a.is_walk_in && <span className="dlgfb-badge dlgfb-badge-self-registered dlgfb-ml-2" title="Added on the feedback form">Self-registered</span>}
                 </td>
                 <td data-label="Company">{a.company_name || "---"}</td>
+                {/* Confirmed on the feedback form, empty until the attendee submits. */}
+                <td data-label="Display name" className="dlgfb-font-weight-bold">{a.alias_name || "---"}</td>
+                <td data-label="Display company">{a.company_alias_name || "---"}</td>
                 <td data-label="Email" className="dlgfb-text-break">{a.email || "---"}</td>
                 <td data-label="Feedback">{a.has_submitted ? <span className="dlgfb-badge dlgfb-badge-active">Submitted</span> : <span className="dlgfb-badge dlgfb-badge-pending">Pending</span>}</td>
                 <td className="dlgfb-text-right dlgfb-actions-cell">

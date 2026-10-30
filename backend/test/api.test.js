@@ -139,6 +139,45 @@ describe("feedback flow", () => {
     assert.equal(r2.data.code, "already_submitted");
   });
 
+  test("submit saves the display name and company alias", async () => {
+    const body = { attendee_id: a1, alias_name: "  Priya   S ", company_alias_name: "Shell plc", feedback_data: { x: 1 } };
+    const r = await api("POST", "/feedback/submit/", { body });
+    assert.equal(r.status, 201);
+    const [row] = await query("SELECT userAliesName, userComapnyAliesName FROM feedback_submissions WHERE id = ?", [r.data.id]);
+    assert.deepEqual({ ...row }, { userAliesName: "Priya S", userComapnyAliesName: "Shell plc" });
+    // The attendee list itself is not changed.
+    assert.equal((await query("SELECT full_name FROM attendees WHERE attendee_id = ?", [a1]))[0].full_name, "Priya Sharma");
+
+    // Without an alias the name and company on the list are saved.
+    const r2 = await api("POST", "/feedback/submit/", { body: { attendee_id: a2, feedback_data: { x: 1 } } });
+    const [row2] = await query("SELECT userAliesName, userComapnyAliesName FROM feedback_submissions WHERE id = ?", [r2.data.id]);
+    assert.deepEqual({ ...row2 }, { userAliesName: "James Smith", userComapnyAliesName: "BP" });
+  });
+
+  test("new attendee keeps the typed name apart from the alias", async () => {
+    const body = {
+      new_attendee: { full_name: "Abc Real", company_name: "Acme", email: "" },
+      alias_name: "Xyz Rep",
+      company_alias_name: "Acme Group",
+      feedback_data: { x: 1 },
+    };
+    const r = await api("POST", "/feedback/submit/", { body });
+    assert.equal(r.status, 201);
+    const [row] = await query(
+      `SELECT a.full_name, a.company_name, s.userAliesName, s.userComapnyAliesName
+       FROM feedback_submissions s JOIN attendees a ON a.attendee_id = s.attendee_id WHERE s.id = ?`,
+      [r.data.id]
+    );
+    assert.deepEqual({ ...row }, { full_name: "Abc Real", company_name: "Acme", userAliesName: "Xyz Rep", userComapnyAliesName: "Acme Group" });
+  });
+
+  test("migrate fills the alias on older submissions", async () => {
+    const id = await createSubmission(a1);
+    await migrate(EVENT_A);
+    const [row] = await query("SELECT userAliesName, userComapnyAliesName FROM feedback_submissions WHERE id = ?", [id]);
+    assert.deepEqual({ ...row }, { userAliesName: "Priya Sharma", userComapnyAliesName: "Shell" });
+  });
+
   test("device check is left to the form", async () => {
     // Clearing the form site's cookies must open the form again, so the API keeps no device flag of its own.
     await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } });
@@ -443,6 +482,28 @@ describe("lucky draw", () => {
     assert.equal((await api("POST", "/lucky-draw/reveal/", { body: { submission_id: s1 } })).status, 400);
   });
 
+  test("winner is shown by the alias, admin sees both names", async () => {
+    const body = { attendee_id: a1, alias_name: "Xyz Rep", company_alias_name: "Shell Rep", feedback_data: { x: 1 } };
+    const id = (await api("POST", "/feedback/submit/", { body })).data.id;
+
+    const reveal = await api("POST", "/lucky-draw/reveal/", { body: { submission_id: id } });
+    assert.deepEqual([reveal.data.attendee_name, reveal.data.company_name], ["Xyz Rep", "Shell Rep"]);
+    assert.ok(!JSON.stringify((await api("GET", "/lucky-draw/winners/")).data).includes("Priya Sharma"));
+
+    const [sub] = (await api("GET", "/admin/submissions/?q=xyz", { token })).data.results;
+    assert.deepEqual(
+      [sub.attendee_name, sub.company_name, sub.alias_name, sub.company_alias_name],
+      ["Priya Sharma", "Shell", "Xyz Rep", "Shell Rep"]
+    );
+
+    // Attendees page, the alias shows once the attendee has submitted.
+    const people = (await api("GET", "/admin/attendees/", { token })).data;
+    const pick = (name) => people.find((a) => a.full_name === name);
+    assert.deepEqual([pick("Priya Sharma").alias_name, pick("Priya Sharma").company_alias_name], ["Xyz Rep", "Shell Rep"]);
+    assert.deepEqual([pick("James Smith").alias_name, pick("James Smith").company_alias_name], [null, null]);
+    assert.deepEqual((await api("GET", "/admin/attendees/?q=xyz", { token })).data.map((a) => a.full_name), ["Priya Sharma"]);
+  });
+
   test("past winners leave the pool", async () => {
     const s1 = await createSubmission(a1);
     const s2 = await createSubmission(a2);
@@ -537,6 +598,20 @@ describe("events", () => {
     assert.equal(r.status, 200);
     assert.deepEqual(r.data, [{ name: "Priya Sharma", company: "Shell" }]);
     assert.deepEqual((await api("GET", "/registered-attendees/", { event: "testb" })).data, [{ name: "James Smith", company: "BP" }]);
+  });
+
+  test("registered attendees show the alias once submitted", async () => {
+    const id = await createAttendee("Priya Sharma", "priya@example.com", "Shell");
+    await createAttendee("Ana Lopez", null, "BP");
+    await query(
+      "INSERT INTO feedback_submissions (attendee_id, device_fingerprint, feedback_data, userAliesName, userComapnyAliesName, is_suspended, created_at) " +
+        "VALUES (?, 'a', '{}', 'Xyz Rep', 'Acme Rep', 0, UTC_TIMESTAMP(6))",
+      [id]
+    );
+    assert.deepEqual((await api("GET", "/registered-attendees/")).data, [
+      { name: "Xyz Rep", company: "Acme Rep" },
+      { name: "Ana Lopez", company: "BP" },
+    ]);
   });
 
   test("settings belong to one event", async () => {

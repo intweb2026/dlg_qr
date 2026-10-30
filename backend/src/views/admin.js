@@ -38,8 +38,9 @@ async function submissionList(req, res) {
   const q = String(req.query.q || "").trim();
   if (q) {
     const like = `%${escapeLike(q)}%`;
-    let filter = "a.full_name LIKE ? OR a.email LIKE ? OR a.company_name LIKE ?";
-    params.push(like, like, like);
+    let filter =
+      "a.full_name LIKE ? OR a.email LIKE ? OR a.company_name LIKE ? OR s.userAliesName LIKE ? OR s.userComapnyAliesName LIKE ?";
+    params.push(like, like, like, like, like);
     if (/^\d+$/.test(q)) {
       filter += " OR s.id = ?";
       params.push(Number(q));
@@ -101,8 +102,10 @@ async function attendeeList(req, res) {
   const q = String(req.query.q || "").trim();
   if (q) {
     const like = `%${escapeLike(q)}%`;
-    where.push("(a.full_name LIKE ? OR a.email LIKE ? OR a.company_name LIKE ?)");
-    params.push(like, like, like);
+    where.push(
+      "(a.full_name LIKE ? OR a.email LIKE ? OR a.company_name LIKE ? OR s.userAliesName LIKE ? OR s.userComapnyAliesName LIKE ?)"
+    );
+    params.push(like, like, like, like, like);
   }
   const walkIn = req.query.walk_in; // true = added on the feedback form, false = from the list
   if (walkIn === "true" || walkIn === "false") where.push(`a.is_walk_in = ${walkIn === "true" ? 1 : 0}`);

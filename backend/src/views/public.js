@@ -1,6 +1,6 @@
 const { query, transaction } = require("../db");
 const { publicConfig } = require("../events");
-const { attendeeLookupJson, getAttendee, isActive, loadSettings } = require("../models");
+const { ALIAS_COMPANY, ALIAS_NAME, attendeeLookupJson, getAttendee, isActive, loadSettings } = require("../models");
 const { collapseSpaces, deviceFingerprint, normalizeName } = require("../utils");
 const v = require("../validation");
 
@@ -29,12 +29,17 @@ async function attendeeList(req, res) {
   return res.json(rows.map(attendeeLookupJson));
 }
 
-/** The Registered Attendees page. Name and company only, walk-ins added on the feedback form are left out. */
+/**
+ * The Registered Attendees page. Name and company only, walk-ins added on the feedback form are left out.
+ * Attendees who submitted are shown by the alias they confirmed, the others by the name on the list.
+ */
 async function registeredAttendees(req, res) {
   const rows = await query(
-    "SELECT full_name, company_name FROM attendees WHERE is_walk_in = 0 ORDER BY company_name, full_name"
+    `SELECT IF(s.id IS NULL, a.full_name, ${ALIAS_NAME}) AS name, IF(s.id IS NULL, a.company_name, ${ALIAS_COMPANY}) AS company
+     FROM attendees a LEFT JOIN feedback_submissions s ON s.attendee_id = a.attendee_id
+     WHERE a.is_walk_in = 0 ORDER BY company, name`
   );
-  return res.json(rows.map((a) => ({ name: a.full_name, company: a.company_name })));
+  return res.json(rows.map((a) => ({ name: a.name, company: a.company })));
 }
 
 // A name typed on the form that is not on the attendee list. Company is required, it tells apart people with the same name.
@@ -72,6 +77,9 @@ const SUBMIT_FIELDS = {
     },
   },
   new_attendee: { clean: (value) => v.nested(value, NEW_ATTENDEE_FIELDS) },
+  // Name and company from the Your Display Name popup, saved as given even when not edited.
+  alias_name: { clean: (value) => collapseSpaces(v.string(value, { allowBlank: true })) },
+  company_alias_name: { clean: (value) => collapseSpaces(v.string(value, { allowBlank: true })) },
   feedback_data: {
     required: true,
     clean(value) {
@@ -133,6 +141,10 @@ async function feedbackSubmit(req, res) {
 
   // 4. Duplicate check + save
   if (attendee && attendee.has_submitted) return res.status(400).json(ALREADY_SUBMITTED);
+  // An older page that sends no alias keeps the name and company as they are on the list.
+  const who = attendee || newAttendee;
+  const aliasName = values.alias_name || who.full_name;
+  const companyAliasName = values.company_alias_name || who.company_name;
   let submissionId;
   try {
     submissionId = await transaction(async (q) => {
@@ -145,9 +157,9 @@ async function feedbackSubmit(req, res) {
         attendee = { attendee_id: created.insertId };
       }
       const result = await q(
-        "INSERT INTO feedback_submissions (attendee_id, device_fingerprint, feedback_data, is_suspended, created_at) " +
-          "VALUES (?, ?, ?, 0, UTC_TIMESTAMP(6))",
-        [attendee.attendee_id, deviceFingerprint(req), JSON.stringify(values.feedback_data)]
+        "INSERT INTO feedback_submissions (attendee_id, device_fingerprint, feedback_data, userAliesName, userComapnyAliesName, is_suspended, created_at) " +
+          "VALUES (?, ?, ?, ?, ?, 0, UTC_TIMESTAMP(6))",
+        [attendee.attendee_id, deviceFingerprint(req), JSON.stringify(values.feedback_data), aliasName, companyAliasName]
       );
       return result.insertId;
     });

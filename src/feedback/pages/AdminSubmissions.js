@@ -216,7 +216,7 @@ export default function AdminSubmissions() {
       <SettingsPanel />
 
       <div className="dlgfb-filter-row">
-        <input type="search" className="dlgfb-form-control" placeholder="Search by ID, name, email or company"
+        <input type="search" className="dlgfb-form-control" placeholder="Search by ID, name, display name, email or company"
           value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search submissions" />
         <select className="dlgfb-custom-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by status">
           <option value="">All statuses</option>
@@ -233,6 +233,8 @@ export default function AdminSubmissions() {
               <th>Attendee name</th>
               <th>Email</th>
               <th>Company</th>
+              <th>Display name</th>
+              <th>Display company</th>
               <th>Submitted at</th>
               <th>Status</th>
               <th className="dlgfb-text-right">Actions</th>
@@ -240,10 +242,10 @@ export default function AdminSubmissions() {
           </thead>
           <tbody>
             {loading && data.results.length === 0 && (
-              <tr className="dlgfb-empty-row"><td colSpan={7} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">Loading submissions</td></tr>
+              <tr className="dlgfb-empty-row"><td colSpan={9} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">Loading submissions</td></tr>
             )}
             {!loading && data.results.length === 0 && (
-              <tr className="dlgfb-empty-row"><td colSpan={7} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">
+              <tr className="dlgfb-empty-row"><td colSpan={9} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">
                 {q || statusFilter ? "No submissions match these filters." : "No feedback has been submitted yet. Share the form link with attendees."}
               </td></tr>
             )}
@@ -253,6 +255,9 @@ export default function AdminSubmissions() {
                 <td data-label="Attendee" className="dlgfb-font-weight-bold">{s.attendee_name}</td>
                 <td data-label="Email" className="dlgfb-text-break">{s.email || "---"}</td>
                 <td data-label="Company">{s.company_name || "Not listed"}</td>
+                {/* The name and company confirmed on the form, used for the lucky draw. */}
+                <td data-label="Display name" className="dlgfb-font-weight-bold">{s.alias_name}</td>
+                <td data-label="Display company">{s.company_alias_name || "Not listed"}</td>
                 <td data-label="Submitted" className="dlgfb-text-nowrap">{formatDate(s.created_at)}</td>
                 <td data-label="Status">
                   <span className={`dlgfb-badge ${s.is_suspended ? "dlgfb-badge-suspended" : "dlgfb-badge-active"}`}>
@@ -287,7 +292,7 @@ export default function AdminSubmissions() {
             ))}
           </dl>
           <p className="dlgfb-small dlgfb-text-muted dlgfb-mb-0">
-            Submitted {formatDate(viewing.created_at)}
+            Display name {viewing.alias_name}, {viewing.company_alias_name || "no company"}. Submitted {formatDate(viewing.created_at)}
           </p>
         </Modal>
       )}

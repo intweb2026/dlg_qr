@@ -176,6 +176,9 @@ export default function FeedbackForm() {
   const [confirmError, setConfirmError] = useState(null);
   // The confirm popup field being edited, "full_name" or "company_name", or null.
   const [editingField, setEditingField] = useState(null);
+  // Name and company as shown on the confirm popup, saved as the alias. Kept apart from the attendee,
+  // so a new attendee's typed name is saved as their real name even when the popup changes it.
+  const [alias, setAlias] = useState({ full_name: "", company_name: "" });
   const [submitting, setSubmitting] = useState(false);
     const [entryId, setEntryId] = useState(() => readEntryNumber());
 
@@ -238,6 +241,7 @@ export default function FeedbackForm() {
     if (missing.length === 0) {
       setConfirmError(null);
       setEditingField(null);
+      setAlias({ full_name: attendee.full_name.trim(), company_name: attendee.company_name.trim() });
       setConfirming(true);
       return;
     }
@@ -268,7 +272,9 @@ export default function FeedbackForm() {
             },
           }
         : { attendee_id: attendee.attendee_id };
-      const { data } = await api.post("/feedback/submit/", { ...who, feedback_data });
+      // The popup's name and company are always saved as the alias, edited or not.
+      const aliasFields = { alias_name: alias.full_name, company_alias_name: alias.company_name };
+      const { data } = await api.post("/feedback/submit/", { ...who, ...aliasFields, feedback_data });
       const id = Number.isInteger(data?.id) ? data.id : null;
       if (id !== null) saveEntryNumber(id);
       setEntryId(id);
@@ -563,16 +569,15 @@ export default function FeedbackForm() {
               <ConfirmRow
                 key={key}
                 label={label}
-                value={attendee[key].trim()}
+                value={alias[key]}
                 editing={editingField === key}
                 disabled={submitting || (editingField !== null && editingField !== key)}
                 onEdit={() => setEditingField(key)}
                 onCancel={() => setEditingField(null)}
                 onSave={(next) => {
-                  setAttendee((a) => ({ ...a, [key]: next }));
+                  // A refusal is about the name typed on the form, so it stays until Go back.
+                  setAlias((a) => ({ ...a, [key]: next }));
                   setEditingField(null);
-                  // A refusal was about the old name or company, check again with the new one.
-                  setConfirmError(null);
                 }}
               />
             ))}
