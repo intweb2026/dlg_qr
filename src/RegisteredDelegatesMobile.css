@@ -108,7 +108,7 @@
   display: block;
   height: 6.9px;
   width: 100%;
-  background: #278dff;
+  background: var(--theme-secondary);
 }
 
 .delegates-mobile__card {
@@ -159,7 +159,7 @@
 }
 
 .delegates-mobile__table th {
-  background: #278dff;
+  background: var(--theme-secondary);
   padding: 10px;
   font-family: "Poppins", sans-serif;
   font-weight: 700;
@@ -179,7 +179,7 @@
 }
 
 .delegates-mobile__table tbody tr:nth-child(even) {
-  background: #278dff1f;
+  background: rgba(var(--theme-secondary-rgb), 0.12);
 }
 
 .delegates-mobile__note {
@@ -229,7 +229,7 @@ body {
   min-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
-  background-color: #278dff;
+  background-color: var(--theme-secondary);
   background-image: url(../public/images/dle26/DLE_bg_pattern.png);
   background-position: right center;
   background-repeat: no-repeat;
@@ -295,7 +295,7 @@ body {
 }
 
 .page th {
-  background: #278dff;
+  background: var(--theme-secondary);
   font-weight: 700;
   font-size: 13px;
   color: #0b0b0b;

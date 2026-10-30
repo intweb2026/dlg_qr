@@ -456,7 +456,7 @@ body.dlgfb-body-active {
 }
 
 /* ------------------------------------------------------------------ public form */
-/* Colours follow the event QR site, brand blue #278dff. Everything here is scoped to .fb-page so the admin keeps its look. */
+/* Colours follow the event QR site, the event's theme.secondary (--theme-secondary, #278dff by default). Everything here is scoped to .fb-page so the admin keeps its look. */
 .dlgfb-app .dlgfb-event-name {
   color: var(--brass-light);
   font-weight: 700;
@@ -493,8 +493,8 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-page {
-  --fb-blue: #278dff;
-  --fb-blue-dark: #1f7ae6;
+  --fb-blue: var(--theme-secondary);
+  --fb-blue-dark: var(--theme-secondary-dark);
   --fb-navy: #163f86;
   --fb-tint: #eaf2fc;
   --fb-surface: #f3f5f8;
@@ -521,7 +521,7 @@ body.dlgfb-body-active {
   min-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
-  background-color: #278dff;
+  background-color: var(--theme-secondary);
   background-image: url(../../public/images/dle26/DLE_bg_pattern.png);
   background-position: right center;
   background-repeat: no-repeat;
@@ -805,7 +805,7 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-form-radio input:focus-visible+.dlgfb-form-radio-mark,
 .dlgfb-app .dlgfb-form-check input:focus-visible+.dlgfb-form-check-mark {
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.35);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.35);
 }
 
 .dlgfb-app .dlgfb-is-invalid .dlgfb-form-radio-mark,
@@ -876,7 +876,7 @@ body.dlgfb-body-active {
   outline: none;
   border-color: var(--fb-blue);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
 }
 
 .dlgfb-app .dlgfb-form-select.dlgfb-is-invalid select,
@@ -899,7 +899,7 @@ body.dlgfb-body-active {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  box-shadow: 0 6px 16px rgba(39, 141, 255, 0.35);
+  box-shadow: 0 6px 16px rgba(var(--theme-secondary-rgb), 0.35);
   cursor: pointer;
   transition: background-color 0.15s, transform 0.1s;
 }
@@ -1078,7 +1078,7 @@ body.dlgfb-body-active {
   background: #fff;
   border: 1.5px solid var(--fb-blue);
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(39, 141, 255, 0.18);
+  box-shadow: 0 8px 20px rgba(var(--theme-secondary-rgb), 0.18);
 }
 
 .dlgfb-app .dlgfb-form-ticket::before {
@@ -1468,7 +1468,7 @@ body.dlgfb-body-active {
 .dlgfb-app .dlgfb-form-page .dlgfb-search-field .dlgfb-form-control:focus {
   border-color: var(--fb-blue);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-search-field .dlgfb-form-control:disabled {
@@ -1516,7 +1516,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-attendee-option-name mark {
-  background: rgba(39, 141, 255, 0.18);
+  background: rgba(var(--theme-secondary-rgb), 0.18);
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-attendee-option-company,
@@ -1526,7 +1526,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-attendee-avatar {
-  background: #278dff;
+  background: var(--theme-secondary);
   color: #fff;
 }
 
@@ -1632,7 +1632,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-confirm-row.dlgfb-is-editing {
-  border-color: #278dff;
+  border-color: var(--theme-secondary);
 }
 
 .dlgfb-app .dlgfb-form-confirm-label {
@@ -1659,8 +1659,8 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-confirm-input:focus {
-  border-color: #278dff;
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.2);
+  border-color: var(--theme-secondary);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
 }
 
 .dlgfb-app .dlgfb-form-confirm-input.dlgfb-is-invalid {
@@ -1684,13 +1684,13 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-form-confirm-edit:hover:not(:disabled),
 .dlgfb-app .dlgfb-form-confirm-edit:focus-visible {
-  color: #278dff;
+  color: var(--theme-secondary);
   background: #eaf2fc;
 }
 
 .dlgfb-app .dlgfb-is-editing .dlgfb-form-confirm-edit {
   color: #fff;
-  background: #278dff;
+  background: var(--theme-secondary);
 }
 
 .dlgfb-app .dlgfb-form-confirm-edit:disabled {
@@ -1713,25 +1713,25 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-btn:focus {
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.3);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.3);
 }
 
 .dlgfb-app .dlgfb-form-btn-primary {
-  background: #278dff;
-  border: 1px solid #278dff;
+  background: var(--theme-secondary);
+  border: 1px solid var(--theme-secondary);
   color: #fff;
 }
 
 .dlgfb-app .dlgfb-form-btn-primary:hover,
 .dlgfb-app .dlgfb-form-btn-primary:not(:disabled):active {
-  background: #1f7ae6;
-  border-color: #1f7ae6;
+  background: var(--theme-secondary-dark);
+  border-color: var(--theme-secondary-dark);
   color: #fff;
 }
 
 .dlgfb-app .dlgfb-form-btn-primary:disabled {
-  background: #278dff;
-  border-color: #278dff;
+  background: var(--theme-secondary);
+  border-color: var(--theme-secondary);
   color: #fff;
   opacity: 0.6;
 }
@@ -1743,8 +1743,8 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-btn-ghost:hover {
-  border-color: #278dff;
-  color: #278dff;
+  border-color: var(--theme-secondary);
+  color: var(--theme-secondary);
 }
 
 /* Tablet and desktop. The mobile design above is the reference, these rules only widen and enlarge it. */
@@ -2819,16 +2819,28 @@ body.dlgfb-body-active {
   margin-bottom: 0.9rem;
 }
 
+/* The event logo, kept inside the column and at a sensible height whatever size the file is. */
+.dlgfb-app .dlgfb-login-logo {
+  display: block;
+  max-width: min(235px, 60%);
+  max-height: 110px;
+  width: auto;
+  height: auto;
+  margin: 0 auto 1.25rem;
+  object-fit: contain;
+}
+
 .dlgfb-app .dlgfb-login-intro h1 {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 2.6rem;
-  line-height: 1;
-  margin-bottom: 0.4rem;
+  font-size: clamp(2rem, 8vw, 2.6rem);
+  line-height: 1.1;
+  margin-bottom: 0.9rem;
 }
 
 .dlgfb-app .dlgfb-login-intro-copy {
   color: #c8d0de;
+  line-height: 1.5;
   margin: 0;
 }
 
@@ -2898,6 +2910,45 @@ body.dlgfb-body-active {
 @media (max-width: 420px) {
   .dlgfb-app .dlgfb-login-card {
     padding: 1.5rem 1.25rem;
+  }
+
+  .dlgfb-app .dlgfb-login-intro {
+    margin-bottom: 1.25rem;
+  }
+
+  .dlgfb-app .dlgfb-login-intro h1 {
+    margin-bottom: 0.7rem;
+  }
+
+  .dlgfb-app .dlgfb-login-intro-copy {
+    font-size: 0.95rem;
+  }
+
+  .dlgfb-app .dlgfb-login-logo {
+    max-height: 80px;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Phones turned sideways, start at the top so the form scrolls instead of being squeezed. */
+@media (max-height: 560px) and (orientation: landscape) {
+  .dlgfb-app .dlgfb-login-page {
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
+  .dlgfb-app .dlgfb-login-intro {
+    margin-bottom: 1rem;
+  }
+
+  .dlgfb-app .dlgfb-login-logo {
+    max-height: 56px;
+    margin-bottom: 0.6rem;
+  }
+
+  .dlgfb-app .dlgfb-login-intro h1 {
+    font-size: 1.9rem;
+    margin-bottom: 0.5rem;
   }
 }
 

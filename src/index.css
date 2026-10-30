@@ -1,3 +1,10 @@
+/* Theme secondary colour. EventLayout replaces these with the event's theme.secondary from backend/events.json. */
+:root {
+  --theme-secondary: #278dff;
+  --theme-secondary-rgb: 39, 141, 255;
+  --theme-secondary-dark: #1f7ae6;
+}
+
 * {
   box-sizing: border-box;
 }

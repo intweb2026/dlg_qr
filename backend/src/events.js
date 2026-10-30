@@ -7,6 +7,8 @@ const path = require("path");
 const EVENTS_FILE = process.env.EVENTS_FILE || path.join(__dirname, "..", "events.json");
 const CODE = /^[a-z0-9][a-z0-9-]{1,31}$/;
 const DATABASE = /^[A-Za-z0-9_]{1,64}$/;
+// "theme": { "secondary": "#278dff" } is optional, the site uses #278dff without it.
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 function loadEvents(file = EVENTS_FILE) {
   const name = path.basename(file);
@@ -32,6 +34,12 @@ function loadEvents(file = EVENTS_FILE) {
     if (!DATABASE.test(event.database || "")) fail('"database" must be a MySQL database name, letters, digits and _');
     if (databases.has(event.database)) fail(`"database" is already used by event "${databases.get(event.database)}"`);
     databases.set(event.database, code);
+    if (event.theme !== undefined) {
+      if (!event.theme || typeof event.theme !== "object" || Array.isArray(event.theme)) fail('"theme" must be an object');
+      if (event.theme.secondary !== undefined && !HEX_COLOR.test(event.theme.secondary)) {
+        fail('"theme.secondary" must be a colour like #278dff');
+      }
+    }
     events.set(code, { ...event, code, active: event.active !== false });
   }
   return events;

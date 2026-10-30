@@ -6,7 +6,10 @@
   },
   "testa": {
     "database": "feedback_testa_test",
-    "name": "Test event a"
+    "name": "Test event a",
+    "theme": {
+      "secondary": "#ff6600"
+    }
   },
   "testb": {
     "database": "feedback_testb_test",

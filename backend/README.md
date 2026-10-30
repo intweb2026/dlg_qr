@@ -9,7 +9,8 @@ Every event is one entry in `events.json`, keyed by its code. The code is the fi
 - The key is the event code, lower case letters, digits and dashes.
 - `database` is the event's own MySQL database. Every event needs a different one. Its login is in `databases.json`, see below.
 - `active` set to `false` hides the event without deleting anything.
-- Everything else, name, media, links and Wi-Fi, is sent to the site by `GET /api/events/<code>/`. The database name is never sent. Do not put passwords or private keys in an event entry, the site shows its contents.
+- `media.favicon` is the browser tab icon and `theme.secondary` the accent colour, like `#278dff`. Both are optional.
+- Everything else, name, media, links, Wi-Fi and theme, is sent to the site by `GET /api/events/<code>/`. The database name is never sent. Do not put passwords or private keys in an event entry, the site shows its contents.
 
 ```json
 {

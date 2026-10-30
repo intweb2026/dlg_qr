@@ -547,6 +547,27 @@ describe("events", () => {
     assert.equal(r.data.code, "testa");
     assert.equal(r.data.name, "Test event a");
     assert.ok(!("database" in r.data));
+    assert.deepEqual(r.data.theme, { secondary: "#ff6600" });
+    assert.equal((await api("GET", "/", { event: "testb" })).data.theme, undefined);
+  });
+
+  test("theme secondary colour is checked when the events file loads", () => {
+    const { loadEvents } = require("../src/events");
+    const file = path.join(os.tmpdir(), `feedback-test-events-${process.pid}.json`);
+    const load = (theme) => {
+      fs.writeFileSync(file, JSON.stringify({ demo: { database: "feedback_demo", theme } }));
+      try {
+        return loadEvents(file);
+      } finally {
+        fs.unlinkSync(file);
+      }
+    };
+    assert.equal(load({ secondary: "#278DFF" }).get("demo").theme.secondary, "#278DFF");
+    assert.ok(load({}).has("demo"));
+    for (const bad of ["278dff", "#278df", "blue", "#278dff; color: red"]) {
+      assert.throws(() => load({ secondary: bad }), /"theme.secondary" must be a colour like #278dff/);
+    }
+    assert.throws(() => load("blue"), /"theme" must be an object/);
   });
 
   test("codes are matched without case", async () => {
