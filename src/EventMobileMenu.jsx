@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./EventMobileMenu.css";
 import { useEvent, useEventPath } from "./event/EventContext";
+import api from "./feedback/api";
 
 const forwardIcon = "/images/common/forward_icon.png";
 
@@ -55,10 +56,60 @@ const MENU_ITEMS = [
   },
 ];
 
+// Keyed by the form status the admin sets on the Submissions page, any other closed status uses notEnabled.
+const FEEDBACK_POPUPS = {
+  upcoming: { title: "Event Not Started", message: "Feedback is not open yet." },
+  ended: { title: "Event Ended", message: "This event has ended, so feedback is no longer open." },
+  notEnabled: { title: "Form Not Enabled By Admin", message: "Feedback is not available at the moment." },
+};
+
+// Returns the popup to show, or null when the form can open. If the status cannot be loaded, the form page shows its own message.
+async function feedbackPopup() {
+  try {
+    const { data } = await api.get("/form-status/");
+    if (data.is_active) return null;
+    return FEEDBACK_POPUPS[data.form_status] || FEEDBACK_POPUPS.notEnabled;
+  } catch (err) {
+    return null;
+  }
+}
+
+function MenuPopup({ popup, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="menu-popup" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="menu-popup__box" role="dialog" aria-modal="true" aria-labelledby="menu-popup-title">
+        <h2 className="menu-popup__title" id="menu-popup-title">{popup.title}</h2>
+        <p className="menu-popup__message">{popup.message}</p>
+        <button type="button" className="menu-popup__button" onClick={onClose} autoFocus>
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function EventMobileMenu() {
   const { config } = useEvent();
   const eventPath = useEventPath();
   const media = config.media || {};
+  const [popup, setPopup] = useState(null);
+  const [checking, setChecking] = useState(false);
+
+  const openFeedback = async (e, href) => {
+    e.preventDefault();
+    if (checking) return;
+    setChecking(true);
+    const blocked = await feedbackPopup();
+    setChecking(false);
+    if (blocked) setPopup(blocked);
+    else window.location.assign(href);
+  };
 
   return (
     // <div className="wls-menu">
@@ -152,6 +203,7 @@ export default function EventMobileMenu() {
                 className="action-button"
                 key={item.label}
                 href={href}
+                {...(item.to === "/feedback-form" ? { onClick: (e) => openFeedback(e, href) } : {})}
               >
                 <span className="icon">
                   {item.svg}
@@ -166,6 +218,7 @@ export default function EventMobileMenu() {
           })}
         </div>
       </div>
+      {popup && <MenuPopup popup={popup} onClose={() => setPopup(null)} />}
     </div>
   );
 }
