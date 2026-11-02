@@ -20,12 +20,15 @@ async function loadSettings() {
 }
 
 // The event's status, set on the admin Submissions page. Only "active" takes responses.
-// upcoming: the event has not started. active: open for responses. ended: the event is closed, responses stop.
-const FORM_STATUSES = ["upcoming", "active", "ended"];
+// inactive: the admin has not enabled the form. upcoming: the event has not started. active: open for responses.
+// ended: the event is over. closed: the event is closed. Every status other than active stops responses.
+const FORM_STATUSES = ["inactive", "upcoming", "active", "ended", "closed"];
 
 const CLOSED_MESSAGES = {
+  inactive: "The feedback form has not been enabled yet.",
   upcoming: "The event has not started yet.",
   ended: "This event has ended.",
+  closed: "This event is closed.",
 };
 
 function isActive(settings) {
@@ -34,7 +37,7 @@ function isActive(settings) {
 
 /** The 403 body sent while the form is not taking responses, the form uses form_status to pick its message. */
 function closedJson(settings) {
-  return { detail: CLOSED_MESSAGES[settings.form_status] || CLOSED_MESSAGES.ended, form_status: settings.form_status };
+  return { detail: CLOSED_MESSAGES[settings.form_status] || CLOSED_MESSAGES.inactive, form_status: settings.form_status };
 }
 
 function settingsJson(row) {

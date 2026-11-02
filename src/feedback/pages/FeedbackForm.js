@@ -13,14 +13,20 @@ const REQUIRED_TOTAL = feedbackQuestions.filter((q) => q.required).length + 1; /
 const checkedIcon = "/images/common/checked.png" 
 
 // The view for each status set in the admin, only "active" shows the form.
-const STATUS_VIEWS = { upcoming: "upcoming", ended: "ended" };
-const closedView = (status) => STATUS_VIEWS[status] || "ended";
+const STATUS_VIEWS = { inactive: "inactive", upcoming: "upcoming", ended: "ended", closed: "closed" };
+const closedView = (status) => STATUS_VIEWS[status] || "inactive";
 
 const PANEL_ICONS = {
   info: (
     <>
       <path d="M12 11v6" />
       <path d="M12 7.3v.2" />
+    </>
+  ),
+  inactive: (
+    <>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
     </>
   ),
   upcoming: (
@@ -33,6 +39,12 @@ const PANEL_ICONS = {
     <>
       <path d="M6 20V5" />
       <path d="M6 5h11l-2 3.5 2 3.5H6" />
+    </>
+  ),
+  closed: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M8.5 12h7" />
     </>
   ),
   offline: (
@@ -174,7 +186,7 @@ function ConfirmRow({ label, value, editing, disabled, onEdit, onSave, onCancel 
 export default function FeedbackForm() {
   const notify = useToast();
   const eventPath = useEventPath();
-  // loading | already | upcoming | ended | form | success | offline
+  // loading | already | inactive | upcoming | ended | closed | form | success | offline
   const [view, setView] = useState("loading");
   const [attendees, setAttendees] = useState(null);
   const [attendeesError, setAttendeesError] = useState(false);
@@ -373,6 +385,12 @@ export default function FeedbackForm() {
             </StatusPanel>
           )}
 
+          {view === "inactive" && (
+            <StatusPanel tone="inactive" title="The feedback form is not open yet">
+              The organisers have not enabled the feedback form yet. Please check back later.
+            </StatusPanel>
+          )}
+
           {view === "upcoming" && (
             <StatusPanel tone="upcoming" title="The event has not started yet">
               The feedback form opens once the event begins. Please check back later.
@@ -382,6 +400,12 @@ export default function FeedbackForm() {
           {view === "ended" && (
             <StatusPanel tone="ended" title="This event has ended">
               Thank you for attending. The feedback form is no longer available.
+            </StatusPanel>
+          )}
+
+          {view === "closed" && (
+            <StatusPanel tone="closed" title="This event is closed">
+              The feedback form is closed and no longer takes responses.
             </StatusPanel>
           )}
 

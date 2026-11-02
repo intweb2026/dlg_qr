@@ -963,8 +963,10 @@ body.dlgfb-body-active {
   color: var(--fb-blue);
 }
 
+.dlgfb-app .dlgfb-form-status-inactive .dlgfb-form-status-icon,
 .dlgfb-app .dlgfb-form-status-upcoming .dlgfb-form-status-icon,
-.dlgfb-app .dlgfb-form-status-ended .dlgfb-form-status-icon {
+.dlgfb-app .dlgfb-form-status-ended .dlgfb-form-status-icon,
+.dlgfb-app .dlgfb-form-status-closed .dlgfb-form-status-icon {
   background: var(--fb-tint);
   color: var(--fb-navy);
 }
@@ -2390,10 +2392,10 @@ body.dlgfb-body-active {
   gap: 1rem;
 }
 
-/* The three event statuses, one per row on narrow screens. */
+/* The five event statuses, wrapping to fewer per row on narrow screens. */
 .dlgfb-app .dlgfb-status-steps {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
   gap: 0.4rem;
 }
 
@@ -2432,12 +2434,6 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-status-step:disabled {
   cursor: progress;
-}
-
-@media (max-width: 400px) {
-  .dlgfb-app .dlgfb-status-steps {
-    grid-template-columns: 1fr;
-  }
 }
 
 .dlgfb-app .dlgfb-status-card.dlgfb-is-open {

@@ -273,8 +273,10 @@ describe("feedback flow", () => {
 
   test("only open for responses takes feedback, each closed status says why", async () => {
     const messages = {
+      inactive: "The feedback form has not been enabled yet.",
       upcoming: "The event has not started yet.",
       ended: "This event has ended.",
+      closed: "This event is closed.",
     };
     for (const [status, detail] of Object.entries(messages)) {
       await query("UPDATE form_settings SET form_status = ?", [status]);
@@ -384,19 +386,16 @@ describe("admin panel", () => {
     assert.equal(r.data.max_spin_attempts, 3);
     assert.match(r.data.updated_at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d{6})?Z$/);
     assert.equal((await api("GET", "/form-status/")).data.is_active, false);
-    for (const status of ["upcoming", "ended", "active"]) {
+    for (const status of ["inactive", "upcoming", "ended", "closed", "active"]) {
       r = await api("PATCH", "/admin/settings/", { token, body: { form_status: status } });
       assert.deepEqual([r.status, r.data.form_status], [200, status]);
     }
-    // Closed for responses was removed, Event closed stops responses instead.
-    r = await api("PATCH", "/admin/settings/", { token, body: { form_status: "inactive" } });
-    assert.deepEqual([r.status, r.data], [400, { form_status: ['"inactive" is not a valid choice.'] }]);
   });
 
-  test("migrate turns the old closed status into ended", async () => {
+  test("migrate keeps the form not enabled status", async () => {
     await query("UPDATE form_settings SET form_status = 'inactive'");
     await migrate(EVENT_A);
-    assert.equal((await api("GET", "/form-status/")).data.form_status, "ended");
+    assert.equal((await api("GET", "/form-status/")).data.form_status, "inactive");
   });
 
   test("submissions list, filters and suspend", async () => {

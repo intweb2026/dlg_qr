@@ -189,7 +189,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
     if (!autoFullscreen) return undefined;
     const enter = (e) => {
       // The Full screen button handles its own click, entering here too would toggle straight back out.
-      if (e?.target?.closest?.(".btn-fullscreen:not(.btn-next-spin)")) return;
+      if (e?.target?.closest?.(".dlgfb-btn-fullscreen:not(.dlgfb-btn-next-spin)")) return;
       if (!document.fullscreenElement) stageRef.current?.requestFullscreen?.().catch(() => {});
       stop();
     };

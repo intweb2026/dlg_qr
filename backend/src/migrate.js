@@ -56,9 +56,6 @@ async function migrate(event, { log = () => {} } = {}) {
        WHERE s.userAliesName = '' OR s.userComapnyAliesName = ''`
     );
     if (filled.affectedRows) log(`${event.code}: filled the alias on ${filled.affectedRows} older submissions.`);
-    // The old "inactive" status (closed for responses) is now "ended" (event closed).
-    const closed = await query("UPDATE form_settings SET form_status = 'ended' WHERE form_status = 'inactive'");
-    if (closed.affectedRows) log(`${event.code}: form status inactive is now ended.`);
     log(`${event.code}: tables in ${event.database} are up to date.`);
 
     await loadSettings();

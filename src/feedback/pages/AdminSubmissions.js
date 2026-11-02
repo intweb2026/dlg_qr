@@ -10,6 +10,13 @@ const MAX_SPIN_SECONDS = 60;
 
 // The event's status, in the order an event goes through them. Only "active" takes responses.
 const FORM_STATUSES = {
+  inactive: {
+    label: "Form not enabled",
+    help: "Responses are stopped, attendees see that the form is not enabled yet.",
+    title: "Form not enabled",
+    toast: "The feedback form is off until you enable it.",
+    tone: "warning",
+  },
   upcoming: {
     label: "Event not started",
     help: "Attendees see that the event has not started yet.",
@@ -25,8 +32,15 @@ const FORM_STATUSES = {
     tone: "success",
   },
   ended: {
-    label: "Event closed",
+    label: "Event ended",
     help: "Responses are stopped, attendees see that the event has ended.",
+    title: "Event ended",
+    toast: "The feedback form no longer takes responses.",
+    tone: "warning",
+  },
+  closed: {
+    label: "Event closed",
+    help: "Responses are stopped, attendees see that the event is closed.",
     title: "Event closed",
     toast: "The feedback form no longer takes responses.",
     tone: "warning",
@@ -113,7 +127,7 @@ function SettingsPanel() {
   }
 
   const active = cfg.form_status === "active";
-  const status = FORM_STATUSES[cfg.form_status] || FORM_STATUSES.ended;
+  const status = FORM_STATUSES[cfg.form_status] || FORM_STATUSES.inactive;
   const dirty = spins !== String(cfg.max_spin_attempts) || seconds !== String(cfg.spin_duration_seconds);
 
   return (
@@ -128,7 +142,7 @@ function SettingsPanel() {
             </span>
             <p className="dlgfb-panel-help dlgfb-mb-0">{status.help}</p>
           </div>
-          {/* Quick open and close, off is Event closed. The three statuses are below. */}
+          {/* Quick open and close, off is Form not enabled. All five statuses are below. */}
           <button
             type="button"
             role="switch"
@@ -136,7 +150,7 @@ function SettingsPanel() {
             aria-label="Feedback form open"
             className={`dlgfb-big-switch${active ? " dlgfb-on" : ""}`}
             disabled={savingStatus}
-            onClick={() => setStatus(active ? "ended" : "active")}
+            onClick={() => setStatus(active ? "inactive" : "active")}
           >
             <span className="dlgfb-big-switch-knob">
               {savingStatus && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm" aria-hidden="true" />}
