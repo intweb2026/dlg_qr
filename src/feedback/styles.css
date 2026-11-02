@@ -963,7 +963,8 @@ body.dlgfb-body-active {
   color: var(--fb-blue);
 }
 
-.dlgfb-app .dlgfb-form-status-closed .dlgfb-form-status-icon {
+.dlgfb-app .dlgfb-form-status-upcoming .dlgfb-form-status-icon,
+.dlgfb-app .dlgfb-form-status-ended .dlgfb-form-status-icon {
   background: var(--fb-tint);
   color: var(--fb-navy);
 }
@@ -2377,10 +2378,66 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-status-card {
   display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.dlgfb-app .dlgfb-status-card-top {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  transition: border-color 0.2s, background-color 0.2s;
+}
+
+/* The three event statuses, one per row on narrow screens. */
+.dlgfb-app .dlgfb-status-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.dlgfb-app .dlgfb-status-step {
+  border: 1px solid #d5dce6;
+  background: #fff;
+  color: var(--slate);
+  border-radius: 8px;
+  padding: 0.5rem 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+/* Hover only changes the other statuses, the current one keeps its white text on teal. */
+.dlgfb-app .dlgfb-status-step:not(.dlgfb-is-current):hover:not(:disabled) {
+  background: var(--teal-tint);
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.dlgfb-app .dlgfb-status-step.dlgfb-is-current,
+.dlgfb-app .dlgfb-status-step.dlgfb-is-current:hover {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-status-step:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.dlgfb-app .dlgfb-status-step:disabled {
+  cursor: progress;
+}
+
+@media (max-width: 400px) {
+  .dlgfb-app .dlgfb-status-steps {
+    grid-template-columns: 1fr;
+  }
 }
 
 .dlgfb-app .dlgfb-status-card.dlgfb-is-open {

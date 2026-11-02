@@ -19,8 +19,22 @@ async function loadSettings() {
   return row;
 }
 
+// The event's status, set on the admin Submissions page. Only "active" takes responses.
+// upcoming: the event has not started. active: open for responses. ended: the event is closed, responses stop.
+const FORM_STATUSES = ["upcoming", "active", "ended"];
+
+const CLOSED_MESSAGES = {
+  upcoming: "The event has not started yet.",
+  ended: "This event has ended.",
+};
+
 function isActive(settings) {
   return settings.form_status === "active";
+}
+
+/** The 403 body sent while the form is not taking responses, the form uses form_status to pick its message. */
+function closedJson(settings) {
+  return { detail: CLOSED_MESSAGES[settings.form_status] || CLOSED_MESSAGES.ended, form_status: settings.form_status };
 }
 
 function settingsJson(row) {
@@ -157,7 +171,9 @@ function winnerJson(row) {
 module.exports = {
   SETTINGS_DEFAULTS,
   loadSettings,
+  FORM_STATUSES,
   isActive,
+  closedJson,
   settingsJson,
   ALIAS_NAME,
   ALIAS_COMPANY,

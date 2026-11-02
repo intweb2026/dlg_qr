@@ -9,7 +9,7 @@ const v = require("../validation");
 // Settings and submissions
 // ==================================================================
 const SETTINGS_FIELDS = {
-  form_status: { clean: (value) => v.choice(value, ["active", "inactive"]) },
+  form_status: { clean: (value) => v.choice(value, m.FORM_STATUSES) },
   // 0 means unlimited spins
   max_spin_attempts: { clean: (value) => v.integer(value, { min: 0, max: 4294967295 }) },
   // How long the lucky draw reels spin before stopping on the winning number

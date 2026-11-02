@@ -126,7 +126,7 @@ describe("feedback flow", () => {
   });
 
   test("attendee list is closed with the form", async () => {
-    await query("UPDATE form_settings SET form_status = 'inactive'");
+    await query("UPDATE form_settings SET form_status = 'ended'");
     assert.equal((await api("GET", "/attendees/")).status, 403);
   });
 
@@ -265,10 +265,27 @@ describe("feedback flow", () => {
     assert.equal(r.status, 400);
   });
 
-  test("inactive form", async () => {
-    await query("UPDATE form_settings SET form_status = 'inactive'");
+  test("closed event form", async () => {
+    await query("UPDATE form_settings SET form_status = 'ended'");
     const r = await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } });
     assert.equal(r.status, 403);
+  });
+
+  test("only open for responses takes feedback, each closed status says why", async () => {
+    const messages = {
+      upcoming: "The event has not started yet.",
+      ended: "This event has ended.",
+    };
+    for (const [status, detail] of Object.entries(messages)) {
+      await query("UPDATE form_settings SET form_status = ?", [status]);
+      assert.deepEqual((await api("GET", "/form-status/")).data, { form_status: status, is_active: false });
+      const list = await api("GET", "/attendees/");
+      assert.deepEqual([list.status, list.data], [403, { detail, form_status: status }]);
+      const r = await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } });
+      assert.deepEqual([r.status, r.data], [403, { detail, form_status: status }]);
+    }
+    await query("UPDATE form_settings SET form_status = 'active'");
+    assert.equal((await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } })).status, 201);
   });
 });
 
@@ -361,12 +378,25 @@ describe("admin panel", () => {
       form_status: ['"paused" is not a valid choice.'],
       max_spin_attempts: ["Ensure this value is greater than or equal to 0."],
     });
-    r = await api("PATCH", "/admin/settings/", { token, body: { form_status: "inactive", max_spin_attempts: "3" } });
+    r = await api("PATCH", "/admin/settings/", { token, body: { form_status: "ended", max_spin_attempts: "3" } });
     assert.equal(r.status, 200);
-    assert.equal(r.data.form_status, "inactive");
+    assert.equal(r.data.form_status, "ended");
     assert.equal(r.data.max_spin_attempts, 3);
     assert.match(r.data.updated_at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d{6})?Z$/);
     assert.equal((await api("GET", "/form-status/")).data.is_active, false);
+    for (const status of ["upcoming", "ended", "active"]) {
+      r = await api("PATCH", "/admin/settings/", { token, body: { form_status: status } });
+      assert.deepEqual([r.status, r.data.form_status], [200, status]);
+    }
+    // Closed for responses was removed, Event closed stops responses instead.
+    r = await api("PATCH", "/admin/settings/", { token, body: { form_status: "inactive" } });
+    assert.deepEqual([r.status, r.data], [400, { form_status: ['"inactive" is not a valid choice.'] }]);
+  });
+
+  test("migrate turns the old closed status into ended", async () => {
+    await query("UPDATE form_settings SET form_status = 'inactive'");
+    await migrate(EVENT_A);
+    assert.equal((await api("GET", "/form-status/")).data.form_status, "ended");
   });
 
   test("submissions list, filters and suspend", async () => {
@@ -614,7 +644,7 @@ describe("events", () => {
       "INSERT INTO attendees (full_name, email, company_name, is_walk_in, created_at) VALUES ('James Smith', NULL, 'BP', 0, UTC_TIMESTAMP(6))"
     );
     // Still shown while the feedback form is closed.
-    await query("UPDATE form_settings SET form_status = 'inactive'");
+    await query("UPDATE form_settings SET form_status = 'ended'");
     const r = await api("GET", "/registered-attendees/");
     assert.equal(r.status, 200);
     assert.deepEqual(r.data, [{ name: "Priya Sharma", company: "Shell" }]);
@@ -637,7 +667,7 @@ describe("events", () => {
 
   test("settings belong to one event", async () => {
     const token = await login("benny");
-    await api("PATCH", "/admin/settings/", { token, body: { form_status: "inactive" } });
+    await api("PATCH", "/admin/settings/", { token, body: { form_status: "ended" } });
     assert.equal((await api("GET", "/form-status/")).data.is_active, false);
     assert.equal((await api("GET", "/form-status/", { event: "testb" })).data.is_active, true);
   });

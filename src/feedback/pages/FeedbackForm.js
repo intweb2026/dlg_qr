@@ -12,6 +12,10 @@ const REQUIRED_TOTAL = feedbackQuestions.filter((q) => q.required).length + 1; /
 
 const checkedIcon = "/images/common/checked.png" 
 
+// The view for each status set in the admin, only "active" shows the form.
+const STATUS_VIEWS = { upcoming: "upcoming", ended: "ended" };
+const closedView = (status) => STATUS_VIEWS[status] || "ended";
+
 const PANEL_ICONS = {
   info: (
     <>
@@ -19,10 +23,16 @@ const PANEL_ICONS = {
       <path d="M12 7.3v.2" />
     </>
   ),
-  closed: (
+  upcoming: (
     <>
-      <rect x="6" y="10.5" width="12" height="9" rx="2" />
-      <path d="M8.5 10.5V8a3.5 3.5 0 017 0v2.5" />
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4.5l3 1.8" />
+    </>
+  ),
+  ended: (
+    <>
+      <path d="M6 20V5" />
+      <path d="M6 5h11l-2 3.5 2 3.5H6" />
     </>
   ),
   offline: (
@@ -164,7 +174,7 @@ function ConfirmRow({ label, value, editing, disabled, onEdit, onSave, onCancel 
 export default function FeedbackForm() {
   const notify = useToast();
   const eventPath = useEventPath();
-  // loading | already | closed | form | success | offline
+  // loading | already | upcoming | ended | form | success | offline
   const [view, setView] = useState("loading");
   const [attendees, setAttendees] = useState(null);
   const [attendeesError, setAttendeesError] = useState(false);
@@ -189,7 +199,7 @@ export default function FeedbackForm() {
       .get("/attendees/")
       .then(({ data }) => setAttendees(Array.isArray(data) ? data : []))
       .catch((err) => {
-        if (err?.response?.status === 403) setView("closed");
+        if (err?.response?.status === 403) setView(closedView(err.response.data?.form_status));
         else setAttendeesError(true);
       });
   }, []);
@@ -204,7 +214,8 @@ export default function FeedbackForm() {
     loadAttendees();
     api
       .get("/form-status/")
-      .then(({ data }) => setView((v) => (v === "closed" || !data.is_active ? "closed" : "form")))
+      // A 403 from the attendee list, if it came first, already chose the closed view.
+      .then(({ data }) => setView((v) => (!data.is_active ? closedView(data.form_status) : STATUS_VIEWS[v] ? v : "form")))
       .catch(() => setView("offline"));
   }, [loadAttendees]);
 
@@ -291,7 +302,7 @@ export default function FeedbackForm() {
       }
       setConfirming(false);
       if (err?.response?.status === 403) {
-        setView("closed");
+        setView(closedView(err.response.data?.form_status));
       } else {
         if (code === "already_submitted" && !attendee.is_new) {
           setAttendees((list) => (list || []).filter((a) => a.attendee_id !== attendee.attendee_id));
@@ -362,9 +373,15 @@ export default function FeedbackForm() {
             </StatusPanel>
           )}
 
-          {view === "closed" && (
-            <StatusPanel tone="closed" title="Event feedback is closed">
-              The feedback form is not accepting responses right now. Please check with the event team.
+          {view === "upcoming" && (
+            <StatusPanel tone="upcoming" title="The event has not started yet">
+              The feedback form opens once the event begins. Please check back later.
+            </StatusPanel>
+          )}
+
+          {view === "ended" && (
+            <StatusPanel tone="ended" title="This event has ended">
+              Thank you for attending. The feedback form is no longer available.
             </StatusPanel>
           )}
 

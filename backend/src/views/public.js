@@ -1,10 +1,9 @@
 const { query, transaction } = require("../db");
 const { publicConfig } = require("../events");
-const { ALIAS_COMPANY, ALIAS_NAME, attendeeLookupJson, getAttendee, isActive, loadSettings } = require("../models");
+const { ALIAS_COMPANY, ALIAS_NAME, attendeeLookupJson, closedJson, getAttendee, isActive, loadSettings } = require("../models");
 const { collapseSpaces, deviceFingerprint, normalizeName } = require("../utils");
 const v = require("../validation");
 
-const CLOSED = { detail: "Event feedback is closed." };
 const ALREADY_SUBMITTED = { detail: "Feedback has already been submitted for this attendee.", code: "already_submitted" };
 
 /** The event's settings for the site, its name, media, links and Wi-Fi. */
@@ -19,7 +18,8 @@ async function formStatus(req, res) {
 
 /** Full lookup list, loaded once with the feedback form. The browser filters it after 3 typed characters. */
 async function attendeeList(req, res) {
-  if (!isActive(await loadSettings())) return res.status(403).json(CLOSED);
+  const cfg = await loadSettings();
+  if (!isActive(cfg)) return res.status(403).json(closedJson(cfg));
   // Hide people who already submitted.
   const rows = await query(
     `SELECT a.attendee_id, a.full_name, a.company_name, a.email
@@ -92,7 +92,8 @@ const SUBMIT_FIELDS = {
 
 async function feedbackSubmit(req, res) {
   // 1. Status check
-  if (!isActive(await loadSettings())) return res.status(403).json(CLOSED);
+  const cfg = await loadSettings();
+  if (!isActive(cfg)) return res.status(403).json(closedJson(cfg));
 
   // 2. The one entry per device check is done by the form, with a cookie and localStorage on its own site.
   // A cookie set here would live on the API domain, which clearing the form site's cookies does not remove.

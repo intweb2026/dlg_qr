@@ -8,6 +8,31 @@ import { useToast } from "../context/ToastContext";
 const MIN_SPIN_SECONDS = 1;
 const MAX_SPIN_SECONDS = 60;
 
+// The event's status, in the order an event goes through them. Only "active" takes responses.
+const FORM_STATUSES = {
+  upcoming: {
+    label: "Event not started",
+    help: "Attendees see that the event has not started yet.",
+    title: "Event not started",
+    toast: "The feedback form stays closed until you open it.",
+    tone: "warning",
+  },
+  active: {
+    label: "Open for responses",
+    help: "Attendees can find their name and submit.",
+    title: "Feedback form is open",
+    toast: "Attendees can submit their feedback now.",
+    tone: "success",
+  },
+  ended: {
+    label: "Event closed",
+    help: "Responses are stopped, attendees see that the event has ended.",
+    title: "Event closed",
+    toast: "The feedback form no longer takes responses.",
+    tone: "warning",
+  },
+};
+
 function formatDate(iso) {
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
@@ -39,17 +64,14 @@ function SettingsPanel() {
     api.get("/admin/settings/").then(({ data }) => apply(data)).catch((err) => notify(errorMessage(err), "danger"));
   }, [notify]);
 
-  const toggleForm = async () => {
-    const opening = cfg.form_status !== "active";
+  const setStatus = async (status) => {
+    if (status === cfg.form_status) return;
     setSavingStatus(true);
     try {
-      const { data } = await api.patch("/admin/settings/", { form_status: opening ? "active" : "inactive" });
+      const { data } = await api.patch("/admin/settings/", { form_status: status });
       setCfg((c) => ({ ...c, ...data }));
-      if (opening) {
-        notify("Attendees can submit their feedback now.", "success", { title: "Feedback form is open" });
-      } else {
-        notify("New responses are paused until you open the form again.", "warning", { title: "Feedback form is closed" });
-      }
+      const { toast, title, tone } = FORM_STATUSES[status];
+      notify(toast, tone, { title });
     } catch (err) {
       notify(errorMessage(err), "danger", { title: "Status not changed" });
     } finally {
@@ -91,34 +113,51 @@ function SettingsPanel() {
   }
 
   const active = cfg.form_status === "active";
+  const status = FORM_STATUSES[cfg.form_status] || FORM_STATUSES.ended;
   const dirty = spins !== String(cfg.max_spin_attempts) || seconds !== String(cfg.spin_duration_seconds);
 
   return (
     <div className="dlgfb-settings-grid">
       <div className={`dlgfb-panel dlgfb-status-card${active ? " dlgfb-is-open" : " dlgfb-is-closed"}`}>
-        <div className="dlgfb-status-card-text">
-          <span className="dlgfb-panel-label">Feedback form</span>
-          <span className="dlgfb-status-pill">
-            <span className="dlgfb-status-dot" aria-hidden="true" />
-            {active ? "Open for responses" : "Closed"}
-          </span>
-          <p className="dlgfb-panel-help dlgfb-mb-0">
-            {active ? "Attendees can find their name and submit." : "Attendees see a closed message."}
-          </p>
+        <div className="dlgfb-status-card-top">
+          <div className="dlgfb-status-card-text">
+            <span className="dlgfb-panel-label">Feedback form</span>
+            <span className="dlgfb-status-pill">
+              <span className="dlgfb-status-dot" aria-hidden="true" />
+              {status.label}
+            </span>
+            <p className="dlgfb-panel-help dlgfb-mb-0">{status.help}</p>
+          </div>
+          {/* Quick open and close, off is Event closed. The three statuses are below. */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={active}
+            aria-label="Feedback form open"
+            className={`dlgfb-big-switch${active ? " dlgfb-on" : ""}`}
+            disabled={savingStatus}
+            onClick={() => setStatus(active ? "ended" : "active")}
+          >
+            <span className="dlgfb-big-switch-knob">
+              {savingStatus && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm" aria-hidden="true" />}
+            </span>
+          </button>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={active}
-          aria-label="Feedback form open"
-          className={`dlgfb-big-switch${active ? " dlgfb-on" : ""}`}
-          disabled={savingStatus}
-          onClick={toggleForm}
-        >
-          <span className="dlgfb-big-switch-knob">
-            {savingStatus && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm" aria-hidden="true" />}
-          </span>
-        </button>
+        <div className="dlgfb-status-steps" role="radiogroup" aria-label="Event status">
+          {Object.entries(FORM_STATUSES).map(([key, s]) => (
+            <button
+              key={key}
+              type="button"
+              role="radio"
+              aria-checked={cfg.form_status === key}
+              className={`dlgfb-status-step${cfg.form_status === key ? " dlgfb-is-current" : ""}`}
+              disabled={savingStatus}
+              onClick={() => setStatus(key)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <form className="dlgfb-panel dlgfb-draw-settings" onSubmit={saveDraw}>
