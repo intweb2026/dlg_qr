@@ -179,14 +179,18 @@ export default function LuckyDraw({ autoFullscreen = false }) {
     if (phase === "idle" && entryId === null) setReels(blankReels(padLength));
   }, [padLength, phase, entryId]);
 
+  // The standalone stage fills the window, so a full screen page handed over by the admin Lucky draw link counts too.
   useEffect(() => {
-    const onChange = () => setFullscreen(document.fullscreenElement === stageRef.current);
+    const onChange = () =>
+      setFullscreen(document.fullscreenElement === stageRef.current || (autoFullscreen && !!document.fullscreenElement));
+    onChange();
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
+  }, [autoFullscreen]);
 
   useEffect(() => {
-    if (!autoFullscreen) return undefined;
+    // Already full screen when opened from the admin Lucky draw link.
+    if (!autoFullscreen || document.fullscreenElement) return undefined;
     const enter = (e) => {
       // The Full screen button handles its own click, entering here too would toggle straight back out.
       if (e?.target?.closest?.(".dlgfb-btn-fullscreen:not(.dlgfb-btn-next-spin)")) return;

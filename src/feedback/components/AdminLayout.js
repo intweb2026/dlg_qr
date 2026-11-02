@@ -21,6 +21,18 @@ export default function AdminLayout() {
     navigate(eventPath("/admin/login"));
   };
 
+  // Lucky draw opens the venue screen in full screen. Full screen has to be asked for inside the click,
+  // the route change keeps it since the page does not reload.
+  const openLuckyDraw = async (e) => {
+    e.preventDefault();
+    try {
+      await document.documentElement.requestFullscreen?.();
+    } catch {
+      notify("Full screen is not available in this browser.", "warning");
+    }
+    navigate(eventPath("/lucky-draw"));
+  };
+
   const link = ({ isActive }) => `dlgfb-admin-link${isActive ? " dlgfb-active" : ""}`;
   const name = user?.full_name || user?.username || "";
 
@@ -46,7 +58,7 @@ export default function AdminLayout() {
           </button>
           <div className={`dlgfb-admin-menu${open ? " dlgfb-show" : ""}`} id="admin-menu">
             <nav className="dlgfb-admin-links" aria-label="Admin">
-              <NavLink className={link} to={eventPath("/admin/lucky-draw")}>Lucky draw</NavLink>
+              <NavLink className={link} to={eventPath("/lucky-draw")} onClick={openLuckyDraw}>Lucky draw</NavLink>
               <NavLink className={link} to={eventPath("/admin/feedback-submission")}>Submissions</NavLink>
               <NavLink className={link} to={eventPath("/admin/attendees")}>Attendees</NavLink>
             </nav>
