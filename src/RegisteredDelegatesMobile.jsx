@@ -4,12 +4,15 @@ import "./RegisteredDelegatesMobile.css";
 import { useEvent, useEventPath } from "./event/EventContext";
 import api from "./feedback/api";
 
+// eslint-disable-next-line no-unused-vars -- used by the commented-out header below
 const backButtonBlack = "/images/common/back_button_black.png";
 const backButtonBlue = "/images/common/back_button_blue.png";
 
 // The list comes live from the event's attendees table, walk-ins added on the feedback form are left out.
 export default function RegisteredDelegatesMobile() {
+  // eslint-disable-next-line no-unused-vars -- used by the commented-out header below
   const navigate = useNavigate();
+  // eslint-disable-next-line no-unused-vars -- used by the commented-out header below
   const { config } = useEvent();
   const eventPath = useEventPath();
   const [delegates, setDelegates] = useState(null);

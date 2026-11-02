@@ -1,0 +1,4 @@
+# Nixpacks' default package set has no nodejs_24, so pin a nixos-26.05 snapshot that does.
+[phases.setup]
+nixPkgs = ["nodejs_24"]
+nixpkgsArchive = "9bb52223f4f6a0cc606fd0852d8784f896c137d5"

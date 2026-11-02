@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
+// eslint-disable-next-line no-unused-vars -- used by the commented-out menu below
 import { Link } from "react-router-dom";
 import "./EventMobileMenu.css";
 import { useEvent, useEventPath } from "./event/EventContext";
 import api from "./feedback/api";
 
+// eslint-disable-next-line no-unused-vars -- used by the commented-out menu below
 const forwardIcon = "/images/common/forward_icon.png";
 
 // The same menu for every event. Items with "link" open that address from the event file's "links",

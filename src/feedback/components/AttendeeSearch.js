@@ -33,6 +33,7 @@ function Highlight({ text, term }) {
   );
 }
 
+// eslint-disable-next-line no-unused-vars -- used by the commented-out avatars below
 function initials(name) {
   return name
     .split(/\s+/)
