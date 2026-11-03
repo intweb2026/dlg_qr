@@ -30,7 +30,7 @@ export default function AdminLayout() {
     } catch {
       notify("Full screen is not available in this browser.", "warning");
     }
-    navigate(eventPath("/lucky-draw"));
+    navigate(eventPath("/raffle-draw"));
   };
 
   const link = ({ isActive }) => `dlgfb-admin-link${isActive ? " dlgfb-active" : ""}`;
@@ -58,7 +58,7 @@ export default function AdminLayout() {
           </button>
           <div className={`dlgfb-admin-menu${open ? " dlgfb-show" : ""}`} id="admin-menu">
             <nav className="dlgfb-admin-links" aria-label="Admin">
-              <NavLink className={link} to={eventPath("/lucky-draw")} onClick={openLuckyDraw}>Lucky draw</NavLink>
+              <NavLink className={link} to={eventPath("/raffle-draw")} onClick={openLuckyDraw}>Lucky draw</NavLink>
               <NavLink className={link} to={eventPath("/admin/feedback-submission")}>Submissions</NavLink>
               <NavLink className={link} to={eventPath("/admin/attendees")}>Attendees</NavLink>
             </nav>

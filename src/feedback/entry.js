@@ -20,7 +20,7 @@ export function AdminArea() {
   );
 }
 
-// The lucky draw on its own at /lucky-draw, without the admin menu, for the screen at the venue.
+// The lucky draw on its own at /raffle-draw, without the admin menu, for the screen at the venue.
 // The draw API is public, so no sign in is needed here.
 export function LuckyDrawStandalone() {
   return (

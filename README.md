@@ -12,7 +12,7 @@ For an event with the code `dle26`.
 | `/dle26/registered-attendees` | Registered attendees |
 | `/dle26/wifipassword` | Wi-Fi details |
 | `/dle26/feedback-form` | Feedback form |
-| `/dle26/lucky-draw` | Lucky draw for the screen at the venue |
+| `/dle26/raffle-draw` | Lucky draw for the screen at the venue |
 | `/dle26/admin/login` | Admin sign in, then submissions, attendees and the lucky draw |
 
 The bare home page `/` shows a "500 Internal Server Error" page. An unknown code shows "Event not found".

@@ -581,6 +581,33 @@ body.dlgfb-body-active {
   text-align: center;
 }
 
+/* The event's media.logo, under the title. */
+.dlgfb-app .dlgfb-form-logo {
+  display: block;
+  width: auto;
+  height: 96px;
+  max-width: 70%;
+  margin: 16px auto;
+  object-fit: contain;
+}
+
+/* The logo's own bottom margin is the gap below it, so it always matches the gap above. */
+.dlgfb-app .dlgfb-form-header .dlgfb-form-logo + * {
+  margin-top: 0;
+}
+
+.dlgfb-app .dlgfb-form-header:has(> .dlgfb-form-logo:last-child) {
+  padding-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .dlgfb-app .dlgfb-form-logo {
+    height: 128px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+}
+
 .dlgfb-app .dlgfb-form-intro {
   margin: 18px 0 12px;
   font-size: 14px;
@@ -3074,7 +3101,7 @@ body.dlgfb-body-active {
   background-color: var(--ink);
 }
 
-/* Standalone /lucky-draw, the full screen layout covers the whole window before the browser goes full screen.
+/* Standalone /raffle-draw, the full screen layout covers the whole window before the browser goes full screen.
    Below the toasts (2000) so messages still show on top. */
 .dlgfb-app .dlgfb-draw-stage.dlgfb-is-window {
   position: fixed;
@@ -3829,6 +3856,14 @@ body.dlgfb-body-active {
 .dlgfb-app .dlgfb-draw-stage {
   --font-display: "Montserrat", "Segoe UI", Arial, sans-serif;
   font-family: var(--font-display);
+  /* The title and the top bar buttons follow the event's theme.secondary in every theme, see backend/events.json. */
+  --draw-title: var(--theme-secondary);
+  --draw-button: var(--theme-secondary);
+  --draw-button-hover: var(--theme-secondary-dark);
+}
+
+.dlgfb-app .dlgfb-draw-stage .dlgfb-draw-title {
+  color: var(--draw-title);
 }
 
 .dlgfb-app .dlgfb-draw-title {
@@ -3864,11 +3899,11 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-phase-revealed .dlgfb-winner-name {
-  font-size: clamp(1.9rem, 5.5vw, 3.2rem);
+  font-size: clamp(2.6rem, 7.5vw, 4.4rem);
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen.dlgfb-phase-revealed .dlgfb-winner-name {
-  font-size: clamp(2.4rem, 4.2vw, 4.6rem);
+  font-size: clamp(3.2rem, 6vw, 6.4rem);
 }
 
 .dlgfb-app .dlgfb-winner-company {
@@ -3877,11 +3912,17 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-phase-revealed .dlgfb-winner-company {
-  font-size: clamp(1rem, 3vw, 1.8rem);
+  font-size: clamp(1.4rem, 4vw, 2.4rem);
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen.dlgfb-phase-revealed .dlgfb-winner-company {
-  font-size: clamp(1.3rem, 2.4vw, 2.6rem);
+  font-size: clamp(1.8rem, 3.4vw, 3.6rem);
+}
+
+/* No keyboard focus outline on Spin, Theme and Full screen, the venue screen should stay clean. */
+.dlgfb-app .dlgfb-btn-fullscreen:focus,
+.dlgfb-app .dlgfb-btn-fullscreen:focus-visible {
+  outline: none;
 }
 
 .dlgfb-app .dlgfb-name-scramble {
@@ -3908,28 +3949,24 @@ body.dlgfb-body-active {
   font-size: clamp(1.9rem, 3.5vw, 2.8rem);
 }
 
-/* Top bar buttons, Default colours */
-.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen {
+/* Top bar buttons, the same in every theme */
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen,
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen.dlgfb-is-on {
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  background: var(--brass);
-  border-color: var(--brass);
-  color: var(--ink);
+  background: var(--draw-button);
+  border-color: var(--draw-button);
+  color: #fff;
 }
 
 .dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen:hover,
 .dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen.dlgfb-is-on:hover {
-  background: #fff;
-  border-color: #fff;
-  color: var(--ink);
-}
-
-.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen.dlgfb-is-on {
-  background: var(--brass-light);
-  border-color: var(--brass-light);
+  background: var(--draw-button-hover);
+  border-color: var(--draw-button-hover);
+  color: #fff;
 }
 
 .dlgfb-app .dlgfb-draw-stage .dlgfb-btn-draw {
@@ -3940,13 +3977,6 @@ body.dlgfb-body-active {
 }
 
 /* White and Black */
-.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white,
-.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black {
-  --draw-title: #3C9BFF;
-  --draw-button: #4286f8;
-  --draw-button-hover: #2f74ea;
-}
-
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white {
   --name-from: #181e35;
   --name-to: #4589e3;
@@ -3955,6 +3985,12 @@ body.dlgfb-body-active {
     radial-gradient(120% 55% at 50% -12%, rgba(255, 255, 255, 0.95), transparent 62%),
     #e6e6e6;
   color: #181e35;
+}
+
+/* Default, the dark blue theme, takes the same name and company gradient as Black. */
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-default {
+  --name-from: #ffffff;
+  --name-to: #4b95f9;
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black {
@@ -3975,20 +4011,6 @@ body.dlgfb-body-active {
 .dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-draw-title,
 .dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-winner-kicker {
   color: var(--draw-title);
-}
-
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-fullscreen,
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-fullscreen.dlgfb-is-on {
-  background: var(--draw-button);
-  border-color: var(--draw-button);
-  color: #fff;
-}
-
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-fullscreen:hover,
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-fullscreen.dlgfb-is-on:hover {
-  background: var(--draw-button-hover);
-  border-color: var(--draw-button-hover);
-  color: #fff;
 }
 
 .dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-draw {
@@ -4095,14 +4117,14 @@ body.dlgfb-body-active {
 }
 
 /* Left to right name gradient. Each letter paints its own slice, since the letters animate one by one. */
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-winner-letter {
+.dlgfb-app .dlgfb-draw-stage .dlgfb-winner-letter {
   background: linear-gradient(90deg, var(--name-from), var(--name-to));
   -webkit-background-clip: text;
   background-clip: text;
 }
 
 @supports (color: color-mix(in srgb, red 50%, blue)) {
-  .dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-winner-letter {
+  .dlgfb-app .dlgfb-draw-stage .dlgfb-winner-letter {
     background: linear-gradient(90deg,
         color-mix(in srgb, var(--name-to) calc(var(--p0, 0) * 100%), var(--name-from)),
         color-mix(in srgb, var(--name-to) calc(var(--p1, 1) * 100%), var(--name-from)));
@@ -4111,7 +4133,7 @@ body.dlgfb-body-active {
   }
 }
 
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-winner-company {
+.dlgfb-app .dlgfb-draw-stage .dlgfb-winner-company {
   display: inline-block;
   padding: 0 0.04em 0.12em;
   background: linear-gradient(90deg, var(--name-from), var(--name-to));

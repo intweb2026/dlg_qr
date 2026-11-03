@@ -106,7 +106,7 @@ function WinnerName({ name }) {
 // }
 
 /**
- * autoFullscreen, used by the standalone /lucky-draw page. The stage fills the whole window from the start,
+ * autoFullscreen, used by the standalone /raffle-draw page. The stage fills the whole window from the start,
  * and the first click or key press switches the browser to real full screen. Browsers refuse full screen
  * without a user action, so it cannot happen on page load alone.
  */

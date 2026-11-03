@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useEventPath } from "../../event/EventContext";
+import { useEvent, useEventPath } from "../../event/EventContext";
 import api, { errorMessage, padId } from "../api";
 import AttendeeSearch from "../components/AttendeeSearch";
 import Modal from "../components/Modal";
@@ -183,9 +183,32 @@ function ConfirmRow({ label, value, editing, disabled, onEdit, onSave, onCancel 
   );
 }
 
+/** The tick, the title and the raffle ticket number, after a submit and when this device has already submitted. */
+function SubmittedCard({ title, entryId, foot }) {
+  return (
+    <div className="dlgfb-form-card dlgfb-form-success" role="status">
+      <span className="dlgfb-form-success-icon" aria-hidden="true">
+        <img src={checkedIcon} alt="Success" />
+      </span>
+      <h2>{title}</h2>
+      {entryId !== null && entryId !== undefined && (
+        <>
+          <p className="dlgfb-form-raffle-kicker">Your raffle ticket number is</p>
+          <p className="dlgfb-form-raffle-number">{padId(entryId, 2)}</p>
+          <p className="dlgfb-form-raffle-note">
+            The winning number will be announced shortly; please stay in the room, as the prize can only be claimed by a winner who is present.
+          </p>
+        </>
+      )}
+      <p className="dlgfb-form-raffle-foot">{foot}</p>
+    </div>
+  );
+}
+
 export default function FeedbackForm() {
   const notify = useToast();
   const eventPath = useEventPath();
+  const logo = useEvent().config.media?.logo;
   // loading | already | inactive | upcoming | ended | closed | form | success | offline
   const [view, setView] = useState("loading");
   const [attendees, setAttendees] = useState(null);
@@ -349,6 +372,7 @@ export default function FeedbackForm() {
             </Link>
             <h1 className={`dlgfb-form-title${view === "success" ? " dlgfb-sr-only" : ""}`}>Feedback Form</h1>
           </div>
+          {logo && <img src={logo} alt="" className="dlgfb-form-logo" />}
           {showIntro && (
             <>
               <p className="dlgfb-form-intro">Your answers help shape next year. Every complete submission goes into the lucky draw at the closing session.</p>
@@ -376,13 +400,11 @@ export default function FeedbackForm() {
           )}
 
           {view === "already" && (
-            <StatusPanel
-              tone="info"
+            <SubmittedCard
               title="Feedback already received"
-              // extra={entryId !== null ? <DrawTicket id={entryId} /> : null}
-            >
-              You have already submitted your feedback. Thank you for taking part.
-            </StatusPanel>
+              entryId={entryId}
+              foot="You have already submitted your feedback. Thank you for taking part."
+            />
           )}
 
           {view === "inactive" && (
@@ -423,27 +445,7 @@ export default function FeedbackForm() {
             </StatusPanel>
           )}
 
-          {view === "success" && (
-            <div className="dlgfb-form-card dlgfb-form-success" role="status">
-              <span className="dlgfb-form-success-icon" aria-hidden="true">
-                <img src={checkedIcon} alt="Success" />
-                {/* <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6 12.5l4 4L18 8" />
-                </svg> */}
-              </span>
-              <h2>You’re all set!</h2>
-              {entryId !== null && entryId !== undefined && (
-                <>
-                  <p className="dlgfb-form-raffle-kicker">Your raffle ticket number is</p>
-                  <p className="dlgfb-form-raffle-number">{padId(entryId, 2)}</p>
-                  <p className="dlgfb-form-raffle-note">
-                    The winning number will be announced shortly; please stay in the room, as the prize can only be claimed by a winner who is present.
-                  </p>
-                </>
-              )}
-              <p className="dlgfb-form-raffle-foot">You’re entered in the draw. Good luck!</p>
-            </div>
-          )}
+          {view === "success" && <SubmittedCard title="You’re all set!" entryId={entryId} foot="You’re entered in the draw. Good luck!" />}
 
           {view === "form" && (
             <form className="dlgfb-form-panel" onSubmit={handleReview} noValidate>

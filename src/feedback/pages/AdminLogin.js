@@ -17,7 +17,7 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to={eventPath("/admin/lucky-draw")} replace />;
+  if (user) return <Navigate to={eventPath("/admin/raffle-draw")} replace />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -26,7 +26,7 @@ export default function AdminLogin() {
     try {
       await login(form.username.trim(), form.password);
       notify("You are signed in to the admin panel.", "success", { title: "Welcome back" });
-      navigate(location.state?.from || eventPath("/admin/lucky-draw"), { replace: true });
+      navigate(location.state?.from || eventPath("/admin/raffle-draw"), { replace: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {

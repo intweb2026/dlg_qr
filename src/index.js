@@ -43,12 +43,12 @@ function App() {
 
         <Route element={load(FeedbackShell)}>
           <Route path="feedback-form" element={load(FeedbackForm)} />
-          <Route path="lucky-draw" element={load(LuckyDrawStandalone)} />
+          <Route path="raffle-draw" element={load(LuckyDrawStandalone)} />
           <Route path="admin/login" element={load(AdminLogin)} />
           <Route path="admin" element={load(AdminArea)}>
             <Route index element={<Navigate to="feedback-submission" replace />} />
             <Route path="feedback-submission" element={load(AdminSubmissions)} />
-            <Route path="lucky-draw" element={load(LuckyDraw)} />
+            <Route path="raffle-draw" element={load(LuckyDraw)} />
             <Route path="attendees" element={load(AdminAttendees)} />
             <Route path="*" element={load(NotFound)} />
           </Route>
