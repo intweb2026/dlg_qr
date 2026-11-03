@@ -61,10 +61,9 @@ function App() {
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
+// No React.StrictMode, its development double mount made every API call twice.
 root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
 );

@@ -27,7 +27,6 @@ export default function RegisteredDelegatesMobile() {
       .catch(() => setFailed(true));
   }, []);
 
-  console.log('delegates', delegates);
   let message = null;
   if (failed) message = "The attendee list will be published soon.";
   // else if (!delegates) message = "Loading attendees...";
