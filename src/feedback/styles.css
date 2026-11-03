@@ -522,11 +522,21 @@ body.dlgfb-body-active {
   margin: 0 auto;
   overflow: hidden;
   background-color: #278dff;
+  /* The pattern sits on its own layer behind the content, so it can be faded without fading the page. */
+  isolation: isolate;
+}
+
+.dlgfb-app .feedback-form-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image: url(../../public/images/dle26/DLE_bg_pattern.png);
   background-position: right center;
   background-repeat: no-repeat;
   background-size: auto 100%;
-  background-attachment: fixed;
+  opacity: 0.35;
 }
 
 .dlgfb-app .dlgfb-form-shell {  
