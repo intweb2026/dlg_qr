@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS `feedback_submissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Single row with id 1 holding the global form configuration. max_spin_attempts 0 means unlimited.
+-- form_status is inactive (form not enabled by an admin), upcoming (event not started), active (open for responses),
+-- ended (event ended) or closed (event closed). Only active takes responses.
 CREATE TABLE IF NOT EXISTS `form_settings` (
   `id` int NOT NULL AUTO_INCREMENT,
   `form_status` varchar(10) NOT NULL DEFAULT 'active',

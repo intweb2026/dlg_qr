@@ -6,6 +6,8 @@ const admin = require("./views/admin");
 const auth = require("./views/auth");
 const luckyDraw = require("./views/luckyDraw");
 const pub = require("./views/public");
+const { upcomingConferences } = require("./views/upcomingConferences");
+const { suggestTestimonial } = require("./views/testimonial");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 5 } });
@@ -30,7 +32,9 @@ route("/", { get: pub.eventConfig });
 route("/form-status/", { get: pub.formStatus });
 route("/attendees/", { get: pub.attendeeList });
 route("/registered-attendees/", { get: pub.registeredAttendees });
+route("/upcoming-conferences/", { get: upcomingConferences });
 route("/feedback/submit/", { post: pub.feedbackSubmit });
+route("/feedback/suggest-testimonial/", { post: suggestTestimonial });
 // Admin auth
 route("/auth/login/", { post: auth.login });
 route("/auth/me/", { get: [requireAdmin, auth.me] });

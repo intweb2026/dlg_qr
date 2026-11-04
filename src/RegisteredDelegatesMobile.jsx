@@ -12,8 +12,8 @@ const backButtonBlue = "/images/common/back_button_blue.png";
 export default function RegisteredDelegatesMobile() {
   // eslint-disable-next-line no-unused-vars -- used by the commented-out header below
   const navigate = useNavigate();
-  // eslint-disable-next-line no-unused-vars -- used by the commented-out header below
   const { config } = useEvent();
+  const background = config.media?.background;
   const eventPath = useEventPath();
   const [delegates, setDelegates] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -88,7 +88,7 @@ export default function RegisteredDelegatesMobile() {
     //     </div>
     //   </div>
     // </div>
-    <div className="page">
+    <div className="page" style={background ? { "--delegates-bg": `url(${background})` } : undefined}>
       <div className="card">
         <div className="title-container">
           <a className="back_btn" href={eventPath()}>

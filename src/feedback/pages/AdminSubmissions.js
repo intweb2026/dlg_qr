@@ -175,7 +175,7 @@ function SettingsPanel() {
       </div>
 
       <form className="dlgfb-panel dlgfb-draw-settings" onSubmit={saveDraw}>
-        <span className="dlgfb-panel-label">Lucky draw</span>
+        <span className="dlgfb-panel-label">Raffle draw</span>
         <div className="dlgfb-draw-settings-fields">
           <div className="dlgfb-form-group dlgfb-mb-0">
             <label htmlFor="max-spins">Spins allowed per draw</label>
@@ -238,7 +238,7 @@ export default function AdminSubmissions() {
     const entry = padId(sub.id, data.pad_length);
     try {
       await api.patch(`/admin/submissions/${sub.id}/suspend/`, { is_suspended: !sub.is_suspended });
-      if (sub.is_suspended) notify(`${sub.attendee_name} is back in the lucky draw.`, "success", { title: `Entry ${entry} restored` });
+      if (sub.is_suspended) notify(`${sub.attendee_name} is back in the raffle draw.`, "success", { title: `Entry ${entry} restored` });
       else notify(`${sub.attendee_name} can no longer be drawn.`, "warning", { title: `Entry ${entry} suspended` });
       load();
     } catch (err) {

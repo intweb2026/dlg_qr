@@ -493,10 +493,11 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-page {
-  --fb-blue: #278dff;
-  --fb-blue-dark: #1f7ae6;
-  --fb-navy: #163f86;
-  --fb-tint: #eaf2fc;
+  /* The form's colours follow the event's theme.secondary, see backend/events.json. */
+  --fb-blue: var(--theme-secondary);
+  --fb-blue-dark: var(--theme-secondary-dark);
+  --fb-navy: color-mix(in srgb, var(--theme-secondary) 45%, #000);
+  --fb-tint: color-mix(in srgb, var(--theme-secondary) 10%, #fff);
   --fb-surface: #f3f5f8;
   --fb-text: #0a0a0a;
   --fb-muted: #4a5a6e;
@@ -508,7 +509,7 @@ body.dlgfb-body-active {
   --fb-title: "Montserrat", "Segoe UI", Roboto, Arial, sans-serif;
   --fb-body: "Poppins", "Segoe UI", Roboto, Arial, sans-serif;
   min-height: 100vh;
-  /* background: linear-gradient(160deg, #163f86 0%, #1f5fc4 45%, #278dff 100%); */
+  /* background: linear-gradient(160deg, #163f86 0%, #1f5fc4 45%, var(--fb-blue) 100%); */
   font-family: var(--fb-body);
   color: var(--fb-text);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -521,7 +522,7 @@ body.dlgfb-body-active {
   min-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
-  background-color: #278dff;
+  background-color: var(--theme-secondary);
   /* The pattern sits on its own layer behind the content, so it can be faded without fading the page. */
   isolation: isolate;
 }
@@ -532,7 +533,8 @@ body.dlgfb-body-active {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image: url(../../public/images/dle26/DLE_bg_pattern.png);
+  /* The event's media.background, set as --event-pattern by FeedbackForm.js. */
+  background-image: var(--event-pattern, none);
   background-position: right center;
   background-repeat: no-repeat;
   background-size: auto 100%;
@@ -589,6 +591,374 @@ body.dlgfb-body-active {
   padding: 0 36px;
   color: #fff;
   text-align: center;
+}
+
+/* Question cards with a coloured header band, the number in a box, then the hint, Required and the fields.
+   .dlgfb-form-panel in the selectors outranks the older padded card rules further down. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--fb-tint);
+  box-shadow: none;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, var(--fb-blue-dark), var(--fb-blue));
+  color: #fff;
+  font-family: var(--fb-title);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-num {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q.dlgfb-has-error .dlgfb-form-q-num {
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-text {
+  align-self: center;
+}
+
+.dlgfb-app .dlgfb-form-q-body {
+  padding: 16px 18px 18px;
+}
+
+.dlgfb-app .dlgfb-form-q-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--fb-placeholder);
+}
+
+.dlgfb-app .dlgfb-form-q-required {
+  margin: 0 0 10px;
+  font-family: var(--fb-title);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-form-q-optional {
+  margin: 0 0 10px;
+  font-family: var(--fb-title);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fb-muted);
+}
+
+/* Suggested testimonial under question 1, with its three choices, the chosen wording and the agreement. */
+.dlgfb-app .dlgfb-testimonial {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(var(--theme-secondary-rgb), 0.18);
+}
+
+.dlgfb-app .dlgfb-testimonial-title {
+  margin: 0 0 8px;
+  font-family: var(--fb-title);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-testimonial-text {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--fb-text);
+}
+
+.dlgfb-app .dlgfb-testimonial-wait {
+  margin: 0;
+  font-style: italic;
+  color: var(--fb-muted);
+}
+
+.dlgfb-app .dlgfb-testimonial-btn {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: #eef3fb;
+  color: var(--fb-text);
+  font-family: var(--fb-title);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.15s, filter 0.15s;
+}
+
+.dlgfb-app .dlgfb-testimonial-btn:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+.dlgfb-app .dlgfb-testimonial-btn-primary {
+  margin-top: 0;
+  background: linear-gradient(135deg, var(--fb-blue-dark), var(--fb-blue));
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-testimonial-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.dlgfb-app .dlgfb-testimonial-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--fb-muted);
+}
+
+.dlgfb-app .dlgfb-testimonial-final {
+  margin: 14px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--fb-text);
+}
+
+.dlgfb-app .dlgfb-form-q-body .dlgfb-testimonial-consent {
+  margin-top: 14px;
+  align-items: center;
+}
+
+.dlgfb-app .dlgfb-testimonial-consent .dlgfb-form-check-title {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.dlgfb-app .dlgfb-testimonial-modal .dlgfb-modal-footer {
+  display: block;
+}
+
+.dlgfb-app .dlgfb-testimonial-modal-intro {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.dlgfb-app .dlgfb-testimonial-modal .dlgfb-testimonial-modal-text {
+  min-height: 120px;
+  background: #eef3fb;
+}
+
+/* Back, under Continue from step 2 on, a light tint of the event colour. */
+.dlgfb-app .dlgfb-form-step-back {
+  display: block;
+  width: 100%;
+  height: 52px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(var(--theme-secondary-rgb), 0.25);
+  color: var(--fb-text);
+  font-family: var(--fb-title);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.dlgfb-app .dlgfb-form-step-back:hover {
+  background: rgba(var(--theme-secondary-rgb), 0.4);
+}
+
+@media (min-width: 768px) {
+  .dlgfb-app .dlgfb-form-step-back {
+    width: 320px;
+    max-width: 100%;
+    height: 54px;
+    margin: 16px auto 0;
+  }
+}
+
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-textarea {
+  background: #fff;
+}
+
+.dlgfb-app .dlgfb-form-list {
+  display: grid;
+  gap: 12px;
+}
+
+.dlgfb-app .dlgfb-form-input {
+  display: block;
+  width: 100%;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--fb-border);
+  border-radius: 6px;
+  background: #fff;
+  font-family: var(--fb-body);
+  font-size: 16px;
+  color: var(--fb-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dlgfb-app .dlgfb-form-input::placeholder {
+  color: var(--fb-placeholder);
+  opacity: 1;
+  /* Smaller than the typed text, so long hints fit on a phone; the 16px typed text stops iOS zooming in. */
+  font-size: 14px;
+}
+
+.dlgfb-app .dlgfb-form-input:focus {
+  outline: none;
+  border-color: var(--fb-blue);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
+}
+
+.dlgfb-app .dlgfb-form-input.dlgfb-is-invalid {
+  border-color: var(--fb-error);
+}
+
+/* Answer options inside a question card are tiles at every width, one per row on phones and two from 768px. */
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-radio {
+  display: flex;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid #e1e6ee;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 15px;
+}
+
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-radio.dlgfb-is-selected {
+  border-color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-radio-mark {
+  border-color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-form-q-body .dlgfb-is-invalid .dlgfb-form-radio {
+  border-color: #f1b5b5;
+}
+
+.dlgfb-app .dlgfb-form-other {
+  margin-top: 12px;
+}
+
+/* Tick boxes inside a question card are tiles too, one per row, with an optional second line of detail. */
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-checks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-check {
+  display: flex;
+  gap: 14px;
+  min-height: 48px;
+  padding: 14px;
+  border: 1px solid #e1e6ee;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 15px;
+}
+
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-check.dlgfb-is-selected {
+  border-color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-check-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border-color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-form-check-label {
+  display: grid;
+  gap: 4px;
+}
+
+.dlgfb-app .dlgfb-form-check-title {
+  font-weight: 600;
+  color: var(--fb-text);
+}
+
+.dlgfb-app .dlgfb-form-check-detail {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--fb-muted);
+}
+
+@media (min-width: 768px) {
+  .dlgfb-app .dlgfb-form-q-body .dlgfb-form-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Progress above the name field, in the event's colour. */
+.dlgfb-app .dlgfb-form-progress {
+  margin-bottom: 20px;
+}
+
+.dlgfb-app .dlgfb-form-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+  font-family: var(--fb-title);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-form-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #e6e9ee;
+  overflow: hidden;
+}
+
+.dlgfb-app .dlgfb-form-progress-bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fb-blue);
+  transition: width 0.3s ease;
 }
 
 /* The event's media.logo, under the title. */
@@ -842,7 +1212,7 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-form-radio input:focus-visible+.dlgfb-form-radio-mark,
 .dlgfb-app .dlgfb-form-check input:focus-visible+.dlgfb-form-check-mark {
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.35);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.35);
 }
 
 .dlgfb-app .dlgfb-is-invalid .dlgfb-form-radio-mark,
@@ -913,7 +1283,7 @@ body.dlgfb-body-active {
   outline: none;
   border-color: var(--fb-blue);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
 }
 
 .dlgfb-app .dlgfb-form-select.dlgfb-is-invalid select,
@@ -936,7 +1306,7 @@ body.dlgfb-body-active {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  box-shadow: 0 6px 16px rgba(39, 141, 255, 0.35);
+  box-shadow: 0 6px 16px rgba(var(--theme-secondary-rgb), 0.35);
   cursor: pointer;
   transition: background-color 0.15s, transform 0.1s;
 }
@@ -1118,7 +1488,7 @@ body.dlgfb-body-active {
   background: #fff;
   border: 1.5px solid var(--fb-blue);
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(39, 141, 255, 0.18);
+  box-shadow: 0 8px 20px rgba(var(--theme-secondary-rgb), 0.18);
 }
 
 .dlgfb-app .dlgfb-form-ticket::before {
@@ -1508,7 +1878,7 @@ body.dlgfb-body-active {
 .dlgfb-app .dlgfb-form-page .dlgfb-search-field .dlgfb-form-control:focus {
   border-color: var(--fb-blue);
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-search-field .dlgfb-form-control:disabled {
@@ -1556,7 +1926,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-attendee-option-name mark {
-  background: rgba(39, 141, 255, 0.18);
+  background: rgba(var(--theme-secondary-rgb), 0.18);
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-attendee-option-company,
@@ -1566,7 +1936,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-attendee-avatar {
-  background: #278dff;
+  background: var(--fb-blue);
   color: #fff;
 }
 
@@ -1672,7 +2042,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-confirm-row.dlgfb-is-editing {
-  border-color: #278dff;
+  border-color: var(--fb-blue);
 }
 
 .dlgfb-app .dlgfb-form-confirm-label {
@@ -1699,8 +2069,8 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-confirm-input:focus {
-  border-color: #278dff;
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.2);
+  border-color: var(--fb-blue);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.2);
 }
 
 .dlgfb-app .dlgfb-form-confirm-input.dlgfb-is-invalid {
@@ -1724,13 +2094,13 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-form-confirm-edit:hover:not(:disabled),
 .dlgfb-app .dlgfb-form-confirm-edit:focus-visible {
-  color: #278dff;
-  background: #eaf2fc;
+  color: var(--fb-blue);
+  background: var(--fb-tint);
 }
 
 .dlgfb-app .dlgfb-is-editing .dlgfb-form-confirm-edit {
   color: #fff;
-  background: #278dff;
+  background: var(--fb-blue);
 }
 
 .dlgfb-app .dlgfb-form-confirm-edit:disabled {
@@ -1753,25 +2123,25 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-btn:focus {
-  box-shadow: 0 0 0 3px rgba(39, 141, 255, 0.3);
+  box-shadow: 0 0 0 3px rgba(var(--theme-secondary-rgb), 0.3);
 }
 
 .dlgfb-app .dlgfb-form-btn-primary {
-  background: #278dff;
-  border: 1px solid #278dff;
+  background: var(--fb-blue);
+  border: 1px solid var(--fb-blue);
   color: #fff;
 }
 
 .dlgfb-app .dlgfb-form-btn-primary:hover,
 .dlgfb-app .dlgfb-form-btn-primary:not(:disabled):active {
-  background: #1f7ae6;
-  border-color: #1f7ae6;
+  background: var(--fb-blue-dark);
+  border-color: var(--fb-blue-dark);
   color: #fff;
 }
 
 .dlgfb-app .dlgfb-form-btn-primary:disabled {
-  background: #278dff;
-  border-color: #278dff;
+  background: var(--fb-blue);
+  border-color: var(--fb-blue);
   color: #fff;
   opacity: 0.6;
 }
@@ -1783,8 +2153,8 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-btn-ghost:hover {
-  border-color: #278dff;
-  color: #278dff;
+  border-color: var(--fb-blue);
+  color: var(--fb-blue);
 }
 
 /* Tablet and desktop. The mobile design above is the reference, these rules only widen and enlarge it. */
@@ -4023,22 +4393,23 @@ body.dlgfb-body-active {
   color: var(--draw-title);
 }
 
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-draw {
+/* The big Spin button and Try again follow the event's theme.secondary in every theme. */
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-draw {
   background: var(--draw-button);
   color: #fff;
-  box-shadow: 0 6px 18px rgba(66, 134, 248, 0.35);
+  box-shadow: 0 6px 18px rgba(var(--theme-secondary-rgb), 0.35);
 }
 
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-draw:disabled {
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-draw:disabled {
   box-shadow: none;
 }
 
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-draw:hover:not(:disabled) {
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-draw:hover:not(:disabled) {
   background: var(--draw-button-hover);
   color: #fff;
 }
 
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-btn-reveal.dlgfb-is-ready {
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-reveal.dlgfb-is-ready {
   background: var(--draw-button);
   border-color: var(--draw-button);
   color: #fff;

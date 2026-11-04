@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useEvent, useEventPath } from "../../event/EventContext";
 import api, { errorMessage, padId } from "../api";
 import AttendeeSearch from "../components/AttendeeSearch";
 import Modal from "../components/Modal";
+import TestimonialAssist, { testimonialFinal, testimonialHelper } from "../components/TestimonialAssist";
 import feedbackQuestions from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
 import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryNumber, saveEntryNumber } from "../utils/device";
@@ -81,7 +82,7 @@ function DrawTicket({ id }) {
         <div className="dlgfb-form-ticket-text">
           <span className="dlgfb-form-ticket-kicker">Your draw number</span>
           <span className="dlgfb-form-ticket-title">Entry confirmed</span>
-          <span className="dlgfb-form-ticket-sub">{hasNumber ? "Keep this number handy" : "You are in the lucky draw"}</span>
+          <span className="dlgfb-form-ticket-sub">{hasNumber ? "Keep this number handy" : "You are in the raffle draw"}</span>
         </div>
         {hasNumber && (
           <span
@@ -103,6 +104,31 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function isAnswered(v) {
   if (Array.isArray(v)) return v.length > 0;
   return v !== undefined && v !== null && String(v).trim() !== "";
+}
+
+/** A "list" question is complete when every required field is filled, "Other" when its text is filled,
+ any other question when it has an answer. */
+function isComplete(q, answers) {
+  const v = answers[q.key];
+  if (q.type === "list") return q.fields.every((f, i) => !f.required || String(v?.[i] || "").trim() !== "");
+  if (q.other && v === q.other) return String(answers[`${q.key}_other`] || "").trim() !== "";
+  return isAnswered(v);
+}
+
+/** The questions for one event. A question with "optionsFrom" takes its options from that list in sources,
+ and is left out while the list is empty. */
+function eventQuestions(sources) {
+  return feedbackQuestions
+    .map((q) => {
+      if (!q.optionsFrom) return q;
+      const items = Array.isArray(sources[q.optionsFrom]) ? sources[q.optionsFrom] : [];
+      return {
+        ...q,
+        options: items.map((item) => item.name),
+        optionDetails: Object.fromEntries(items.map((item) => [item.name, [item.dates, item.location].filter(Boolean).join(" | ")])),
+      };
+    })
+    .filter((q) => !q.optionsFrom || q.options.length > 0);
 }
 
 const EDIT_ICON = (
@@ -183,6 +209,30 @@ function ConfirmRow({ label, value, editing, disabled, onEdit, onSave, onCancel 
   );
 }
 
+/** The question count and the current step, above the form. */
+function FormProgress({ step, total, count }) {
+  return (
+    <div className="dlgfb-form-progress">
+      <div className="dlgfb-form-progress-head">
+        <span>Your feedback</span>
+        <span>
+          {count} Questions · Step {step} of {total}
+        </span>
+      </div>
+      <div
+        className="dlgfb-form-progress-track"
+        role="progressbar"
+        aria-label="Form progress"
+        aria-valuemin={1}
+        aria-valuemax={total}
+        aria-valuenow={step}
+      >
+        <span className="dlgfb-form-progress-bar" style={{ width: `${(step / total) * 100}%` }} />
+      </div>
+    </div>
+  );
+}
+
 /** The tick, the title and the raffle ticket number, after a submit and when this device has already submitted. */
 function SubmittedCard({ title, entryId, foot }) {
   return (
@@ -208,7 +258,16 @@ function SubmittedCard({ title, entryId, foot }) {
 export default function FeedbackForm() {
   const notify = useToast();
   const eventPath = useEventPath();
-  const logo = useEvent().config.media?.logo;
+  const { logo, background } = useEvent().config.media || {};
+  // The last question's options, the conferences listed on the event's website.
+  const [upcomingConferences, setUpcomingConferences] = useState([]);
+  // Step 1 is the name, then one step for each "step" number used by this event's questions.
+  const { questions, questionSteps } = useMemo(() => {
+    const list = eventQuestions({ upcomingConferences });
+    return { questions: list, questionSteps: [...new Set(list.map((q) => q.step))].sort((a, b) => a - b) };
+  }, [upcomingConferences]);
+  const stepTotal = 1 + questionSteps.length;
+  const questionsOnStep = (n) => (n === 1 ? [] : questions.filter((q) => q.step === questionSteps[n - 2]));
   // loading | already | inactive | upcoming | ended | closed | form | success | offline
   const [view, setView] = useState("loading");
   const [attendees, setAttendees] = useState(null);
@@ -225,6 +284,7 @@ export default function FeedbackForm() {
   // so a new attendee's typed name is saved as their real name even when the popup changes it.
   const [alias, setAlias] = useState({ full_name: "", company_name: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState(1);
     const [entryId, setEntryId] = useState(() => readEntryNumber());
 
   const loadAttendees = useCallback(() => {
@@ -247,12 +307,33 @@ export default function FeedbackForm() {
     }
     // The attendee list loads together with the form status, when the page opens.
     loadAttendees();
+    // Without the list the last question is left out, so a failure needs no message.
+    api
+      .get("/upcoming-conferences/")
+      .then(({ data }) => setUpcomingConferences(Array.isArray(data) ? data : []))
+      .catch(() => {});
     api
       .get("/form-status/")
       // A 403 from the attendee list, if it came first, already chose the closed view.
       .then(({ data }) => setView((v) => (!data.is_active ? closedView(data.form_status) : STATUS_VIEWS[v] ? v : "form")))
       .catch(() => setView("offline"));
   }, [loadAttendees]);
+
+  // Back one step, the answers already typed stay.
+  const goBack = () => {
+    setStep((s) => Math.max(1, s - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // One field of a "list" question, the others keep their text.
+  const setListAnswer = (q, index, val) => {
+    setAnswers((a) => {
+      const list = [...(a[q.key] || q.fields.map(() => ""))];
+      list[index] = val;
+      return { ...a, [q.key]: list };
+    });
+    setErrors((e) => ({ ...e, [q.key]: false }));
+  };
 
   const setAnswer = (key, val) => {
     setAnswers((a) => ({ ...a, [key]: val }));
@@ -266,24 +347,33 @@ export default function FeedbackForm() {
     setAnswer(q.key, q.options.filter((o) => next.includes(o)));
   };
 
-  const validate = () => {
+  /** Checks the fields of one step, the name on step 1 and that step's questions after it. */
+  const validate = (forStep) => {
     const next = {};
-    if (!attendee) next.attendee = true;
-    else if (attendee.is_new) {
-      if (attendee.company_name.trim().length < 2) next.company = true;
-      const email = attendee.email.trim();
-      if (email && !EMAIL_RE.test(email)) next.email = true;
+    if (forStep === 1) {
+      if (!attendee) next.attendee = true;
+      else if (attendee.is_new) {
+        if (attendee.company_name.trim().length < 2) next.company = true;
+        const email = attendee.email.trim();
+        if (email && !EMAIL_RE.test(email)) next.email = true;
+      }
     }
-    feedbackQuestions.forEach((q) => {
-      if (q.required && !isAnswered(answers[q.key])) next[q.key] = true;
+    questionsOnStep(forStep).forEach((q) => {
+      if (q.required && !isComplete(q, answers)) next[q.key] = true;
     });
     setErrors(next);
     return next;
   };
 
-  const handleReview = (e) => {
+  // Continue moves to the next step once this one is complete, the last step opens the confirm popup.
+  const handleContinue = (e) => {
     e.preventDefault();
-    const missing = Object.keys(validate());
+    const missing = Object.keys(validate(step));
+    if (missing.length === 0 && step < stepTotal) {
+      setStep(step + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (missing.length === 0) {
       setConfirmError(null);
       setEditingField(null);
@@ -296,15 +386,25 @@ export default function FeedbackForm() {
       "warning",
       { title: "Almost there" }
     );
-    const first = document.getElementById(`q-${missing[0]}`);
+    const first = document.getElementById(`q-${["attendee", "company", "email"].includes(missing[0]) ? "attendee" : missing[0]}`);
     if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
     const feedback_data = {};
-    feedbackQuestions.forEach((q) => {
-      const v = answers[q.key];
+    questions.forEach((q) => {
+      let v = q.type === "list" ? (answers[q.key] || []).map((text) => text.trim()).filter(Boolean) : answers[q.key];
+      if (q.other && v === q.other) v = `Other: ${String(answers[`${q.key}_other`] || "").trim()}`;
+      if (q.aiSuggestion && isAnswered(v)) {
+        // The chosen wording is the answer, the original words and the agreement are kept beside it.
+        const version = answers[`${q.key}_assist`]?.version || "original";
+        const final = testimonialFinal(answers, q.key);
+        if (final !== String(v).trim()) feedback_data[`${q.key}_original`] = String(v).trim();
+        feedback_data[`${q.key}_version`] = version;
+        feedback_data[`${q.key}_consent`] = answers[`${q.key}_consent`] ? "Yes" : "No";
+        v = final;
+      }
       if (isAnswered(v)) feedback_data[q.key] = typeof v === "string" ? v.trim() : v;
     });
     try {
@@ -342,9 +442,11 @@ export default function FeedbackForm() {
         if (code === "already_submitted" && !attendee.is_new) {
           setAttendees((list) => (list || []).filter((a) => a.attendee_id !== attendee.attendee_id));
           setAttendee(null);
+          setStep(1);
         } else if (code === "attendee_exists") {
           // The name was added to the list after this page loaded, reload it so it can be picked.
           setAttendee(null);
+          setStep(1);
           loadAttendees();
         }
         notify(errorMessage(err), "danger", { title: "Not submitted" });
@@ -354,18 +456,28 @@ export default function FeedbackForm() {
     }
   };
 
-  const showIntro = view === "form" || view === "loading";
-  let number = 1;
+  const showIntro = (view === "form" && step === 1) || view === "loading";
 
   const requiredTag = (required) =>
     required ? <span className="dlgfb-form-tag dlgfb-form-tag-req">Required</span> : <span className="dlgfb-form-tag dlgfb-form-tag-opt">Optional</span>;
 
   return (
-    <div className="dlgfb-form-page feedback-form-page">
+    <div className="dlgfb-form-page feedback-form-page" style={background ? { "--event-pattern": `url(${background})` } : undefined}>
       <div className="dlgfb-form-shell">
         <header className="dlgfb-form-header">
           <div className="dlgfb-form-header-bar">
-            <Link className="dlgfb-form-back" to={eventPath()} aria-label="Go back">
+            <Link
+              className="dlgfb-form-back"
+              to={eventPath()}
+              aria-label="Go back"
+              // After step 1 the arrow goes back one step, so no answers are lost.
+              onClick={(e) => {
+                if (view === "form" && step > 1) {
+                  e.preventDefault();
+                  goBack();
+                }
+              }}
+            >
               <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
                 <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -375,7 +487,7 @@ export default function FeedbackForm() {
           {logo && <img src={logo} alt="" className="dlgfb-form-logo" />}
           {showIntro && (
             <>
-              <p className="dlgfb-form-intro">Your answers help shape next year. Every complete submission goes into the lucky draw at the closing session.</p>
+              <p className="dlgfb-form-intro">Your answers help shape next event. Every complete submission goes into the lucky draw at the closing session.</p>
               <ul className="dlgfb-form-chips">
                 {/* <li>About 1 Minute</li> */}
                 <li>{REQUIRED_TOTAL} Answers Required</li>
@@ -448,128 +560,192 @@ export default function FeedbackForm() {
           {view === "success" && <SubmittedCard title="You’re all set!" entryId={entryId} foot="You’re entered in the draw. Good luck!" />}
 
           {view === "form" && (
-            <form className="dlgfb-form-panel" onSubmit={handleReview} noValidate>
-              <section className={`dlgfb-form-name${errors.attendee || errors.company || errors.email ? " dlgfb-has-error" : ""}`} id="q-attendee">
-                <label htmlFor="attendee-search" className="dlgfb-form-name-label">
-                  Your Name {requiredTag(true)}
-                </label>
-                <AttendeeSearch
-                  attendees={attendees}
-                  loadError={attendeesError}
-                  onRetry={loadAttendees}
-                  value={attendee}
-                  onChange={(a) => {
-                    setAttendee(a);
-                    setErrors((e) => ({ ...e, attendee: false, company: false, email: false }));
-                  }}
-                  invalid={errors.attendee}
-                  companyInvalid={errors.company}
-                  emailInvalid={errors.email}
-                />
-              </section>
+            <form className="dlgfb-form-panel" onSubmit={handleContinue} noValidate>
+              <FormProgress step={step} total={stepTotal} count={questions.length} />
 
-              {feedbackQuestions.map((q) => {
+              {step === 1 && (
+                <section className={`dlgfb-form-name${errors.attendee || errors.company || errors.email ? " dlgfb-has-error" : ""}`} id="q-attendee">
+                  <label htmlFor="attendee-search" className="dlgfb-form-name-label">
+                    Your Name {requiredTag(true)}
+                  </label>
+                  <AttendeeSearch
+                    attendees={attendees}
+                    loadError={attendeesError}
+                    onRetry={loadAttendees}
+                    value={attendee}
+                    onChange={(a) => {
+                      setAttendee(a);
+                      setErrors((e) => ({ ...e, attendee: false, company: false, email: false }));
+                    }}
+                    invalid={errors.attendee}
+                    companyInvalid={errors.company}
+                    emailInvalid={errors.email}
+                  />
+                </section>
+              )}
+
+              {questionsOnStep(step).map((q) => {
                 const invalid = !!errors[q.key];
                 const labelId = `${q.key}-label`;
                 const labelled = q.type === "select" || q.type === "textarea";
                 const LabelTag = labelled ? "label" : "div";
+                const assistHelper = q.aiSuggestion ? testimonialHelper(q, answers, setAnswers) : null;
                 return (
                   <section className={`dlgfb-form-q${invalid ? " dlgfb-has-error" : ""}`} key={q.key} id={`q-${q.key}`}>
                     <LabelTag className="dlgfb-form-q-head" id={labelId} htmlFor={labelled ? q.key : undefined}>
-                      <span className="dlgfb-form-q-num">{number++}.</span>
-                      <span className="dlgfb-form-q-text">
-                        {q.label} {requiredTag(q.required)}
-                      </span>
+                      <span className="dlgfb-form-q-num">{String(questions.indexOf(q) + 1).padStart(2, "0")}</span>
+                      <span className="dlgfb-form-q-text">{q.label}</span>
                     </LabelTag>
 
-                    {q.type === "radio" && (
-                      <div className={`dlgfb-form-options${invalid ? " dlgfb-is-invalid" : ""}`} role="radiogroup" aria-labelledby={labelId}>
-                        {q.options.map((opt) => (
-                          <label key={opt} className={`dlgfb-form-radio${answers[q.key] === opt ? " dlgfb-is-selected" : ""}`}>
-                            <input
-                              type="radio"
-                              className="dlgfb-sr-only"
-                              name={q.key}
-                              value={opt}
-                              checked={answers[q.key] === opt}
-                              onChange={() => setAnswer(q.key, opt)}
-                            />
-                            <span className="dlgfb-form-radio-mark" aria-hidden="true" />
-                            <span>{opt}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
+                    <div className="dlgfb-form-q-body">
+                      {q.hint && <p className="dlgfb-form-q-hint">{q.hint}</p>}
+                      {q.required && <p className="dlgfb-form-q-required">Required</p>}
+                      {!q.required && q.showOptional && <p className="dlgfb-form-q-optional">Optional</p>}
 
-                    {q.type === "select" && (
-                      <div className={`dlgfb-form-select${invalid ? " dlgfb-is-invalid" : ""}`}>
-                        <select
-                          id={q.key}
-                          className={answers[q.key] ? "" : "dlgfb-is-empty"}
-                          value={answers[q.key] || ""}
-                          onChange={(e) => setAnswer(q.key, e.target.value)}
-                        >
-                          <option value="" disabled>
-                            Select an option
-                          </option>
+                      {q.type === "radio" && (
+                        <div className={`dlgfb-form-options${invalid && !answers[q.key] ? " dlgfb-is-invalid" : ""}`} role="radiogroup" aria-labelledby={labelId}>
                           {q.options.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
+                            <label key={opt} className={`dlgfb-form-radio${answers[q.key] === opt ? " dlgfb-is-selected" : ""}`}>
+                              <input
+                                type="radio"
+                                className="dlgfb-sr-only"
+                                name={q.key}
+                                value={opt}
+                                checked={answers[q.key] === opt}
+                                onChange={() => setAnswer(q.key, opt)}
+                              />
+                              <span className="dlgfb-form-radio-mark" aria-hidden="true" />
+                              <span>{opt}</span>
+                            </label>
                           ))}
-                        </select>
-                        <svg className="dlgfb-form-select-caret" viewBox="0 0 12 8" aria-hidden="true">
-                          <path d="M0 0h12L6 8z" />
-                        </svg>
-                      </div>
-                    )}
+                        </div>
+                      )}
 
-                    {q.type === "checkbox" && (
-                      <div className={`dlgfb-form-checks${invalid ? " dlgfb-is-invalid" : ""}`} role="group" aria-labelledby={labelId}>
-                        {q.options.map((opt) => (
-                          <label
-                            key={opt}
-                            className={`dlgfb-form-check${Array.isArray(answers[q.key]) && answers[q.key].includes(opt) ? " dlgfb-is-selected" : ""}`}
+                      {q.type === "radio" && q.other && answers[q.key] === q.other && (
+                        <input
+                          type="text"
+                          className={`dlgfb-form-input dlgfb-form-other${invalid && !(answers[`${q.key}_other`] || "").trim() ? " dlgfb-is-invalid" : ""}`}
+                          placeholder={q.otherPlaceholder || "Please specify *"}
+                          aria-label="Please specify"
+                          maxLength={200}
+                          autoFocus
+                          value={answers[`${q.key}_other`] || ""}
+                          onChange={(e) => {
+                            setAnswer(`${q.key}_other`, e.target.value);
+                            setErrors((err) => ({ ...err, [q.key]: false }));
+                          }}
+                        />
+                      )}
+
+                      {q.type === "select" && (
+                        <div className={`dlgfb-form-select${invalid ? " dlgfb-is-invalid" : ""}`}>
+                          <select
+                            id={q.key}
+                            className={answers[q.key] ? "" : "dlgfb-is-empty"}
+                            value={answers[q.key] || ""}
+                            onChange={(e) => setAnswer(q.key, e.target.value)}
                           >
+                            <option value="" disabled>
+                              Select an option
+                            </option>
+                            {q.options.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                          <svg className="dlgfb-form-select-caret" viewBox="0 0 12 8" aria-hidden="true">
+                            <path d="M0 0h12L6 8z" />
+                          </svg>
+                        </div>
+                      )}
+
+                      {q.type === "checkbox" && (
+                        <div className={`dlgfb-form-checks${invalid ? " dlgfb-is-invalid" : ""}`} role="group" aria-labelledby={labelId}>
+                          {q.options.map((opt) => (
+                            <label
+                              key={opt}
+                              className={`dlgfb-form-check${Array.isArray(answers[q.key]) && answers[q.key].includes(opt) ? " dlgfb-is-selected" : ""}`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="dlgfb-sr-only"
+                                name={q.key}
+                                value={opt}
+                                checked={Array.isArray(answers[q.key]) && answers[q.key].includes(opt)}
+                                onChange={() => toggleOption(q, opt)}
+                              />
+                              <span className="dlgfb-form-check-mark" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M5 12.5l4.5 4.5L19 7.5" />
+                                </svg>
+                              </span>
+                              {q.optionDetails ? (
+                                <span className="dlgfb-form-check-label">
+                                  <span className="dlgfb-form-check-title">{opt}</span>
+                                  {q.optionDetails[opt] && <span className="dlgfb-form-check-detail">{q.optionDetails[opt]}</span>}
+                                </span>
+                              ) : (
+                                <span>{opt}</span>
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+
+                      {q.type === "textarea" && (
+                        <textarea
+                          id={q.key}
+                          className={`dlgfb-form-textarea${invalid ? " dlgfb-is-invalid" : ""}`}
+                          rows={4}
+                          maxLength={2000}
+                          placeholder={q.placeholder || "Type here..."}
+                          value={answers[q.key] || ""}
+                          onChange={(e) => {
+                            setAnswer(q.key, e.target.value);
+                            assistHelper?.onTextChange(e.target.value);
+                          }}
+                          onBlur={(e) => assistHelper?.requestSuggestion(e.target.value)}
+                        />
+                      )}
+
+                      {assistHelper && <TestimonialAssist q={q} text={answers[q.key] || ""} helper={assistHelper} />}
+
+                      {q.type === "list" && (
+                        <div className="dlgfb-form-list" role="group" aria-labelledby={labelId}>
+                          {q.fields.map((f, i) => (
                             <input
-                              type="checkbox"
-                              className="dlgfb-sr-only"
-                              name={q.key}
-                              value={opt}
-                              checked={Array.isArray(answers[q.key]) && answers[q.key].includes(opt)}
-                              onChange={() => toggleOption(q, opt)}
+                              key={f.placeholder}
+                              type="text"
+                              className={`dlgfb-form-input${invalid && f.required && !(answers[q.key]?.[i] || "").trim() ? " dlgfb-is-invalid" : ""}`}
+                              placeholder={f.placeholder}
+                              aria-label={f.placeholder}
+                              maxLength={200}
+                              value={answers[q.key]?.[i] || ""}
+                              onChange={(e) => setListAnswer(q, i, e.target.value)}
                             />
-                            <span className="dlgfb-form-check-mark" aria-hidden="true">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M5 12.5l4.5 4.5L19 7.5" />
-                              </svg>
-                            </span>
-                            <span>{opt}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
 
-                    {q.type === "textarea" && (
-                      <textarea
-                        id={q.key}
-                        className={`dlgfb-form-textarea${invalid ? " dlgfb-is-invalid" : ""}`}
-                        rows={3}
-                        maxLength={2000}
-                        placeholder="Type here..."
-                        value={answers[q.key] || ""}
-                        onChange={(e) => setAnswer(q.key, e.target.value)}
-                      />
-                    )}
-
-                    {invalid && <div className="dlgfb-form-error">Answer this question to continue.</div>}
+                      {invalid && (
+                        <div className="dlgfb-form-error">
+                          {q.other && answers[q.key] === q.other ? "Please specify your answer to continue." : "Answer this question to continue."}
+                        </div>
+                      )}
+                    </div>
                   </section>
                 );
               })}
 
               <button type="submit" className="dlgfb-form-submit">
-                Submit
+                {step < stepTotal ? "Continue" : "Submit Feedback"}
               </button>
+              {step > 1 && (
+                <button type="button" className="dlgfb-form-step-back" onClick={goBack}>
+                  Back
+                </button>
+              )}
             </form>
           )}
         </main>

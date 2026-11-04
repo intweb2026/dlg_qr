@@ -230,7 +230,8 @@ body {
   margin: 0 auto;
   overflow: hidden;
   background-color: var(--theme-secondary);
-  background-image: url(../public/images/dle26/DLE_bg_pattern.png);
+  /* The event's media.background, set as --delegates-bg by RegisteredDelegatesMobile.jsx. */
+  background-image: var(--delegates-bg, none);
   background-position: right center;
   background-repeat: no-repeat;
   background-size: auto 100%;
