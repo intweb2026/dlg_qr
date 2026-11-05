@@ -39,8 +39,8 @@ export default function AdminLogin() {
       <div className="dlgfb-login-wrap">
         <div className="dlgfb-login-intro">
           {logo && <img src={logo} alt="" className="dlgfb-login-logo" />}
-          <h1>Event admin</h1>
-          <p className="dlgfb-login-intro-copy">Manage feedback, attendees and the raffle draw.</p>
+          <h1>Event Admin</h1>
+          <p className="dlgfb-login-intro-copy">Manage Feedback, Attendees and The Raffle Draw.</p>
         </div>
         <form className="dlgfb-login-card" onSubmit={submit} noValidate>
           <h2 className="dlgfb-h5 dlgfb-mb-1">Sign in</h2>
