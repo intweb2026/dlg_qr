@@ -100,6 +100,38 @@ async function interestedAttendees(req, res) {
   });
 }
 
+/**
+ * The submitted feedback answers, one entry per submission with who gave them. Suspended submissions are left out
+ * unless ?include_suspended=true. A single submission can be fetched with ?id=<submission id>.
+ */
+async function feedbackResponses(req, res) {
+  const where = [];
+  const params = [];
+  if (!truthy(req.query.include_suspended)) where.push("s.is_suspended = 0");
+  if (req.query.id !== undefined) {
+    if (!/^\d+$/.test(String(req.query.id))) return res.status(400).json({ detail: "id must be a number." });
+    where.push("s.id = ?");
+    params.push(Number(req.query.id));
+  }
+  const rows = await query(
+    `${m.SUBMISSION_SELECT} ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY s.id`,
+    params
+  );
+  const results = rows.map((row) => {
+    const s = m.submissionJson(row);
+    return {
+      submission_id: s.id,
+      attendeename: s.alias_name,
+      companyname: s.company_alias_name,
+      emailaddress: s.email,
+      is_suspended: s.is_suspended,
+      submitted_at: s.created_at,
+      feedback: s.feedback_data,
+    };
+  });
+  res.json({ count: results.length, results });
+}
+
 // ==================================================================
 // Attendees
 // ==================================================================
@@ -254,6 +286,7 @@ module.exports = {
   submissionList,
   submissionSuspend,
   interestedAttendees,
+  feedbackResponses,
   attendeeList,
   attendeeCreate,
   attendeePatch,

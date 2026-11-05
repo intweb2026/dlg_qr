@@ -44,6 +44,7 @@ route("/admin/settings/", { get: [requireAdmin, admin.getSettings], patch: [requ
 route("/admin/submissions/", { get: [requireAdmin, admin.submissionList] });
 route("/admin/submissions/:pk/suspend/", { patch: [requireAdmin, admin.submissionSuspend] });
 route("/admin/interested-attendees/", { get: [requireAdmin, admin.interestedAttendees] });
+route("/admin/feedback-responses/", { get: [requireAdmin, admin.feedbackResponses] });
 route("/admin/attendees/", { get: [requireAdmin, admin.attendeeList], post: [requireAdmin, admin.attendeeCreate] });
 route("/admin/attendees/import/", { post: [requireAdmin, upload.any(), admin.attendeeImport] });
 route("/admin/attendees/:pk/", { patch: [requireAdmin, admin.attendeePatch], delete: [requireAdmin, admin.attendeeDelete] });
