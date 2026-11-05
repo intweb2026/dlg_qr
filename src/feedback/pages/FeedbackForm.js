@@ -235,7 +235,7 @@ function FormProgress({ step, total, count }) {
 }
 
 /** The tick, the title and the raffle ticket number, after a submit and when this device has already submitted. */
-function SubmittedCard({ title, entryId, foot, homePath }) {
+function SubmittedCard({ title, entryId, foot, homePath, noteIntro = "" }) {
   return (
     <div className="dlgfb-form-card dlgfb-form-success" role="status">
       <span className="dlgfb-form-success-icon" aria-hidden="true">
@@ -247,7 +247,7 @@ function SubmittedCard({ title, entryId, foot, homePath }) {
           <p className="dlgfb-form-raffle-kicker">Your raffle ticket number is</p>
           <p className="dlgfb-form-raffle-number">{padId(entryId, 2)}</p>
           <p className="dlgfb-form-raffle-note">
-            The winning number will be announced shortly; please stay in the room, as the prize can only be claimed by a winner who is present.
+            {noteIntro && `${noteIntro} `}The winning number will be announced shortly; please stay in the room, as the prize can only be claimed by a winner who is present.
           </p>
         </>
       )}
@@ -580,9 +580,10 @@ export default function FeedbackForm() {
 
           {view === "already" && (
             <SubmittedCard
-              title="Feedback already received"
+              title="You’re Already In!"
               entryId={entryId}
-              foot="You have already submitted your feedback. Thank you for taking part."
+              noteIntro="We’ve already got your feedback. It’s one entry per attendee."
+              foot="You’re entered in the draw. Good luck!"
               homePath={eventPath()}
             />
           )}
