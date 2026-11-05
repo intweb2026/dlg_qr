@@ -988,14 +988,22 @@ body.dlgfb-body-active {
   padding-bottom: 0;
 }
 
-/* From tablet width a wide logo, such as a name written beside the mark, is held to 360px wide; the fixed height
-   would otherwise stretch it across the page. Square and tall logos keep their size. */
+/* Phones up to 425px wide, a wide logo is held to 220px so it does not fill the header. */
+@media (max-width: 425px) {
+  .dlgfb-app .dlgfb-form-logo {
+    height: 64px;
+    max-width: min(60%, 220px);
+  }
+}
+
+/* From tablet width the logo is held to 58px tall and 290px wide, so a wide logo, such as a name written beside
+   the mark, does not stretch across the page. */
 @media (min-width: 768px) {
   .dlgfb-app .dlgfb-form-logo {
-    height: 128px;
-    max-width: min(70%, 360px);
-    margin-top: 20px;
-    margin-bottom: 20px;
+    height: 58px;
+    max-width: min(70%, 290px);
+    margin-top: 36px;
+    margin-bottom: 36px;
   }
 }
 
