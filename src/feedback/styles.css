@@ -3332,6 +3332,15 @@ body.dlgfb-body-active {
   margin-bottom: 0.9rem;
 }
 
+/* The event's media.logo above the Event admin heading. */
+.dlgfb-app .dlgfb-login-intro .dlgfb-login-logo {
+  display: block;
+  max-width: min(70%, 220px);
+  max-height: 64px;
+  margin: 0 auto 24px;
+  object-fit: contain;
+}
+
 .dlgfb-app .dlgfb-login-intro h1 {
   font-family: var(--font-display);
   font-weight: 800;
