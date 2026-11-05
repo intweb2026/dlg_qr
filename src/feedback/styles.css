@@ -523,7 +523,7 @@ body.dlgfb-body-active {
   margin: 0 auto;
   overflow: hidden;
   background-color: var(--theme-secondary);
-  /* The pattern sits on its own layer behind the content, so it can be faded without fading the page. */
+  /* The pattern sits on its own layer behind the content, so it stays fixed while the form scrolls. */
   isolation: isolate;
 }
 
@@ -538,7 +538,6 @@ body.dlgfb-body-active {
   background-position: right center;
   background-repeat: no-repeat;
   background-size: auto 100%;
-  opacity: 0.35;
 }
 
 .dlgfb-app .dlgfb-form-shell {  
