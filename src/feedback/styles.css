@@ -2159,6 +2159,28 @@ body.dlgfb-body-active {
   opacity: 0.6;
 }
 
+/* Back to home page on the thank you card, full width, the event colour shading darker to the left. */
+.dlgfb-app .dlgfb-form-btn-home {
+  display: block;
+  width: 100%;
+  margin-top: 24px;
+  padding: 0.9rem 1.25rem;
+  border: 0;
+  background: linear-gradient(90deg, var(--fb-blue-dark) 0%, var(--fb-blue) 100%);
+  color: #fff;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.dlgfb-app .dlgfb-form-btn-home:hover,
+.dlgfb-app .dlgfb-form-btn-home:active {
+  background: var(--fb-blue-dark);
+  color: #fff;
+  text-decoration: none;
+}
+
 /* Submit in the Your Display Name popup, a light shade from top to bottom over the event colour. */
 .dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue);

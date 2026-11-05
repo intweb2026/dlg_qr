@@ -235,7 +235,7 @@ function FormProgress({ step, total, count }) {
 }
 
 /** The tick, the title and the raffle ticket number, after a submit and when this device has already submitted. */
-function SubmittedCard({ title, entryId, foot }) {
+function SubmittedCard({ title, entryId, foot, homePath }) {
   return (
     <div className="dlgfb-form-card dlgfb-form-success" role="status">
       <span className="dlgfb-form-success-icon" aria-hidden="true">
@@ -252,6 +252,10 @@ function SubmittedCard({ title, entryId, foot }) {
         </>
       )}
       <p className="dlgfb-form-raffle-foot">{foot}</p>
+      {/* Takes the place of the header's back arrow, which is hidden once the feedback is in. */}
+      <Link to={homePath} className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-home">
+        Back to home page
+      </Link>
     </div>
   );
 }
@@ -519,6 +523,9 @@ export default function FeedbackForm() {
 
   const showIntro = (view === "form" && step === 1) || view === "loading";
 
+  // The thank you screens, after a submit or for a device that already submitted.
+  const submitted = view === "success" || view === "already";
+
   const requiredTag = (required) =>
     required ? <span className="dlgfb-form-tag dlgfb-form-tag-req">Required</span> : <span className="dlgfb-form-tag dlgfb-form-tag-opt">Optional</span>;
 
@@ -527,7 +534,7 @@ export default function FeedbackForm() {
       <div className="dlgfb-form-shell">
         <header className="dlgfb-form-header">
           <div className="dlgfb-form-header-bar">
-            <Link
+            {!submitted && <Link
               className="dlgfb-form-back"
               to={eventPath()}
               aria-label="Go back"
@@ -542,7 +549,7 @@ export default function FeedbackForm() {
               <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
                 <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-            </Link>
+            </Link>}
             <h1 className={`dlgfb-form-title${view === "success" ? " dlgfb-sr-only" : ""}`}>Feedback Form</h1>
           </div>
           {logo && <img src={logo} alt="" className="dlgfb-form-logo" />}
@@ -556,7 +563,6 @@ export default function FeedbackForm() {
               </ul> */}
             </>
           )}
-          {view === "success" && <p className="dlgfb-form-tagline">Your voice helps make each event better.</p>}
         </header>
 
         <main className="dlgfb-form-body">
@@ -577,6 +583,7 @@ export default function FeedbackForm() {
               title="Feedback already received"
               entryId={entryId}
               foot="You have already submitted your feedback. Thank you for taking part."
+              homePath={eventPath()}
             />
           )}
 
@@ -618,7 +625,7 @@ export default function FeedbackForm() {
             </StatusPanel>
           )}
 
-          {view === "success" && <SubmittedCard title="You’re all set!" entryId={entryId} foot="You’re entered in the draw. Good luck!" />}
+          {view === "success" && <SubmittedCard title="You’re all set!" entryId={entryId} foot="You’re entered in the draw. Good luck!" homePath={eventPath()} />}
 
           {view === "form" && (
             <form className="dlgfb-form-panel" onSubmit={handleContinue} noValidate>
