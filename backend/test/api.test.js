@@ -156,7 +156,7 @@ describe("feedback flow", () => {
 
   test("new attendee keeps the typed name apart from the alias", async () => {
     const body = {
-      new_attendee: { full_name: "Abc Real", company_name: "Acme", email: "" },
+      new_attendee: { full_name: "Abc Real", company_name: "Acme", email: "abc@example.com" },
       alias_name: "Xyz Rep",
       company_alias_name: "Acme Group",
       feedback_data: { x: 1 },
@@ -188,7 +188,7 @@ describe("feedback flow", () => {
 
   test("submit with new attendee", async () => {
     const r = await api("POST", "/feedback/submit/", {
-      body: { new_attendee: { full_name: "  Ana   Lopez ", company_name: "Total" }, feedback_data: { x: 1 } },
+      body: { new_attendee: { full_name: "  Ana   Lopez ", company_name: "Total", email: "ana@example.com" }, feedback_data: { x: 1 } },
     });
     assert.equal(r.status, 201);
     const [row] = await query(
@@ -200,7 +200,7 @@ describe("feedback flow", () => {
   });
 
   test("new attendee already on the list", async () => {
-    const body = { new_attendee: { full_name: "priya  SHÁRMA", company_name: " shell " }, feedback_data: { x: 1 } };
+    const body = { new_attendee: { full_name: "priya  SHÁRMA", company_name: " shell ", email: "new@example.com" }, feedback_data: { x: 1 } };
     assert.equal((await api("POST", "/feedback/submit/", { body })).data.code, "attendee_exists");
     await createSubmission(a1);
     assert.equal((await api("POST", "/feedback/submit/", { body })).data.code, "already_submitted");
@@ -209,12 +209,23 @@ describe("feedback flow", () => {
 
   test("same name from another company is added", async () => {
     await createSubmission(a1);
-    const body = { new_attendee: { full_name: "Priya Sharma", company_name: "BP" }, feedback_data: { x: 1 } };
+    const body = { new_attendee: { full_name: "Priya Sharma", company_name: "BP", email: "priya.bp@example.com" }, feedback_data: { x: 1 } };
     assert.equal((await api("POST", "/feedback/submit/", { body })).status, 201);
     assert.equal(await count("attendees", "full_name = 'Priya Sharma'"), 2);
   });
 
-  test("new attendee email is optional and unique", async () => {
+  test("new attendee email is required", async () => {
+    for (const email of [undefined, "", "   ", null]) {
+      const newAttendee = { full_name: "Ana Lopez", company_name: "Total" };
+      if (email !== undefined) newAttendee.email = email;
+      const r = await api("POST", "/feedback/submit/", { body: { new_attendee: newAttendee, feedback_data: { x: 1 } } });
+      assert.equal(r.status, 400);
+      assert.ok(r.data.new_attendee.email, `email ${JSON.stringify(email)} is refused`);
+    }
+    assert.equal(await count("attendees"), 2);
+  });
+
+  test("new attendee email is checked and unique", async () => {
     let body = { new_attendee: { full_name: "Ana Lopez", company_name: "Total", email: " Ana@Example.com " }, feedback_data: { x: 1 } };
     assert.equal((await api("POST", "/feedback/submit/", { body })).status, 201);
     const [ana] = await query("SELECT email FROM attendees WHERE full_name = 'Ana Lopez'");
@@ -230,7 +241,7 @@ describe("feedback flow", () => {
 
   test("new attendee needs a company", async () => {
     for (const company of [undefined, "", "   "]) {
-      const newAttendee = { full_name: "Ana Lopez" };
+      const newAttendee = { full_name: "Ana Lopez", email: "ana@example.com" };
       if (company !== undefined) newAttendee.company_name = company;
       const r = await api("POST", "/feedback/submit/", { body: { new_attendee: newAttendee, feedback_data: { x: 1 } } });
       assert.equal(r.status, 400);
@@ -418,6 +429,42 @@ describe("admin panel", () => {
     assert.equal(r.data.is_suspended, false);
     assert.equal((await api("PATCH", "/admin/submissions/999999/suspend/", { token, body: {} })).status, 404);
     assert.equal((await api("PATCH", "/admin/submissions/abc/suspend/", { token, body: {} })).status, 404);
+  });
+
+  test("interested attendees are grouped by upcoming conference", async () => {
+    assert.equal((await api("GET", "/admin/interested-attendees/")).status, 401);
+    const add = async (name, email, company, data, suspended = 0) => {
+      const id = await createAttendee(name, email, company);
+      await query(
+        "INSERT INTO feedback_submissions (attendee_id, device_fingerprint, feedback_data, userAliesName, userComapnyAliesName, is_suspended, created_at) " +
+          "VALUES (?, 'a', ?, ?, ?, ?, UTC_TIMESTAMP(6))",
+        [id, JSON.stringify(data), name, company, suspended]
+      );
+    };
+    await add("Priya Sharma", "priya@example.com", "Shell", { upcoming_interest: ["Energy Summit", "Gas Forum"] });
+    await add("James Smith", "james@example.com", "BP", { upcoming_interest: ["Energy Summit"] });
+    await add("Hidden Person", "hidden@example.com", "Acme", { upcoming_interest: ["Energy Summit"] }, 1);
+    await add("No Interest", "none@example.com", "Acme", { upcoming_interest: [] });
+    await add("No Answer", "na@example.com", "Acme", { x: 1 });
+    const r = await api("GET", "/admin/interested-attendees/", { token });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.data, {
+      events: [
+        {
+          event_name: "Energy Summit",
+          count: 2,
+          attendees: [
+            { attendeename: "Priya Sharma", companyname: "Shell", emailaddress: "priya@example.com" },
+            { attendeename: "James Smith", companyname: "BP", emailaddress: "james@example.com" },
+          ],
+        },
+        {
+          event_name: "Gas Forum",
+          count: 1,
+          attendees: [{ attendeename: "Priya Sharma", companyname: "Shell", emailaddress: "priya@example.com" }],
+        },
+      ],
+    });
   });
 
   test("attendee create, edit and delete", async () => {

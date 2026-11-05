@@ -77,6 +77,29 @@ async function submissionSuspend(req, res) {
   res.json(m.submissionJson({ ...sub, is_suspended: suspended }));
 }
 
+/**
+ * Who is interested in which upcoming conference, from the "Which of our upcoming conferences interest you?"
+ * answers. One entry per conference, in the order first chosen, each with the attendees who ticked it. The name and
+ * company are the ones the attendee gave on the form. Suspended submissions are left out.
+ */
+async function interestedAttendees(req, res) {
+  const rows = await query(
+    `${m.SUBMISSION_SELECT} WHERE s.is_suspended = 0 AND JSON_LENGTH(s.feedback_data, '$.upcoming_interest') > 0 ORDER BY s.id`
+  );
+  const events = new Map();
+  for (const row of rows) {
+    const { feedback_data: data, alias_name, company_alias_name, email } = m.submissionJson(row);
+    const picked = Array.isArray(data?.upcoming_interest) ? data.upcoming_interest : [];
+    for (const name of new Set(picked.filter((n) => typeof n === "string" && n.trim()))) {
+      if (!events.has(name)) events.set(name, []);
+      events.get(name).push({ attendeename: alias_name, companyname: company_alias_name, emailaddress: email });
+    }
+  }
+  res.json({
+    events: [...events].map(([event_name, attendees]) => ({ event_name, count: attendees.length, attendees })),
+  });
+}
+
 // ==================================================================
 // Attendees
 // ==================================================================
@@ -230,6 +253,7 @@ module.exports = {
   patchSettings,
   submissionList,
   submissionSuspend,
+  interestedAttendees,
   attendeeList,
   attendeeCreate,
   attendeePatch,

@@ -61,9 +61,11 @@ const NEW_ATTENDEE_FIELDS = {
       return company;
     },
   },
+  // Required, it is how an attendee interested in an upcoming conference is reached.
   email: {
-    default: null,
-    clean: (value) => v.email(value, { allowBlank: true, allowNull: true })?.toLowerCase() || null,
+    required: true,
+    requiredMessage: "Enter your email address.",
+    clean: (value) => v.email(value, { blankMessage: "Enter your email address." }).toLowerCase(),
   },
 };
 

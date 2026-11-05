@@ -171,21 +171,22 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               value={value.company_name}
               onChange={(e) => onChange({ ...value, company_name: e.target.value })}
             />
-            {companyInvalid && <div className="dlgfb-invalid-feedback dlgfb-d-block">Enter your company name to add yourself.</div>}
+            {companyInvalid && <div className="dlgfb-invalid-feedback dlgfb-d-block">Enter your company name.</div>}
             <input
               id="q-email"
               type="email"
               inputMode="email"
               autoComplete="email"
               className={`dlgfb-form-control dlgfb-new-attendee-company${emailInvalid ? " dlgfb-is-invalid" : ""}`}
-              placeholder="Email (optional)"
-              aria-label="Email, optional"
+              placeholder="Email (Required)"
+              aria-label="Email, required"
+              aria-required="true"
               aria-invalid={!!emailInvalid}
               maxLength={MAX_NAME}
               value={value.email}
               onChange={(e) => onChange({ ...value, email: e.target.value })}
             />
-            {emailInvalid && <div className="dlgfb-invalid-feedback dlgfb-d-block">Enter a valid email address, or leave it empty.</div>}
+            {emailInvalid && <div className="dlgfb-invalid-feedback dlgfb-d-block">Enter a valid email address.</div>}
           </>
         )}
       </>

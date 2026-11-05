@@ -365,7 +365,7 @@ export default function FeedbackForm() {
       else if (attendee.is_new) {
         if (attendee.company_name.trim().length < 2) next.company = true;
         const email = attendee.email.trim();
-        if (email && !EMAIL_RE.test(email)) next.email = true;
+        if (!EMAIL_RE.test(email)) next.email = true;
       }
     }
     questionsOnStep(forStep).forEach((q) => {
