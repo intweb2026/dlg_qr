@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useEvent, useEventPath } from "../../event/EventContext";
-import api, { errorMessage, padId } from "../api";
+import api, { errorMessage, eventKey, padId } from "../api";
 import AttendeeSearch from "../components/AttendeeSearch";
 import Modal from "../components/Modal";
 import TestimonialAssist, { testimonialFinal, testimonialHelper } from "../components/TestimonialAssist";
@@ -9,6 +9,7 @@ import feedbackQuestions from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
 import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryNumber, saveEntryNumber } from "../utils/device";
 
+// eslint-disable-next-line no-unused-vars -- used by the commented-out chips under the intro
 const REQUIRED_TOTAL = feedbackQuestions.filter((q) => q.required).length + 1; // plus the name
 
 const checkedIcon = "/images/common/checked.png" 
@@ -255,12 +256,42 @@ function SubmittedCard({ title, entryId, foot }) {
   );
 }
 
+// The form in progress is kept in this tab's session storage, so a refresh comes back to the same step with
+// every answer. It is removed once the feedback is submitted; closing the tab drops it too.
+const draftKey = () => eventKey("feedbackDraft");
+
+function readDraft() {
+  try {
+    const draft = JSON.parse(sessionStorage.getItem(draftKey()) || "null");
+    if (!draft || typeof draft !== "object") return null;
+    // A suggestion that was still being written is asked for again when the text box is left.
+    const answers = { ...(draft.answers || {}) };
+    for (const key of Object.keys(answers)) {
+      if (key.endsWith("_assist") && answers[key]?.status === "loading") answers[key] = { status: "idle" };
+    }
+    return { step: Number.isInteger(draft.step) && draft.step > 0 ? draft.step : 1, attendee: draft.attendee || null, answers };
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  try {
+    sessionStorage.removeItem(draftKey());
+  } catch {
+    /* storage blocked, nothing was saved */
+  }
+}
+
 export default function FeedbackForm() {
   const notify = useToast();
   const eventPath = useEventPath();
   const { logo, background } = useEvent().config.media || {};
   // The last question's options, the conferences listed on the event's website.
   const [upcomingConferences, setUpcomingConferences] = useState([]);
+  // True once the conferences answered or failed, the number of steps is final from then on.
+  const [conferencesReady, setConferencesReady] = useState(false);
+  const [draft] = useState(readDraft);
   // Step 1 is the name, then one step for each "step" number used by this event's questions.
   const { questions, questionSteps } = useMemo(() => {
     const list = eventQuestions({ upcomingConferences });
@@ -272,8 +303,8 @@ export default function FeedbackForm() {
   const [view, setView] = useState("loading");
   const [attendees, setAttendees] = useState(null);
   const [attendeesError, setAttendeesError] = useState(false);
-  const [attendee, setAttendee] = useState(null);
-  const [answers, setAnswers] = useState({});
+  const [attendee, setAttendee] = useState(() => draft?.attendee ?? null);
+  const [answers, setAnswers] = useState(() => draft?.answers ?? {});
   const [errors, setErrors] = useState({});
   const [confirming, setConfirming] = useState(false);
   // A refusal shown inside the confirm card, in place of a toast.
@@ -284,7 +315,7 @@ export default function FeedbackForm() {
   // so a new attendee's typed name is saved as their real name even when the popup changes it.
   const [alias, setAlias] = useState({ full_name: "", company_name: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => draft?.step ?? 1);
     const [entryId, setEntryId] = useState(() => readEntryNumber());
 
   const loadAttendees = useCallback(() => {
@@ -302,6 +333,7 @@ export default function FeedbackForm() {
   useEffect(() => {
     // Pre-check: device already submitted
     if (hasSubmittedOnDevice()) {
+      clearDraft();
       setView("already");
       return;
     }
@@ -321,13 +353,29 @@ export default function FeedbackForm() {
         api
           .get("/upcoming-conferences/")
           .then(({ data: list }) => !cancelled && setUpcomingConferences(Array.isArray(list) ? list : []))
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => !cancelled && setConferencesReady(true));
       })
       .catch(() => !cancelled && setView("offline"));
     return () => {
       cancelled = true;
     };
   }, [loadAttendees]);
+
+  // Saves the form in progress after every change.
+  useEffect(() => {
+    if (view !== "form") return;
+    try {
+      sessionStorage.setItem(draftKey(), JSON.stringify({ step, attendee, answers }));
+    } catch {
+      /* storage blocked or full, the form still works without the draft */
+    }
+  }, [view, step, attendee, answers]);
+
+  // A draft from the last step of an event whose last question is gone comes back on the step before it.
+  useEffect(() => {
+    if (conferencesReady && step > stepTotal) setStep(stepTotal);
+  }, [conferencesReady, step, stepTotal]);
 
   // Back one step, the answers already typed stay.
   const goBack = () => {
@@ -437,6 +485,7 @@ export default function FeedbackForm() {
       if (id !== null) saveEntryNumber(id);
       setEntryId(id);
       markSubmittedOnDevice();
+      clearDraft();
       setConfirming(false);
       setView("success");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -500,11 +549,11 @@ export default function FeedbackForm() {
           {showIntro && (
             <>
               <p className="dlgfb-form-intro">Your answers help shape next event. Every complete submission goes into the lucky draw at the closing session.</p>
-              <ul className="dlgfb-form-chips">
-                {/* <li>About 1 Minute</li> */}
+              {/* <ul className="dlgfb-form-chips">
+                
                 <li>{REQUIRED_TOTAL} Answers Required</li>
                 <li>One Entry Per Attendee</li>
-              </ul>
+              </ul> */}
             </>
           )}
           {view === "success" && <p className="dlgfb-form-tagline">Your voice helps make each event better.</p>}
@@ -573,7 +622,7 @@ export default function FeedbackForm() {
 
           {view === "form" && (
             <form className="dlgfb-form-panel" onSubmit={handleContinue} noValidate>
-              <FormProgress step={step} total={stepTotal} count={questions.length} />
+              <FormProgress step={Math.min(step, stepTotal)} total={stepTotal} count={questions.length} />
 
               {step === 1 && (
                 <section className={`dlgfb-form-name${errors.attendee || errors.company || errors.email ? " dlgfb-has-error" : ""}`} id="q-attendee">
@@ -767,11 +816,12 @@ export default function FeedbackForm() {
         <Modal
           title="Your Display Name"
           className="dlgfb-form-modal"
+          showClose={false}
           onClose={() => !submitting && setConfirming(false)}
           footer={
             <>
               <button className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-ghost" disabled={submitting} onClick={() => setConfirming(false)}>
-                Go back
+                GO BACK
               </button>
               <button
                 className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-primary"
@@ -779,7 +829,7 @@ export default function FeedbackForm() {
                 onClick={handleSubmit}
               >
                 {submitting && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-mr-2" aria-hidden="true" />}
-                {submitting ? "Submitting" : "Submit"}
+                {submitting ? "SUBMITTING" : "SUBMIT"}
               </button>
             </>
           }

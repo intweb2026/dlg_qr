@@ -609,7 +609,8 @@ body.dlgfb-body-active {
   gap: 14px;
   margin: 0;
   padding: 16px 18px;
-  background: linear-gradient(135deg, var(--fb-blue-dark), var(--fb-blue));
+  /* The same shade as the Continue button, over the event colour. */
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue);
   color: #fff;
   font-family: var(--fb-title);
   font-size: 16px;
@@ -903,6 +904,12 @@ body.dlgfb-body-active {
   border-color: var(--fb-blue);
 }
 
+/* The tick on the event colour is black, in a tick box question such as question 8 and in question 1's agreement. */
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-checks .dlgfb-form-check-mark,
+.dlgfb-app .dlgfb-testimonial-consent .dlgfb-form-check-mark {
+  color: #000;
+}
+
 .dlgfb-app .dlgfb-form-check-label {
   display: grid;
   gap: 4px;
@@ -969,6 +976,8 @@ body.dlgfb-body-active {
   max-width: 70%;
   margin: 16px auto;
   object-fit: contain;
+  /* 0 4px 4px rgba(0, 0, 0, 0.25), as a drop shadow so it follows the logo's shape, not the image's box. */
+  filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
 }
 
 /* The logo's own bottom margin is the gap below it, so it always matches the gap above. */
@@ -980,9 +989,12 @@ body.dlgfb-body-active {
   padding-bottom: 0;
 }
 
+/* From tablet width a wide logo, such as a name written beside the mark, is held to 360px wide; the fixed height
+   would otherwise stretch it across the page. Square and tall logos keep their size. */
 @media (min-width: 768px) {
   .dlgfb-app .dlgfb-form-logo {
     height: 128px;
+    max-width: min(70%, 360px);
     margin-top: 20px;
     margin-bottom: 20px;
   }
@@ -1299,7 +1311,8 @@ body.dlgfb-body-active {
   margin-top: 8px;
   border: 0;
   border-radius: 8px;
-  background: var(--fb-blue);
+  /* A light shade from left to right over the event colour, theme.secondary in backend/events.json. */
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue);
   color: #fff;
   font-family: var(--fb-title);
   font-size: 16px;
@@ -1312,7 +1325,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-submit:hover {
-  background: var(--fb-blue-dark);
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue-dark);
 }
 
 .dlgfb-app .dlgfb-form-submit:active {
@@ -1990,6 +2003,7 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-form-modal .dlgfb-modal-footer {
   border-top: 1px solid #e6ebf2;
+  justify-content: center;
 }
 
 .dlgfb-app .dlgfb-form-modal-note {
@@ -2144,6 +2158,16 @@ body.dlgfb-body-active {
   border-color: var(--fb-blue);
   color: #fff;
   opacity: 0.6;
+}
+
+/* Submit in the Your Display Name popup, a light shade from top to bottom over the event colour. */
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary:hover,
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary:not(:disabled):active {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue-dark);
 }
 
 .dlgfb-app .dlgfb-form-btn-ghost {

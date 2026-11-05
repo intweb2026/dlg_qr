@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-// Modal markup styled by base.css, controlled by React.
-export default function Modal({ title, onClose, children, footer, size = "", className = "" }) {
+// Modal markup styled by base.css, controlled by React. showClose false leaves out the × in the header.
+export default function Modal({ title, onClose, children, footer, size = "", className = "", showClose = true }) {
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
@@ -19,9 +19,11 @@ export default function Modal({ title, onClose, children, footer, size = "", cla
           <div className="dlgfb-modal-content">
             <div className="dlgfb-modal-header">
               <h5 className="dlgfb-modal-title">{title}</h5>
-              <button type="button" className="dlgfb-close" aria-label="Close" onClick={onClose}>
-                <span aria-hidden="true">&times;</span>
-              </button>
+              {showClose && (
+                <button type="button" className="dlgfb-close" aria-label="Close" onClick={onClose}>
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              )}
             </div>
             <div className="dlgfb-modal-body">{children}</div>
             {footer && <div className="dlgfb-modal-footer">{footer}</div>}
