@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import api, { errorMessage, padId } from "../api";
 import Modal from "../components/Modal";
 import Pagination, { pageCount, pageSlice } from "../components/Pagination";
-import { questionLabel, ratingScale } from "../config/feedbackQuestions";
+import { orderedAnswers, questionLabel, ratingScale } from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
 
 const MIN_SPIN_SECONDS = 1;
@@ -37,14 +37,7 @@ const FORM_STATUSES = {
     title: "Event ended",
     toast: "The feedback form no longer takes responses.",
     tone: "warning",
-  },
-  closed: {
-    label: "Event closed",
-    help: "Responses are stopped, attendees see that the event is closed.",
-    title: "Event closed",
-    toast: "The feedback form no longer takes responses.",
-    tone: "warning",
-  },
+  }
 };
 
 function formatDate(iso) {
@@ -337,7 +330,7 @@ export default function AdminSubmissions() {
       {viewing && (
         <Modal title={`Entry ${padId(viewing.id, data.pad_length)}, ${viewing.attendee_name}`} onClose={() => setViewing(null)} size="dlgfb-modal-lg">
           <dl className="dlgfb-answer-list">
-            {Object.entries(viewing.feedback_data || {}).map(([key, val]) => (
+            {orderedAnswers(viewing.feedback_data).map(([key, val]) => (
               <div key={key} className="dlgfb-answer-row">
                 <dt>{questionLabel(key)}</dt>
                 <dd>{formatAnswer(val)}</dd>

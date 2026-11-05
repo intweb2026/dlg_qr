@@ -34,7 +34,7 @@ function saveLeft(left) {
 
 /**
  * The suggested testimonial under a text question with "aiSuggestion". When the attendee leaves the text box,
- * their words are sent to the API, which asks Claude for a polished version. They can use it, edit it in a
+ * their words are sent to the API, which asks Gemini for a polished version. They can use it, edit it in a
  * popup, or keep their original. Everything is kept in the form's answers, so Back and Continue keep it:
  *   assist  { status, basis, suggestion, version, final }  status is idle, loading, ready or unavailable,
  *           basis is the text the suggestion was made for, version is suggested, edited or original.
@@ -76,7 +76,18 @@ export function testimonialHelper(q, answers, setAnswers) {
       });
   };
 
-  return { assist, setAssist, consent: !!answers[consentKey], setConsent: (v) => setAnswers((a) => ({ ...a, [consentKey]: v })), onTextChange, requestSuggestion };
+  // Puts the chosen wording into the question's text box. The attendee's own words are kept as "original", so they
+  // can be brought back with Keep my original and are saved beside the chosen version.
+  const choose = (version, final) =>
+    setAnswers((a) => {
+      const cur = a[assistKey] || { status: "idle" };
+      const original = cur.original ?? String(a[q.key] || "").trim();
+      const text = version === "original" ? original : final;
+      // basis is the box's new text, so leaving the box again does not ask for another suggestion.
+      return { ...a, [q.key]: text, [assistKey]: { ...cur, version, final: text, basis: text, original } };
+    });
+
+  return { assist, setAssist, choose, consent: !!answers[consentKey], setConsent: (v) => setAnswers((a) => ({ ...a, [consentKey]: v })), onTextChange, requestSuggestion };
 }
 
 /** The final wording to save: the chosen version, or the attendee's own words when none was chosen. */
@@ -86,11 +97,9 @@ export function testimonialFinal(answers, key) {
 }
 
 export default function TestimonialAssist({ q, text, helper }) {
-  const { assist, setAssist, consent, setConsent } = helper;
+  const { assist, choose, consent, setConsent } = helper;
   const [editing, setEditing] = useState(null);
   const hasText = text.trim() !== "";
-
-  const choose = (version, final) => setAssist({ ...assist, version, final });
 
   return (
     <>
@@ -111,7 +120,7 @@ export default function TestimonialAssist({ q, text, helper }) {
           <button type="button" className="dlgfb-testimonial-btn" onClick={() => setEditing(assist.version === "edited" ? assist.final : assist.suggestion)}>
             Edit suggestion
           </button>
-          <button type="button" className="dlgfb-testimonial-btn" onClick={() => choose("original", text.trim())}>
+          <button type="button" className="dlgfb-testimonial-btn" onClick={() => choose("original")}>
             Keep my original
           </button>
         </div>
@@ -121,10 +130,8 @@ export default function TestimonialAssist({ q, text, helper }) {
         <p className="dlgfb-testimonial-note">You have used all {SUGGESTION_LIMIT} suggestions, your own words will be used.</p>
       )}
 
-      {assist.version && <p className="dlgfb-testimonial-final">{assist.final}</p>}
-
-      {/* The agreement shows once a version is chosen, or straight away when there is no suggestion. */}
-      {hasText && (assist.version || !["loading", "ready"].includes(assist.status)) && q.consentLabel && (
+      {/* The agreement shows as soon as there is any text, whether or not a suggested version is chosen. */}
+      {hasText && q.consentLabel && (
         <label className={`dlgfb-form-check dlgfb-testimonial-consent${consent ? " dlgfb-is-selected" : ""}`}>
           <input type="checkbox" className="dlgfb-sr-only" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
           <span className="dlgfb-form-check-mark" aria-hidden="true">

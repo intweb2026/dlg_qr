@@ -163,19 +163,15 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               id="q-company"
               type="text"
               className={`dlgfb-form-control dlgfb-new-attendee-company${companyInvalid ? " dlgfb-is-invalid" : ""}`}
-              placeholder="Company name"
-              aria-label="Company name"
+              placeholder="Company Name (Required)"
+              aria-label="Company Name, required"
               aria-required="true"
               aria-invalid={!!companyInvalid}
               maxLength={MAX_NAME}
               value={value.company_name}
               onChange={(e) => onChange({ ...value, company_name: e.target.value })}
             />
-            {companyInvalid ? (
-              <div className="dlgfb-invalid-feedback dlgfb-d-block">Enter your company name to add yourself.</div>
-            ) : (
-              <small className="dlgfb-form-text dlgfb-text-muted">Required, it tells you apart from someone with the same name.</small>
-            )}
+            {companyInvalid && <div className="dlgfb-invalid-feedback dlgfb-d-block">Enter your company name to add yourself.</div>}
             <input
               id="q-email"
               type="email"

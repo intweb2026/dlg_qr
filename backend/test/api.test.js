@@ -487,6 +487,15 @@ describe("lucky draw", () => {
     }
   });
 
+  test("a spin moves the feedback form to ended, an empty pool does not", async () => {
+    assert.equal((await api("POST", "/lucky-draw/spin/")).status, 400);
+    assert.equal((await api("GET", "/form-status/")).data.form_status, "active");
+    await createSubmission(a1);
+    assert.equal((await api("POST", "/lucky-draw/spin/")).status, 200);
+    assert.deepEqual((await api("GET", "/form-status/")).data, { form_status: "ended", is_active: false });
+    assert.equal((await api("GET", "/attendees/")).status, 403);
+  });
+
   test("spin hides the name until reveal", async () => {
     const s1 = await createSubmission(a1);
     await createSubmission(a2);

@@ -33,6 +33,9 @@ async function spin(req, res) {
   const ids = await m.eligibleIds();
   if (!ids.length) return res.status(400).json({ detail: "No eligible submissions in the pool." });
   const maxId = await m.maxSubmissionId();
+  // The draw has started, so the feedback form moves to the ended status. The admin can set another status on the Submissions page.
+  await m.loadSettings();
+  await query("UPDATE form_settings SET form_status = 'ended', updated_at = UTC_TIMESTAMP(6) WHERE id = 1");
   return res.json({ submission_id: ids[crypto.randomInt(ids.length)], pad_length: padLengthFor(maxId) });
 }
 

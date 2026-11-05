@@ -4388,8 +4388,9 @@ body.dlgfb-body-active {
   background: #000;
 }
 
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-draw-title,
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-winner-kicker {
+/* Every theme, the default one included, so nothing on the draw screen is left in the old gold. */
+.dlgfb-app .dlgfb-draw-stage .dlgfb-draw-title,
+.dlgfb-app .dlgfb-draw-stage .dlgfb-winner-kicker {
   color: var(--draw-title);
 }
 
@@ -4400,7 +4401,11 @@ body.dlgfb-body-active {
   box-shadow: 0 6px 18px rgba(var(--theme-secondary-rgb), 0.35);
 }
 
-.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-draw:disabled {
+/* Disabled, and disabled while hovered, keep the theme colour. The general rule would turn it gold. */
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-draw:disabled,
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-draw:disabled:hover {
+  background: var(--draw-button);
+  color: #fff;
   box-shadow: none;
 }
 
@@ -4415,7 +4420,7 @@ body.dlgfb-body-active {
   color: #fff;
 }
 
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-spin-progress-bar {
+.dlgfb-app .dlgfb-draw-stage .dlgfb-spin-progress-bar {
   background: var(--draw-button);
 }
 
@@ -4466,9 +4471,9 @@ body.dlgfb-body-active {
   color: #181e35;
 }
 
-.dlgfb-app .dlgfb-draw-stage:is(.dlgfb-theme-white, .dlgfb-theme-black) .dlgfb-name-scramble {
+.dlgfb-app .dlgfb-draw-stage .dlgfb-name-scramble {
   color: var(--draw-title);
-  text-shadow: 0 0 18px rgba(75, 149, 249, 0.55), 0 0 40px rgba(75, 149, 249, 0.3);
+  text-shadow: 0 0 18px rgba(var(--theme-secondary-rgb), 0.55), 0 0 40px rgba(var(--theme-secondary-rgb), 0.3);
 }
 
 /* The full screen stage scrolls on short screens, so the oversized beams are pinned to the screen to stay out of that scroll area */

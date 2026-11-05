@@ -62,8 +62,7 @@ const MENU_ITEMS = [
 const FEEDBACK_POPUPS = {
   inactive: { title: "Form Not Enabled By Admin", message: "Feedback is not available at the moment." },
   upcoming: { title: "Event Not Started", message: "Feedback is not open yet." },
-  ended: { title: "Event Ended", message: "This event has ended, so feedback is no longer open." },
-  closed: { title: "Event Closed", message: "This event is closed, so feedback is no longer open." },
+  ended: { title: "Event Ended", message: "This event has ended, so feedback is no longer open." }
 };
 
 // Returns the popup to show, or null when the form can open. If the status cannot be loaded, the form page shows its own message.

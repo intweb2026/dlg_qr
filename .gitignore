@@ -7,3 +7,5 @@ npm-debug.log*
 backend/.env
 backend/venv/
 __pycache__/
+backend/events.json
+.gitignore

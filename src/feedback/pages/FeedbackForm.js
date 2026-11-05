@@ -305,18 +305,28 @@ export default function FeedbackForm() {
       setView("already");
       return;
     }
-    // The attendee list loads together with the form status, when the page opens.
-    loadAttendees();
-    // Without the list the last question is left out, so a failure needs no message.
-    api
-      .get("/upcoming-conferences/")
-      .then(({ data }) => setUpcomingConferences(Array.isArray(data) ? data : []))
-      .catch(() => {});
+    // The form status is checked first. The attendee list and the conferences are only requested when the form is active.
+    let cancelled = false;
     api
       .get("/form-status/")
-      // A 403 from the attendee list, if it came first, already chose the closed view.
-      .then(({ data }) => setView((v) => (!data.is_active ? closedView(data.form_status) : STATUS_VIEWS[v] ? v : "form")))
-      .catch(() => setView("offline"));
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (!data.is_active) {
+          setView(closedView(data.form_status));
+          return;
+        }
+        setView("form");
+        loadAttendees();
+        // Without the list the last question is left out, so a failure needs no message.
+        api
+          .get("/upcoming-conferences/")
+          .then(({ data: list }) => !cancelled && setUpcomingConferences(Array.isArray(list) ? list : []))
+          .catch(() => {});
+      })
+      .catch(() => !cancelled && setView("offline"));
+    return () => {
+      cancelled = true;
+    };
   }, [loadAttendees]);
 
   // Back one step, the answers already typed stay.
@@ -400,7 +410,9 @@ export default function FeedbackForm() {
         // The chosen wording is the answer, the original words and the agreement are kept beside it.
         const version = answers[`${q.key}_assist`]?.version || "original";
         const final = testimonialFinal(answers, q.key);
-        if (final !== String(v).trim()) feedback_data[`${q.key}_original`] = String(v).trim();
+        // The text box now holds the chosen wording, the attendee's own words were kept when they chose it.
+        const original = answers[`${q.key}_assist`]?.original ?? String(v).trim();
+        if (final !== original) feedback_data[`${q.key}_original`] = original;
         feedback_data[`${q.key}_version`] = version;
         feedback_data[`${q.key}_consent`] = answers[`${q.key}_consent`] ? "Yes" : "No";
         v = final;

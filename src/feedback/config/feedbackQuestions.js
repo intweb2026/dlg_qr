@@ -3,7 +3,7 @@
 // "list" shows one text field per entry in "fields" and saves the filled ones as a list.
 // A "radio" question with "other" set shows a text field when that option is picked, saved as "Other: <text>".
 // "showOptional" shows an Optional label on a question that is not required.
-// "aiSuggestion" on a textarea offers a polished testimonial written by Claude from the attendee's words, see
+// "aiSuggestion" on a textarea offers a polished testimonial written by Gemini from the attendee's words, see
 // components/TestimonialAssist.js; "consentLabel" is the publishing agreement shown with it.
 // "optionsFrom" names a list the form loads from the API, each item { name, dates, location }, used as the options;
 // the question is left out while that list is empty. "upcomingConferences" comes from the event's website,
@@ -14,7 +14,7 @@ const feedbackQuestions = [
     key: "conference_thoughts",
     step: 2,
     label: "What did you think of the conference?",
-    hint: "A few words are enough.",
+    hint: "A few words are enough. No need for grammar, punctuation or complete sentences, we will tidy it up for you.",
     type: "textarea",
     placeholder: "Type a few words about your experience...",
     aiSuggestion: true,
@@ -135,6 +135,29 @@ const legacyLabels = {
   most_valuable: "What was the most valuable part of the summit?",
   suggestions: "What should we improve next time?",
 };
+
+// The extra answers saved beside a question, shown straight after it in this order.
+const EXTRA_SUFFIXES = ["_original", "_version", "_consent"];
+
+/**
+ * The saved answers as [key, value] pairs in the order of the form. MySQL keeps JSON keys sorted by length and then
+ * by name, so the order they come back in is not the order of the questions. Each question's extra answers, such as
+ * conference_thoughts_original, follow it, and keys from earlier versions of the form go last in their saved order.
+ */
+export function orderedAnswers(data) {
+  const entries = Object.entries(data || {});
+  const rank = (key) => {
+    const index = feedbackQuestions.findIndex((q) => q.key === key);
+    if (index !== -1) return index * 10;
+    for (const [i, suffix] of EXTRA_SUFFIXES.entries()) {
+      const base = feedbackQuestions.findIndex((q) => key === `${q.key}${suffix}`);
+      if (base !== -1) return base * 10 + i + 1;
+    }
+    return feedbackQuestions.length * 10;
+  };
+  // sort is stable, so keys of the same rank stay in the order they were saved.
+  return entries.sort(([a], [b]) => rank(a) - rank(b));
+}
 
 export function questionLabel(key) {
   const q = feedbackQuestions.find((item) => item.key === key);
