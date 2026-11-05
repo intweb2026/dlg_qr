@@ -1,7 +1,7 @@
 {
   "dle26": {
     "database": "feedback_db",
-    "active": true,
+    "active": false,
     "name": "Direct Lithium Extraction 2026",
     "tagline": "ADVANCING SUSTAINABLE LITHIUM\nPRODUCTION IN SOUTH AMERICA",
     "theme": {
