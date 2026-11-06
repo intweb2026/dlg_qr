@@ -4421,7 +4421,8 @@ body.dlgfb-body-active {
 /* White and Black */
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white {
   --name-from: #181e35;
-  --name-to: #4589e3;
+  /* The event's theme.secondary, darkened so a light colour still reads on the white stage. */
+  --name-to: color-mix(in srgb, var(--theme-secondary) 70%, #000);
   background:
     radial-gradient(120% 55% at 50% 112%, rgba(255, 255, 255, 0.95), transparent 62%),
     radial-gradient(120% 55% at 50% -12%, rgba(255, 255, 255, 0.95), transparent 62%),
@@ -4432,12 +4433,12 @@ body.dlgfb-body-active {
 /* Default, the dark blue theme, takes the same name and company gradient as Black. */
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-default {
   --name-from: #ffffff;
-  --name-to: #4b95f9;
+  --name-to: var(--theme-secondary);
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black {
   --name-from: #ffffff;
-  --name-to: #4b95f9;
+  --name-to: var(--theme-secondary);
   background: radial-gradient(ellipse at 50% 32%, #1f1f23 0%, #0a0a0b 60%, #000 100%);
   color: #fff;
 }

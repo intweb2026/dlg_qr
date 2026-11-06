@@ -416,7 +416,7 @@ describe("admin panel", () => {
     await createSubmission(a2, { suspended: true });
     let r = await api("GET", "/admin/submissions/", { token });
     assert.deepEqual(r.data.stats, { total: 2, active: 1, suspended: 1 });
-    assert.equal(r.data.pad_length, 2);
+    assert.equal(r.data.pad_length, 3);
     assert.deepEqual(r.data.results[0].feedback_data, { x: 1 });
     assert.equal(r.data.results[0].attendee_name, "Priya Sharma");
     r = await api("GET", "/admin/submissions/?q=shell", { token });

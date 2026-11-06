@@ -80,7 +80,7 @@ export function errorMessage(err, fallback = "Something went wrong, try again.")
 }
 
 export function padId(id, length) {
-  return String(id).padStart(length || 2, "0");
+  return String(id).padStart(length || 3, "0");
 }
 
 export default api;

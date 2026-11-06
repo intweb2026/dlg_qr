@@ -76,7 +76,7 @@ function StatusPanel({ tone, title, children, action, extra }) {
 // eslint-disable-next-line no-unused-vars -- kept for when the draw ticket is shown again
 function DrawTicket({ id }) {
   const hasNumber = id !== null && id !== undefined;
-  const number = hasNumber ? padId(id, 2) : "";
+  const number = hasNumber ? padId(id, 3) : "";
   return (
     <div className="dlgfb-form-ticket">
       <div className="dlgfb-form-ticket-main">
@@ -245,7 +245,7 @@ function SubmittedCard({ title, entryId, foot, homePath, noteIntro = "" }) {
       {entryId !== null && entryId !== undefined && (
         <>
           <p className="dlgfb-form-raffle-kicker">Your raffle ticket number is</p>
-          <p className="dlgfb-form-raffle-number">{padId(entryId, 2)}</p>
+          <p className="dlgfb-form-raffle-number">{padId(entryId, 3)}</p>
           <p className="dlgfb-form-raffle-note">
             {noteIntro && `${noteIntro} `}The winning number will be announced shortly; please stay in the room, as the prize can only be claimed by a winner who is present.
           </p>

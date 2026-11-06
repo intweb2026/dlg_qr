@@ -22,9 +22,9 @@ function normalizeName(name) {
   return collapseSpaces(String(name || "").normalize("NFD").replace(/\p{Mn}/gu, "").toLowerCase());
 }
 
-/** Digits needed to show every ID with zero padding, minimum 2 (85 -> 2, 1200 -> 4). */
+/** Digits needed to show every ID with zero padding, minimum 3 (7 -> 007, 85 -> 085, 1200 -> 1200). */
 function padLengthFor(maxId) {
-  return Math.max(2, String(maxId || 0).length);
+  return Math.max(3, String(maxId || 0).length);
 }
 
 /** p***a@example.com, so the public lookup never exposes full addresses. */

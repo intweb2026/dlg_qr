@@ -13,7 +13,7 @@ const FAST_MS = 55; // digit change speed at full spin
 const WAIT_MS = 240; // speed while waiting on a slow network after the timer ends
 const SUSPENSE_MS = 3000; // suspense between the reels stopping and the name showing
 
-const EMPTY_DRAW = { attempts: 0, phase: "idle", entryId: null, padLength: 2, winner: null };
+const EMPTY_DRAW = { attempts: 0, phase: "idle", entryId: null, padLength: 3, winner: null };
 
 const THEMES = ["default", "white", "black"];
 const themeKey = () => eventKey("luckyDrawTheme");
@@ -141,7 +141,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
   const suspenseRef = useRef(null);
   const nextSpinRef = useRef(false); // set by the top bar Spin button, spins once the reset has rendered
 
-  const padLength = pool?.pad_length || 2;
+  const padLength = pool?.pad_length || 3;
   const maxSpins = pool?.max_spin_attempts || 0;
   const spinSeconds = pool?.spin_duration_seconds || 5;
 

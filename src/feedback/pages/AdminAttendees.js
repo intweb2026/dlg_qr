@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import api, { errorMessage } from "../api";
+import api, { errorMessage, padId } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Pagination, { pageCount, pageSlice } from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
@@ -176,7 +176,7 @@ export default function AdminAttendees() {
             )}
             {pageSlice(list, page).map((a) => (
               <tr key={a.attendee_id}>
-                <td data-label="ID" className="dlgfb-id-cell">{a.attendee_id}</td>
+                <td data-label="ID" className="dlgfb-id-cell">{padId(a.attendee_id, 3)}</td>
                 <td data-label="Name" className="dlgfb-font-weight-bold">
                   {a.full_name}
                   {a.is_walk_in && <span className="dlgfb-badge dlgfb-badge-self-registered dlgfb-ml-2" title="Added on the feedback form">Self-registered</span>}
