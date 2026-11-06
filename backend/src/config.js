@@ -20,6 +20,12 @@ module.exports = {
   // One bearer token for the CRM export routes, the same for every event. Empty leaves those routes switched off.
   // A comma separated list is accepted so a new value can be added before the old one is removed.
   exportAccessTokens: envList("EXPORT_ACCESS_TOKEN"),
+  // The CRM webhook that receives the feedback responses when the lucky draw starts, and the key it expects.
+  // The first feedback submission number after a new attendee list is imported, a whole number from 1 to 99.
+  feedbackStartNumber: Number.parseInt(process.env.FEEDBACK_START_NUMBER || "1", 10),
+  sendFeedbackSubmissionToCrm: (process.env.SEND_FEEDBACK_SUBMISSION_TO_CRM || "false").toLowerCase() === "true",
+  crmWebhookUrl: process.env.CRM_WEBHOOK_URL || "",
+  crmApiKey: process.env.CRM_API_KEY || "",
   // Logins for every event database, keyed by database name. Each event names its database in backend/events.json.
   databasesFile: process.env.DATABASES_FILE || path.join(__dirname, "..", "databases.json"),
 };

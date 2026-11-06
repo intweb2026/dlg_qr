@@ -14,8 +14,8 @@ export default function AdminAttendees() {
   const [form, setForm] = useState(EMPTY);
   // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
   const [saving, setSaving] = useState(false);
-  // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
   const [importing, setImporting] = useState(false);
+  const [pendingFile, setPendingFile] = useState(null);
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -74,13 +74,18 @@ export default function AdminAttendees() {
 
   const submitted = list.filter((a) => a.has_submitted).length;
 
-  // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
-  const importCsv = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Choosing a file only stages it, the import clears the old list, so it waits for a confirmation.
+  const chooseCsv = (e) => setPendingFile(e.target.files?.[0] || null);
+  const cancelImport = () => {
+    setPendingFile(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const importCsv = async () => {
+    if (!pendingFile) return;
     setImporting(true);
     const body = new FormData();
-    body.append("file", file);
+    body.append("file", pendingFile);
     try {
       const { data } = await api.post("/admin/attendees/import/", body);
       notify(`${data.created} added, ${data.skipped} skipped as duplicates or blank rows.`, data.created ? "success" : "info", {
@@ -92,7 +97,7 @@ export default function AdminAttendees() {
       notify(errorMessage(err), "danger", { title: "Import failed" });
     } finally {
       setImporting(false);
-      if (fileRef.current) fileRef.current.value = "";
+      cancelImport();
     }
   };
 
@@ -109,6 +114,18 @@ export default function AdminAttendees() {
         <div className="dlgfb-stat-card"><span className="dlgfb-stat-value">{list.length}</span><span className="dlgfb-stat-label">{q || walkIn ? "Matching" : "Attendees"}</span></div>
         <div className="dlgfb-stat-card dlgfb-stat-good"><span className="dlgfb-stat-value">{submitted}</span><span className="dlgfb-stat-label">Submitted</span></div>
         <div className="dlgfb-stat-card"><span className="dlgfb-stat-value">{list.length - submitted}</span><span className="dlgfb-stat-label">Pending</span></div>
+      </div>
+
+      <div className="dlgfb-panel dlgfb-mb-3">
+        <h2 className="dlgfb-h6 dlgfb-mb-2">Import attendees from CSV</h2>
+        <p className="dlgfb-small dlgfb-text-muted">
+          Columns full_name, company_name, email. Importing replaces the whole list, the current attendees, feedback submissions and
+          lucky draw winners are cleared first.
+        </p>
+        <div className="dlgfb-custom-file">
+          <input ref={fileRef} type="file" accept=".csv" className="dlgfb-custom-file-input" id="csv-file" onChange={chooseCsv} disabled={importing} />
+          <label className="dlgfb-custom-file-label" htmlFor="csv-file">{importing ? "Importing" : pendingFile ? pendingFile.name : "Choose CSV file"}</label>
+        </div>
       </div>
 
       {/* <div className="dlgfb-row">
@@ -207,6 +224,18 @@ export default function AdminAttendees() {
           onCancel={() => setDeleting(null)}
         >
           Delete <strong>{deleting.full_name}</strong>{deleting.company_name ? ` from ${deleting.company_name}` : ""}. They will no longer appear in the feedback form.
+        </ConfirmDialog>
+      )}
+      {pendingFile && (
+        <ConfirmDialog
+          title="Replace the attendee list"
+          confirmLabel="Clear and import"
+          busy={importing}
+          onConfirm={importCsv}
+          onCancel={cancelImport}
+        >
+          Importing <strong>{pendingFile.name}</strong> deletes every current attendee, feedback submission and lucky draw winner,
+          then adds the attendees from the file. This cannot be undone.
         </ConfirmDialog>
       )}
     </>

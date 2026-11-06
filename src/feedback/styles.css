@@ -4436,14 +4436,20 @@ body.dlgfb-body-active {
     min-height: 7.5rem;
   }
 
+  /* The window and full screen stage reaches the screen edges, so the top bar keeps clear of the top and right
+     edges, and of a notch or rounded corner (the env values are 0 where there is none). */
   .dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen {
-    padding: 1rem;
+    padding: calc(1.75rem + env(safe-area-inset-top)) calc(1.5rem + env(safe-area-inset-right)) 1.5rem calc(1.5rem + env(safe-area-inset-left));
   }
 
   .dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen .dlgfb-draw-topbar {
     position: static;
     width: 100%;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .dlgfb-app .dlgfb-draw-actions {
+    justify-content: center;
   }
 }
 
@@ -4459,6 +4465,10 @@ body.dlgfb-body-active {
    Every theme shares Montserrat and these sizes, the dlgfb-theme-* class on the stage only picks colours.
    --font-display is changed on the stage alone, so the rest of the app keeps Big Shoulders Display. */
 .dlgfb-app .dlgfb-draw-stage {
+  /* The winner name and company gradient, the same in every theme. A mid tone of the event's theme.secondary
+     reads on the white, grey and black stages alike. */
+  --name-from: color-mix(in srgb, var(--theme-secondary) 72%, #000);
+  --name-to: var(--theme-secondary);
   --font-display: "Montserrat", "Segoe UI", Arial, sans-serif;
   font-family: var(--font-display);
   /* The title and the top bar buttons follow the event's theme.secondary in every theme, see backend/events.json. */
@@ -4583,9 +4593,6 @@ body.dlgfb-body-active {
 
 /* White and Black */
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white {
-  --name-from: #181e35;
-  /* The event's theme.secondary, darkened so a light colour still reads on the white stage. */
-  --name-to: color-mix(in srgb, var(--theme-secondary) 70%, #000);
   background:
     radial-gradient(120% 55% at 50% 112%, rgba(255, 255, 255, 0.95), transparent 62%),
     radial-gradient(120% 55% at 50% -12%, rgba(255, 255, 255, 0.95), transparent 62%),
@@ -4593,15 +4600,34 @@ body.dlgfb-body-active {
   color: #181e35;
 }
 
-/* Default, the dark blue theme, takes the same name and company gradient as Black. */
-.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-default {
-  --name-from: #ffffff;
-  --name-to: var(--theme-secondary);
+/* Grey, a light grey stage with dark text, the name and company gradient is shared by every theme. */
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-grey {
+  background: radial-gradient(ellipse at 50% 0%, #e3e6ea 0%, #c4c9d0 70%);
+  color: #1f2226;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-grey:fullscreen,
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-grey::backdrop {
+  background-color: #c4c9d0;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-grey .dlgfb-slot-machine {
+  background: linear-gradient(180deg, #2c2f35, #1f2226);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-grey .dlgfb-slot-digit {
+  color: #2c2f35;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-grey .dlgfb-draw-hint {
+  color: rgba(31, 34, 38, 0.75);
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-grey .dlgfb-spin-progress {
+  background: rgba(31, 34, 38, 0.18);
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black {
-  --name-from: #ffffff;
-  --name-to: var(--theme-secondary);
   background: radial-gradient(ellipse at 50% 32%, #1f1f23 0%, #0a0a0b 60%, #000 100%);
   color: #fff;
 }
@@ -4659,16 +4685,16 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-slot-machine {
-  background: #f4f6f9;
+  background: #0b0d14;
   box-shadow: 0 6px 18px rgba(24, 30, 53, 0.14);
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-slot-reel {
-  background: linear-gradient(180deg, #3a3e62 0%, #2b2e4c 45%, #15172a 100%);
+  background: linear-gradient(180deg, #fff 0%, #eef0f3 55%, #99a2ab 100%);
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-slot-digit {
-  color: #fff;
+  color: #2c2d31;
 }
 
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-slot-machine {
@@ -4712,20 +4738,16 @@ body.dlgfb-body-active {
   overflow-y: hidden;
 }
 
-.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white.dlgfb-phase-revealing::before {
-  background: repeating-conic-gradient(from 0deg, rgba(75, 149, 249, 0.1) 0deg 7deg, transparent 7deg 24deg);
-}
-
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white.dlgfb-phase-revealing::before,
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-grey.dlgfb-phase-revealing::before,
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black.dlgfb-phase-revealing::before {
-  background: repeating-conic-gradient(from 0deg, rgba(75, 149, 249, 0.14) 0deg 7deg, transparent 7deg 24deg);
+  background: repeating-conic-gradient(from 0deg, rgba(var(--theme-secondary-rgb), 0.14) 0deg 7deg, transparent 7deg 24deg);
 }
 
-.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-winner-card::before {
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(75, 149, 249, 0.25) 30%, transparent 65%);
-}
-
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-white .dlgfb-winner-card::before,
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-grey .dlgfb-winner-card::before,
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-winner-card::before {
-  background: radial-gradient(circle, rgba(172, 210, 252, 0.7) 0%, rgba(75, 149, 249, 0.3) 30%, transparent 65%);
+  background: radial-gradient(circle, rgba(var(--theme-secondary-rgb), 0.6) 0%, rgba(var(--theme-secondary-rgb), 0.3) 30%, transparent 65%);
 }
 
 /* Left to right name gradient. Each letter paints its own slice, since the letters animate one by one. */
@@ -4800,4 +4822,36 @@ body.dlgfb-body-active {
   .dlgfb-app .dlgfb-spin-progress {
     visibility: hidden;
   }
+}
+/* Space between the winner and the Spin button that starts the next draw, larger on the full screen. */
+.dlgfb-app .dlgfb-draw-stage.dlgfb-phase-revealed .dlgfb-draw-controls {
+  margin-top: 3rem;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen.dlgfb-phase-revealed .dlgfb-draw-controls {
+  margin-top: 4.5rem;
+}
+
+/* Space around Congratulations!, above it and between it and the counter. */
+.dlgfb-app .dlgfb-draw-stage.dlgfb-phase-revealed .dlgfb-draw-title {
+  margin-top: 2.5rem;
+  margin-bottom: 1.75rem;
+}
+
+.dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen.dlgfb-phase-revealed .dlgfb-draw-title {
+  margin-top: 0;
+  margin-bottom: 2.5rem;
+}
+
+/* The Spin again dialog sits inside the stage, its confirm button follows the event's theme.secondary like Spin does. */
+.dlgfb-app .dlgfb-draw-stage .dlgfb-modal .dlgfb-btn-primary {
+  background: var(--draw-button);
+  border-color: var(--draw-button);
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-draw-stage .dlgfb-modal .dlgfb-btn-primary:hover:not(:disabled) {
+  background: var(--draw-button-hover);
+  border-color: var(--draw-button-hover);
+  color: #fff;
 }

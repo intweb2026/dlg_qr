@@ -15,7 +15,8 @@ const SUSPENSE_MS = 3000; // suspense between the reels stopping and the name sh
 
 const EMPTY_DRAW = { attempts: 0, phase: "idle", entryId: null, padLength: 3, winner: null };
 
-const THEMES = ["default", "white", "black"];
+// White is the one a fresh screen opens with, the theme button then goes to grey and black.
+const THEMES = ["white", "grey", "black"];
 const themeKey = () => eventKey("luckyDrawTheme");
 
 function readTheme() {
@@ -25,7 +26,7 @@ function readTheme() {
   } catch (e) {
     /* ignore */
   }
-  return "default";
+  return "white";
 }
 
 function saveTheme(theme) {
@@ -210,6 +211,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
 
   const poolEmpty = !pool || pool.count === 0;
   const outOfSpins = maxSpins > 0 && attempts >= maxSpins;
+  const [confirmSpin, setConfirmSpin] = useState(false);
   const canSpin = !poolEmpty && !outOfSpins && phase === "idle";
   const canReveal = phase === "landed";
   // A new draw starts only once this one is finished. The second case covers a spin cut off by a
@@ -283,6 +285,8 @@ export default function LuckyDraw({ autoFullscreen = false }) {
 
     try {
       const { data } = await api.post("/lucky-draw/spin/");
+      // The form has ended, so the responses go to the CRM. A separate call, it never holds up or stops the draw.
+      api.post("/lucky-draw/send-to-crm/").catch(() => {});
       const s = spinRef.current;
       const length = Math.max(data.pad_length || padLength, String(data.submission_id).length);
       if (length !== s.length) {
@@ -438,15 +442,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
             <span className="dlgfb-draw-chip dlgfb-draw-chip-strong">{attemptText}</span> */}
           </div>
           <div className="dlgfb-draw-actions">
-            {canStartNew && (
-              <button type="button" className="dlgfb-btn-fullscreen dlgfb-btn-next-spin" onClick={spinNext} disabled={poolEmpty} aria-label="Spin for the next prize">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M20 12a8 8 0 11-2.34-5.66" />
-                  <path d="M20 4v4.5h-4.5" />
-                </svg>
-                <span>Spin</span>
-              </button>
-            )}
             <button
               type="button"
               className="dlgfb-btn-fullscreen dlgfb-btn-theme"
@@ -487,7 +482,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
             <p className="dlgfb-draw-hint">
               {poolEmpty && pool
                 ? "No eligible entries. Entries appear once attendees submit feedback, and past winners are left out."
-                : "The last spin was interrupted and no spins are left. Press Spin at the top to start the next draw."}
+                : "The last spin was interrupted and no spins are left. Press Spin below to start the next draw."}
               {/* : `Press Spin to start. The reels stop after ${spinSeconds} seconds and the winner's name is shown.` */}
             </p>
           )}
@@ -517,8 +512,13 @@ export default function LuckyDraw({ autoFullscreen = false }) {
           )}
         </div>
 
-        {/* The big Spin button is for the first draw only, after a reveal the next spin is in the top bar. */}
+        {/* The same big Spin button for every draw. After a reveal it asks first, so a winner is not replaced by a mis-click. */}
         <div className="dlgfb-draw-controls">
+          {canStartNew && (
+            <button className="dlgfb-btn dlgfb-btn-draw dlgfb-btn-lg" onClick={() => setConfirmSpin(true)} disabled={poolEmpty}>
+              Spin
+            </button>
+          )}
           {(phase === "idle" || phase === "spinning") && !canStartNew && (
             <button className="dlgfb-btn dlgfb-btn-draw dlgfb-btn-lg" onClick={spin} disabled={!canSpin}>
               {phase === "spinning" ? (
@@ -538,6 +538,22 @@ export default function LuckyDraw({ autoFullscreen = false }) {
             </button>
           )}
         </div>
+
+        {/* Inside the stage, so the dialog still shows in full screen */}
+        {confirmSpin && (
+          <ConfirmDialog
+            title="Spin again"
+            confirmLabel="Spin"
+            tone="primary"
+            onConfirm={() => {
+              setConfirmSpin(false);
+              spinNext();
+            }}
+            onCancel={() => setConfirmSpin(false)}
+          >
+             Do you want to spin again?
+          </ConfirmDialog>
+        )}
 
         {/* {phase === "revealed" && <p className="dlgfb-draw-note">This draw is finished. Start the next draw for the next prize.</p>} */}
       </section>

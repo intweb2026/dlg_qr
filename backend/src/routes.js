@@ -52,6 +52,7 @@ route("/admin/attendees/:pk/", { patch: [requireAdmin, admin.attendeePatch], del
 // Lucky draw
 route("/lucky-draw/pool/", { get: luckyDraw.pool });
 route("/lucky-draw/spin/", { post: luckyDraw.spin });
+route("/lucky-draw/send-to-crm/", { post: luckyDraw.sendToCrm });
 route("/lucky-draw/reveal/", { post: luckyDraw.reveal });
 route("/lucky-draw/winners/", { get: luckyDraw.winnerList, delete: luckyDraw.winnerClear });
 

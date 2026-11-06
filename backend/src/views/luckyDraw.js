@@ -1,6 +1,8 @@
 const crypto = require("crypto");
 
+const config = require("../config");
 const { query } = require("../db");
+const { feedbackResponsesPayload } = require("./admin");
 const m = require("../models");
 const { padLengthFor, toInt, truthy } = require("../utils");
 
@@ -39,6 +41,45 @@ async function spin(req, res) {
   return res.json({ submission_id: ids[crypto.randomInt(ids.length)], pad_length: padLengthFor(maxId) });
 }
 
+/**
+ * Posts the feedback responses to the CRM and returns what the CRM answered. The raffle page calls this right after a spin, so the call shows in the
+ * browser's Network tab, but the request to the CRM is made here and the key never leaves the server. Only answers
+ * once the form has ended, which a spin does, so it cannot be used to push responses from an open form.
+ */
+async function sendToCrm(req, res) {
+  if (!config.sendFeedbackSubmissionToCrm || !config.crmWebhookUrl || !config.crmApiKey) return res.json({ sent: false, reason: "disabled" });
+  const cfg = await m.loadSettings();
+  if (cfg.form_status !== "ended") return res.status(409).json({ detail: "The feedback form has not ended yet." });
+  const payload = await feedbackResponsesPayload(req.event);
+  try {
+    const crm = await postToCrm(payload);
+    if (!crm.ok) console.error(`CRM webhook answered ${crm.status}`);
+    // The CRM's own status and reply, and the payload that was sent, so they can be read in the Network tab.
+    return res.json({ sent: crm.ok, crm_status: crm.status, crm_response: crm.body, payload });
+  } catch (err) {
+    console.error(`CRM webhook failed: ${err.message}`);
+    return res.status(502).json({ sent: false, crm_status: null, detail: `The CRM could not be reached, ${err.message}`, payload });
+  }
+}
+
+/** Posts the payload and returns the CRM's status and reply, a reply that is not JSON comes back as text. */
+async function postToCrm(payload) {
+  const res = await fetch(config.crmWebhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CRM-API-KEY": config.crmApiKey },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(15000),
+  });
+  const text = await res.text();
+  let body = text;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    /* not JSON, keep the text */
+  }
+  return { ok: res.ok, status: res.status, body };
+}
+
 async function reveal(req, res) {
   const body = req.body ?? {};
   const submissionId = toInt(body.submission_id);
@@ -65,4 +106,4 @@ async function winnerClear(req, res) {
   res.status(204).end();
 }
 
-module.exports = { pool, spin, reveal, winnerList, winnerClear };
+module.exports = { pool, spin, sendToCrm, reveal, winnerList, winnerClear };

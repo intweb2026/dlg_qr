@@ -457,6 +457,10 @@ describe("admin panel", () => {
     await add("Hidden Person", "hidden@example.com", "Acme", { upcoming_interest: ["Energy Summit"] }, 1);
     await add("No Interest", "none@example.com", "Acme", { upcoming_interest: [] });
     await add("No Answer", "na@example.com", "Acme", { x: 1 });
+    // Several conferences ticked on question 8 come back as a list in the feedback responses.
+    const fr = await api("GET", "/admin/feedback-responses/", bearer);
+    const priya = fr.data.results.find((x) => x.attendeename === "Priya Sharma");
+    assert.deepEqual(priya.feedback.find((f) => f.question === "Which of our upcoming conferences interest you?").response, ["Energy Summit", "Gas Forum"]);
     const r = await api("GET", "/admin/interested-attendees/", bearer);
     assert.equal(r.status, 200);
     assert.deepEqual(r.data, {
@@ -514,7 +518,9 @@ describe("admin panel", () => {
     const form = new FormData();
     form.append("file", new Blob([csv], { type: "text/csv" }), "attendees.csv");
     const r = await api("POST", "/admin/attendees/import/", { token, form });
-    assert.deepEqual(r.data, { created: 2, skipped: 2, errors: [] });
+    // The old list is cleared by an import, so Priya Sharma is gone and "Priya Again" is the only Priya.
+    assert.deepEqual(r.data, { created: 3, skipped: 1, errors: [] });
+    assert.equal((await query("SELECT COUNT(*) AS n FROM attendees WHERE full_name = 'Priya Sharma'"))[0].n, 0);
     const [ana] = await query("SELECT email, company_name FROM attendees WHERE full_name = 'Ana Lopez'");
     assert.deepEqual([ana.email, ana.company_name], [null, "Total"]);
 

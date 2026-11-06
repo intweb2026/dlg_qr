@@ -100,8 +100,8 @@ const feedbackQuestions = [
     key: "upcoming_interest",
     step: 6,
     label: "Which of our upcoming conferences interest you?",
-    hint: "Select one conference that interests you.",
-    type: "radio",
+    hint: "Select all the conferences that interest you.",
+    type: "checkbox",
     optionsFrom: "upcomingConferences",
   },
 ];

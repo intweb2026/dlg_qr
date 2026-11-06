@@ -1,5 +1,6 @@
 const { parse } = require("csv-parse/sync");
 
+const config = require("../config");
 const { query } = require("../db");
 const { feedbackList } = require("../feedbackQuestions");
 const m = require("../models");
@@ -105,14 +106,13 @@ async function interestedAttendees(req, res) {
  * The submitted feedback answers, one entry per submission with who gave them. Suspended submissions are left out
  * unless ?include_suspended=true. A single submission can be fetched with ?id=<submission id>.
  */
-async function feedbackResponses(req, res) {
+async function feedbackResponsesPayload(event, { includeSuspended = false, id } = {}) {
   const where = [];
   const params = [];
-  if (!truthy(req.query.include_suspended)) where.push("s.is_suspended = 0");
-  if (req.query.id !== undefined) {
-    if (!/^\d+$/.test(String(req.query.id))) return res.status(400).json({ detail: "id must be a number." });
+  if (!includeSuspended) where.push("s.is_suspended = 0");
+  if (id !== undefined) {
     where.push("s.id = ?");
-    params.push(Number(req.query.id));
+    params.push(Number(id));
   }
   const rows = await query(
     `${m.SUBMISSION_SELECT} ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY s.id`,
@@ -130,7 +130,20 @@ async function feedbackResponses(req, res) {
       feedback: feedbackList(s.feedback_data),
     };
   });
-  res.json({ count: results.length, results });
+  // site is the website of the event the form belongs to, from "links.website" in events.json.
+  return { site: event?.links?.website ?? null, count: results.length, results };
+}
+
+async function feedbackResponses(req, res) {
+  if (req.query.id !== undefined && !/^\d+$/.test(String(req.query.id))) {
+    return res.status(400).json({ detail: "id must be a number." });
+  }
+  res.json(
+    await feedbackResponsesPayload(req.event, {
+      includeSuspended: truthy(req.query.include_suspended),
+      id: req.query.id,
+    })
+  );
 }
 
 // ==================================================================
@@ -244,6 +257,18 @@ async function attendeeImport(req, res) {
     return res.status(400).json({ detail: "CSV needs a full_name column (also accepted, attendee_name or name)." });
   }
 
+  if (!records.length) return res.status(400).json({ detail: "The CSV file has no attendee rows." });
+
+  // A new list replaces the old one, so the previous winners, submissions and attendees are cleared first and the
+  // submission numbers start again from FEEDBACK_START_NUMBER. Nothing is cleared when the file itself was rejected above.
+  const startNumber = Number.isInteger(config.feedbackStartNumber) && config.feedbackStartNumber >= 1 ? config.feedbackStartNumber : 1;
+  await query("DELETE FROM lucky_draw_winners");
+  await query("DELETE FROM feedback_submissions");
+  await query("DELETE FROM attendees");
+  await query("ALTER TABLE lucky_draw_winners AUTO_INCREMENT = 1");
+  await query(`ALTER TABLE feedback_submissions AUTO_INCREMENT = ${startNumber}`);
+  await query("ALTER TABLE attendees AUTO_INCREMENT = 1");
+
   let created = 0;
   let skipped = 0;
   const errors = [];
@@ -288,6 +313,7 @@ module.exports = {
   submissionSuspend,
   interestedAttendees,
   feedbackResponses,
+  feedbackResponsesPayload,
   attendeeList,
   attendeeCreate,
   attendeePatch,

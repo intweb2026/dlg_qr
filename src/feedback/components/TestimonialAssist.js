@@ -36,8 +36,8 @@ function saveLeft(left) {
  * Polish, which needs at least 3 words. The polished wording replaces the text in the box, and the text it replaced
  * is kept, so Roll back puts it back; each press of Roll back undoes one Polish. Everything is kept in the form's
  * answers, so a refresh keeps it:
- *   assist  { status, basis, history }  status is idle, loading, unavailable or limit; basis is the text being
- *           polished; history is the texts replaced by Polish, oldest first, so history[0] is the attendee's own words.
+ *   assist  { status, basis, polished, history }  status is idle, loading, unavailable or limit; basis is the text being
+ *           polished; polished is the last polished wording, Polish stays disabled while the box still holds it; history is the texts replaced by Polish, oldest first, so history[0] is the attendee's own words.
  *   consent "Yes" or "No", the answer to the marketing question under the box.
  */
 export function testimonialHelper(q, answers, setAnswers) {
@@ -66,7 +66,7 @@ export function testimonialHelper(q, answers, setAnswers) {
           const cur = a[assistKey] || { status: "idle" };
           if (cur.basis !== basis || String(a[q.key] || "").trim() !== basis) return { ...a, [assistKey]: { ...cur, status: "idle" } };
           const past = Array.isArray(cur.history) ? cur.history : [];
-          return { ...a, [q.key]: data.suggestion, [assistKey]: { status: "idle", history: [...past, String(a[q.key] || "")] } };
+          return { ...a, [q.key]: data.suggestion, [assistKey]: { status: "idle", history: [...past, String(a[q.key] || "")], polished: data.suggestion } };
         });
       })
       // No key, busy, declined or out of attempts: the text stays as typed.
@@ -84,7 +84,7 @@ export function testimonialHelper(q, answers, setAnswers) {
       const cur = a[assistKey] || { status: "idle" };
       const past = Array.isArray(cur.history) ? cur.history : [];
       if (past.length === 0) return a;
-      return { ...a, [q.key]: past[past.length - 1], [assistKey]: { ...cur, status: "idle", history: past.slice(0, -1) } };
+      return { ...a, [q.key]: past[past.length - 1], [assistKey]: { ...cur, status: "idle", history: past.slice(0, -1), polished: undefined } };
     });
 
   return {
@@ -133,13 +133,15 @@ export function PolishButton({ text, helper }) {
   const { assist, requestSuggestion } = helper;
   const loading = assist.status === "loading";
   const tooShort = wordCount(text) < MIN_WORDS;
+  // Polishing the polished wording again would give the same thing, so Polish waits until the text is changed.
+  const unchanged = typeof assist.polished === "string" && text.trim() === assist.polished.trim();
   return (
     <button
       type="button"
       className="dlgfb-polish-btn"
-      disabled={loading || assist.status === "limit" || tooShort}
+      disabled={loading || assist.status === "limit" || tooShort || unchanged}
       onClick={() => requestSuggestion(text)}
-      title={tooShort ? `Write at least ${MIN_WORDS} words to polish` : "Rewrite your words with AI"}
+      title={tooShort ? `Write at least ${MIN_WORDS} words to polish` : unchanged ? "Change the text to polish it again" : "Rewrite your words with AI"}
     >
       {loading ? "Polishing..." : "Polish"}
     </button>
