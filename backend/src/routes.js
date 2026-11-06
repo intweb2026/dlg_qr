@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 
-const { requireAdmin } = require("./auth");
+const { requireAccessToken, requireAdmin } = require("./auth");
 const admin = require("./views/admin");
 const auth = require("./views/auth");
 const luckyDraw = require("./views/luckyDraw");
@@ -43,8 +43,9 @@ route("/auth/logout/", { post: [requireAdmin, auth.logout] });
 route("/admin/settings/", { get: [requireAdmin, admin.getSettings], patch: [requireAdmin, admin.patchSettings] });
 route("/admin/submissions/", { get: [requireAdmin, admin.submissionList] });
 route("/admin/submissions/:pk/suspend/", { patch: [requireAdmin, admin.submissionSuspend] });
-route("/admin/interested-attendees/", { get: [requireAdmin, admin.interestedAttendees] });
-route("/admin/feedback-responses/", { get: [requireAdmin, admin.feedbackResponses] });
+// CRM export, opened by the one EXPORT_ACCESS_TOKEN bearer token, not by an admin login.
+route("/admin/interested-attendees/", { get: [requireAccessToken, admin.interestedAttendees] });
+route("/admin/feedback-responses/", { get: [requireAccessToken, admin.feedbackResponses] });
 route("/admin/attendees/", { get: [requireAdmin, admin.attendeeList], post: [requireAdmin, admin.attendeeCreate] });
 route("/admin/attendees/import/", { post: [requireAdmin, upload.any(), admin.attendeeImport] });
 route("/admin/attendees/:pk/", { patch: [requireAdmin, admin.attendeePatch], delete: [requireAdmin, admin.attendeeDelete] });

@@ -16,6 +16,8 @@ fs.writeFileSync(
   JSON.stringify({ feedback_testa_test: testLogin, feedback_testb_test: testLogin, feedback_off_test: testLogin })
 );
 process.env.DATABASES_FILE = LOGINS_FILE;
+const EXPORT_TOKEN = "test-export-token-0123456789abcdef0123456789";
+process.env.EXPORT_ACCESS_TOKEN = EXPORT_TOKEN;
 
 const { createApp } = require("../src/app");
 const db = require("../src/db");
@@ -432,7 +434,16 @@ describe("admin panel", () => {
   });
 
   test("interested attendees are grouped by upcoming conference", async () => {
+    const bearer = { headers: { Authorization: `Bearer ${EXPORT_TOKEN}` } };
     assert.equal((await api("GET", "/admin/interested-attendees/")).status, 401);
+    assert.equal((await api("GET", "/admin/interested-attendees/", { token })).status, 401); // admin login is not enough
+    assert.equal(
+      (await api("GET", "/admin/interested-attendees/", { headers: { Authorization: "Bearer wrong" } })).status,
+      401
+    );
+    assert.equal((await api("GET", "/admin/feedback-responses/")).status, 401);
+    assert.equal((await api("GET", "/admin/feedback-responses/", bearer)).status, 200);
+    assert.equal((await api("PATCH", "/admin/settings/", { ...bearer, body: {} })).status, 401); // token opens only the exports
     const add = async (name, email, company, data, suspended = 0) => {
       const id = await createAttendee(name, email, company);
       await query(
@@ -446,7 +457,7 @@ describe("admin panel", () => {
     await add("Hidden Person", "hidden@example.com", "Acme", { upcoming_interest: ["Energy Summit"] }, 1);
     await add("No Interest", "none@example.com", "Acme", { upcoming_interest: [] });
     await add("No Answer", "na@example.com", "Acme", { x: 1 });
-    const r = await api("GET", "/admin/interested-attendees/", { token });
+    const r = await api("GET", "/admin/interested-attendees/", bearer);
     assert.equal(r.status, 200);
     assert.deepEqual(r.data, {
       events: [

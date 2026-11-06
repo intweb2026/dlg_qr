@@ -17,6 +17,9 @@ module.exports = {
     "CORS_ALLOWED_ORIGINS",
     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001"
   ),
+  // One bearer token for the CRM export routes, the same for every event. Empty leaves those routes switched off.
+  // A comma separated list is accepted so a new value can be added before the old one is removed.
+  exportAccessTokens: envList("EXPORT_ACCESS_TOKEN"),
   // Logins for every event database, keyed by database name. Each event names its database in backend/events.json.
   databasesFile: process.env.DATABASES_FILE || path.join(__dirname, "..", "databases.json"),
 };

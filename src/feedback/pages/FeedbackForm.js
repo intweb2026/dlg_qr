@@ -4,7 +4,7 @@ import { useEvent, useEventPath } from "../../event/EventContext";
 import api, { errorMessage, padId } from "../api";
 import AttendeeSearch from "../components/AttendeeSearch";
 import Modal from "../components/Modal";
-import TestimonialAssist, { testimonialFinal, testimonialHelper } from "../components/TestimonialAssist";
+import TestimonialAssist, { AutoGrowTextarea, PolishButton, testimonialFinal, testimonialHelper } from "../components/TestimonialAssist";
 import feedbackQuestions from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
 import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryNumber, saveEntryNumber } from "../utils/device";
@@ -602,6 +602,7 @@ export default function FeedbackForm() {
                 const labelled = q.type === "select" || q.type === "textarea";
                 const LabelTag = labelled ? "label" : "div";
                 const assistHelper = q.aiSuggestion ? testimonialHelper(q, answers, setAnswers) : null;
+                const TextBox = assistHelper ? AutoGrowTextarea : "textarea";
                 return (
                   <section className={`dlgfb-form-q${invalid ? " dlgfb-has-error" : ""}`} key={q.key} id={`q-${q.key}`}>
                     <LabelTag className="dlgfb-form-q-head" id={labelId} htmlFor={labelled ? q.key : undefined}>
@@ -706,19 +707,21 @@ export default function FeedbackForm() {
                       )}
 
                       {q.type === "textarea" && (
-                        <textarea
-                          id={q.key}
-                          className={`dlgfb-form-textarea${invalid ? " dlgfb-is-invalid" : ""}`}
-                          rows={4}
-                          maxLength={2000}
-                          placeholder={q.placeholder || "Type here..."}
-                          value={answers[q.key] || ""}
-                          onChange={(e) => {
-                            setAnswer(q.key, e.target.value);
-                            assistHelper?.onTextChange(e.target.value);
-                          }}
-                          onBlur={(e) => assistHelper?.requestSuggestion(e.target.value)}
-                        />
+                        <div className={assistHelper ? "dlgfb-polish-wrap" : undefined}>
+                          <TextBox
+                            id={q.key}
+                            className={`dlgfb-form-textarea${invalid ? " dlgfb-is-invalid" : ""}`}
+                            rows={4}
+                            maxLength={2000}
+                            placeholder={q.placeholder || "Type here..."}
+                            value={answers[q.key] || ""}
+                            onChange={(e) => {
+                              setAnswer(q.key, e.target.value);
+                              assistHelper?.onTextChange(e.target.value);
+                            }}
+                          />
+                          {assistHelper && <PolishButton text={answers[q.key] || ""} helper={assistHelper} />}
+                        </div>
                       )}
 
                       {assistHelper && <TestimonialAssist q={q} text={answers[q.key] || ""} helper={assistHelper} />}

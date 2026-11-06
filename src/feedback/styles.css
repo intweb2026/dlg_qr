@@ -676,6 +676,44 @@ body.dlgfb-body-active {
   background: rgba(var(--theme-secondary-rgb), 0.18);
 }
 
+/* The Polish button sits inside the bottom right corner of the text box. */
+.dlgfb-app .dlgfb-polish-wrap {
+  position: relative;
+}
+
+.dlgfb-app .dlgfb-polish-wrap .dlgfb-form-textarea {
+  padding-bottom: 40px;
+  resize: none; /* the box sizes itself to the text, see AutoGrowTextarea */
+}
+
+.dlgfb-app .dlgfb-polish-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  min-height: 26px;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--fb-blue-dark), var(--fb-blue));
+  color: #fff;
+  font-family: var(--fb-title);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.dlgfb-app .dlgfb-polish-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.dlgfb-app .dlgfb-polish-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .dlgfb-app .dlgfb-testimonial-title {
   margin: 0 0 8px;
   font-family: var(--fb-title);
