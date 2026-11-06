@@ -146,7 +146,7 @@ export default function WifiPasswordMobile() {
     //     </div>
     //   </div>
     // </div>
-    <div className="wifi-page">
+    <div className="wifi-page" style={media.background ? { "--wifi-page-bg": `url(${media.background})` } : undefined}>
       <div className="header">
         <div className="header-inner">
           <button className="back-button" aria-label="Go back" onClick={() => navigate(eventPath())}>
