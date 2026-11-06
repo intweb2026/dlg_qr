@@ -204,7 +204,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
   else if (term.length > 0 && !searching) {
     const left = MIN_CHARS - term.length;
     hint = `Type ${left} more character${left > 1 ? "s" : ""} to see matching names.`;
-  } else hint = "Type at least 3 letters of your name, then pick it from the list, or add it if it is not there.";
+  } else hint = "Type at least 3 letters of your registered name, then pick it from the list, or add it if it is not there.";
 
   return (
     <div className="dlgfb-attendee-search" ref={wrapRef}>

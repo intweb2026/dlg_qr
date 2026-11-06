@@ -120,7 +120,7 @@ export default function RegisteredDelegatesMobile() {
           </table>
         </div>
         <p className="note">
-          This attendee list was last updated on 21th August 2026. Registrations received after this date are not included. The latest list will be available online and will include all registered participants.
+          This attendee list was last updated on 7th November 2026. Registrations received after this date are not included. The latest list will be available online and will include all registered participants.
         </p>
       </div>
     </div>
