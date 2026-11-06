@@ -4,7 +4,7 @@ import { useEvent, useEventPath } from "../../event/EventContext";
 import api, { errorMessage, eventKey, padId } from "../api";
 import AttendeeSearch from "../components/AttendeeSearch";
 import Modal from "../components/Modal";
-import TestimonialAssist, { AutoGrowTextarea, PolishButton, testimonialFinal, testimonialHelper } from "../components/TestimonialAssist";
+import TestimonialAssist, { AutoGrowTextarea, PolishButton, RollBackButton, testimonialHelper, testimonialOriginal } from "../components/TestimonialAssist";
 import feedbackQuestions from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
 import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryNumber, saveEntryNumber } from "../utils/device";
@@ -210,25 +210,13 @@ function ConfirmRow({ label, value, editing, disabled, onEdit, onSave, onCancel 
   );
 }
 
-/** The question count and the current step, above the form. */
-function FormProgress({ step, total, count }) {
+/** The question count, above the form. */
+function FormProgress({ count }) {
   return (
     <div className="dlgfb-form-progress">
       <div className="dlgfb-form-progress-head">
         <span>Your feedback</span>
-        <span>
-          {count} Questions · Step {step} of {total}
-        </span>
-      </div>
-      <div
-        className="dlgfb-form-progress-track"
-        role="progressbar"
-        aria-label="Form progress"
-        aria-valuemin={1}
-        aria-valuemax={total}
-        aria-valuenow={step}
-      >
-        <span className="dlgfb-form-progress-bar" style={{ width: `${(step / total) * 100}%` }} />
+        <span>{count} Questions</span>
       </div>
     </div>
   );
@@ -260,8 +248,7 @@ function SubmittedCard({ title, entryId, foot, homePath, noteIntro = "" }) {
   );
 }
 
-// The form in progress is kept in this tab's session storage, so a refresh comes back to the same step with
-// every answer. It is removed once the feedback is submitted; closing the tab drops it too.
+// The form in progress is kept in this tab's session storage, so a refresh comes back with every answer. It is removed once the feedback is submitted; closing the tab drops it too.
 const draftKey = () => eventKey("feedbackDraft");
 
 function readDraft() {
@@ -273,7 +260,7 @@ function readDraft() {
     for (const key of Object.keys(answers)) {
       if (key.endsWith("_assist") && answers[key]?.status === "loading") answers[key] = { status: "idle" };
     }
-    return { step: Number.isInteger(draft.step) && draft.step > 0 ? draft.step : 1, attendee: draft.attendee || null, answers };
+    return { attendee: draft.attendee || null, answers };
   } catch {
     return null;
   }
@@ -293,16 +280,9 @@ export default function FeedbackForm() {
   const { logo, background } = useEvent().config.media || {};
   // The last question's options, the conferences listed on the event's website.
   const [upcomingConferences, setUpcomingConferences] = useState([]);
-  // True once the conferences answered or failed, the number of steps is final from then on.
-  const [conferencesReady, setConferencesReady] = useState(false);
   const [draft] = useState(readDraft);
-  // Step 1 is the name, then one step for each "step" number used by this event's questions.
-  const { questions, questionSteps } = useMemo(() => {
-    const list = eventQuestions({ upcomingConferences });
-    return { questions: list, questionSteps: [...new Set(list.map((q) => q.step))].sort((a, b) => a - b) };
-  }, [upcomingConferences]);
-  const stepTotal = 1 + questionSteps.length;
-  const questionsOnStep = (n) => (n === 1 ? [] : questions.filter((q) => q.step === questionSteps[n - 2]));
+  // Every question is on one screen, under the name.
+  const questions = useMemo(() => eventQuestions({ upcomingConferences }), [upcomingConferences]);
   // loading | already | inactive | upcoming | ended | closed | form | success | offline
   const [view, setView] = useState("loading");
   const [attendees, setAttendees] = useState(null);
@@ -319,8 +299,7 @@ export default function FeedbackForm() {
   // so a new attendee's typed name is saved as their real name even when the popup changes it.
   const [alias, setAlias] = useState({ full_name: "", company_name: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState(() => draft?.step ?? 1);
-    const [entryId, setEntryId] = useState(() => readEntryNumber());
+  const [entryId, setEntryId] = useState(() => readEntryNumber());
 
   const loadAttendees = useCallback(() => {
     setAttendeesError(false);
@@ -357,8 +336,7 @@ export default function FeedbackForm() {
         api
           .get("/upcoming-conferences/")
           .then(({ data: list }) => !cancelled && setUpcomingConferences(Array.isArray(list) ? list : []))
-          .catch(() => {})
-          .finally(() => !cancelled && setConferencesReady(true));
+          .catch(() => {});
       })
       .catch(() => !cancelled && setView("offline"));
     return () => {
@@ -370,22 +348,11 @@ export default function FeedbackForm() {
   useEffect(() => {
     if (view !== "form") return;
     try {
-      sessionStorage.setItem(draftKey(), JSON.stringify({ step, attendee, answers }));
+      sessionStorage.setItem(draftKey(), JSON.stringify({ attendee, answers }));
     } catch {
       /* storage blocked or full, the form still works without the draft */
     }
-  }, [view, step, attendee, answers]);
-
-  // A draft from the last step of an event whose last question is gone comes back on the step before it.
-  useEffect(() => {
-    if (conferencesReady && step > stepTotal) setStep(stepTotal);
-  }, [conferencesReady, step, stepTotal]);
-
-  // Back one step, the answers already typed stay.
-  const goBack = () => {
-    setStep((s) => Math.max(1, s - 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  }, [view, attendee, answers]);
 
   // One field of a "list" question, the others keep their text.
   const setListAnswer = (q, index, val) => {
@@ -409,33 +376,26 @@ export default function FeedbackForm() {
     setAnswer(q.key, q.options.filter((o) => next.includes(o)));
   };
 
-  /** Checks the fields of one step, the name on step 1 and that step's questions after it. */
-  const validate = (forStep) => {
+  /** Checks the name, company and email, then every question, in the order they are shown. */
+  const validate = () => {
     const next = {};
-    if (forStep === 1) {
-      if (!attendee) next.attendee = true;
-      else if (attendee.is_new) {
-        if (attendee.company_name.trim().length < 2) next.company = true;
-        const email = attendee.email.trim();
-        if (!EMAIL_RE.test(email)) next.email = true;
-      }
+    if (!attendee) next.attendee = true;
+    else if (attendee.is_new) {
+      if (attendee.company_name.trim().length < 2) next.company = true;
+      const email = attendee.email.trim();
+      if (!EMAIL_RE.test(email)) next.email = true;
     }
-    questionsOnStep(forStep).forEach((q) => {
+    questions.forEach((q) => {
       if (q.required && !isComplete(q, answers)) next[q.key] = true;
     });
     setErrors(next);
     return next;
   };
 
-  // Continue moves to the next step once this one is complete, the last step opens the confirm popup.
+  // Submit Feedback opens the confirm popup once every required answer is in.
   const handleContinue = (e) => {
     e.preventDefault();
-    const missing = Object.keys(validate(step));
-    if (missing.length === 0 && step < stepTotal) {
-      setStep(step + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
+    const missing = Object.keys(validate());
     if (missing.length === 0) {
       setConfirmError(null);
       setEditingField(null);
@@ -458,16 +418,17 @@ export default function FeedbackForm() {
     questions.forEach((q) => {
       let v = q.type === "list" ? (answers[q.key] || []).map((text) => text.trim()).filter(Boolean) : answers[q.key];
       if (q.other && v === q.other) v = `Other: ${String(answers[`${q.key}_other`] || "").trim()}`;
-      if (q.aiSuggestion && isAnswered(v)) {
-        // The chosen wording is the answer, the original words and the agreement are kept beside it.
-        const version = answers[`${q.key}_assist`]?.version || "original";
-        const final = testimonialFinal(answers, q.key);
-        // The text box now holds the chosen wording, the attendee's own words were kept when they chose it.
-        const original = answers[`${q.key}_assist`]?.original ?? String(v).trim();
-        if (final !== original) feedback_data[`${q.key}_original`] = original;
-        feedback_data[`${q.key}_version`] = version;
-        feedback_data[`${q.key}_consent`] = answers[`${q.key}_consent`] ? "Yes" : "No";
-        v = final;
+      if (q.aiSuggestion) {
+        // The text in the box is the answer. When Polish changed it, the attendee's own words are kept beside it.
+        if (isAnswered(v)) {
+          const original = testimonialOriginal(answers, q.key);
+          const polished = original !== undefined && String(v).trim() !== original;
+          if (polished) feedback_data[`${q.key}_original`] = original;
+          feedback_data[`${q.key}_version`] = polished ? "polished" : "original";
+        }
+        // The marketing question is saved when Yes or No was picked.
+        const consent = answers[`${q.key}_consent`];
+        if (consent === "Yes" || consent === "No") feedback_data[`${q.key}_consent`] = consent;
       }
       if (isAnswered(v)) feedback_data[q.key] = typeof v === "string" ? v.trim() : v;
     });
@@ -507,11 +468,9 @@ export default function FeedbackForm() {
         if (code === "already_submitted" && !attendee.is_new) {
           setAttendees((list) => (list || []).filter((a) => a.attendee_id !== attendee.attendee_id));
           setAttendee(null);
-          setStep(1);
         } else if (code === "attendee_exists") {
           // The name was added to the list after this page loaded, reload it so it can be picked.
           setAttendee(null);
-          setStep(1);
           loadAttendees();
         }
         notify(errorMessage(err), "danger", { title: "Not submitted" });
@@ -521,11 +480,12 @@ export default function FeedbackForm() {
     }
   };
 
-  const showIntro = (view === "form" && step === 1) || view === "loading";
+  const showIntro = view === "form" || view === "loading";
 
   // The thank you screens, after a submit or for a device that already submitted.
   const submitted = view === "success" || view === "already";
 
+  // eslint-disable-next-line no-unused-vars -- kept for when the Required tag beside Your Name is shown again
   const requiredTag = (required) =>
     required ? <span className="dlgfb-form-tag dlgfb-form-tag-req">Required</span> : <span className="dlgfb-form-tag dlgfb-form-tag-opt">Optional</span>;
 
@@ -538,13 +498,6 @@ export default function FeedbackForm() {
               className="dlgfb-form-back"
               to={eventPath()}
               aria-label="Go back"
-              // After step 1 the arrow goes back one step, so no answers are lost.
-              onClick={(e) => {
-                if (view === "form" && step > 1) {
-                  e.preventDefault();
-                  goBack();
-                }
-              }}
             >
               <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
                 <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -555,7 +508,7 @@ export default function FeedbackForm() {
           {logo && <img src={logo} alt="" className="dlgfb-form-logo" />}
           {showIntro && (
             <>
-              <p className="dlgfb-form-intro">Your answers help shape next event. Every complete submission goes into the lucky draw at the closing session.</p>
+              <p className="dlgfb-form-intro">Please submit your completed online feedback form for your chance to win one of the latest Amazon devices in our raffle draw.</p>
               {/* <ul className="dlgfb-form-chips">
                 
                 <li>{REQUIRED_TOTAL} Answers Required</li>
@@ -630,30 +583,28 @@ export default function FeedbackForm() {
 
           {view === "form" && (
             <form className="dlgfb-form-panel" onSubmit={handleContinue} noValidate>
-              <FormProgress step={Math.min(step, stepTotal)} total={stepTotal} count={questions.length} />
+              <FormProgress count={questions.length} />
 
-              {step === 1 && (
-                <section className={`dlgfb-form-name${errors.attendee || errors.company || errors.email ? " dlgfb-has-error" : ""}`} id="q-attendee">
-                  <label htmlFor="attendee-search" className="dlgfb-form-name-label">
-                    Your Name {requiredTag(true)}
-                  </label>
-                  <AttendeeSearch
-                    attendees={attendees}
-                    loadError={attendeesError}
-                    onRetry={loadAttendees}
-                    value={attendee}
-                    onChange={(a) => {
-                      setAttendee(a);
-                      setErrors((e) => ({ ...e, attendee: false, company: false, email: false }));
-                    }}
-                    invalid={errors.attendee}
-                    companyInvalid={errors.company}
-                    emailInvalid={errors.email}
-                  />
-                </section>
-              )}
+              <section className={`dlgfb-form-name${errors.attendee || errors.company || errors.email ? " dlgfb-has-error" : ""}`} id="q-attendee">
+                <label htmlFor="attendee-search" className="dlgfb-form-name-label">
+                  Your name
+                </label>
+                <AttendeeSearch
+                  attendees={attendees}
+                  loadError={attendeesError}
+                  onRetry={loadAttendees}
+                  value={attendee}
+                  onChange={(a) => {
+                    setAttendee(a);
+                    setErrors((e) => ({ ...e, attendee: false, company: false, email: false }));
+                  }}
+                  invalid={errors.attendee}
+                  companyInvalid={errors.company}
+                  emailInvalid={errors.email}
+                />
+              </section>
 
-              {questionsOnStep(step).map((q) => {
+              {questions.map((q) => {
                 const invalid = !!errors[q.key];
                 const labelId = `${q.key}-label`;
                 const labelled = q.type === "select" || q.type === "textarea";
@@ -669,8 +620,6 @@ export default function FeedbackForm() {
 
                     <div className="dlgfb-form-q-body">
                       {q.hint && <p className="dlgfb-form-q-hint">{q.hint}</p>}
-                      {q.required && <p className="dlgfb-form-q-required">Required</p>}
-                      {!q.required && q.showOptional && <p className="dlgfb-form-q-optional">Optional</p>}
 
                       {q.type === "radio" && (
                         <div className={`dlgfb-form-options${invalid && !answers[q.key] ? " dlgfb-is-invalid" : ""}`} role="radiogroup" aria-labelledby={labelId}>
@@ -685,7 +634,14 @@ export default function FeedbackForm() {
                                 onChange={() => setAnswer(q.key, opt)}
                               />
                               <span className="dlgfb-form-radio-mark" aria-hidden="true" />
-                              <span>{opt}</span>
+                              {q.optionDetails ? (
+                                <span className="dlgfb-form-check-label">
+                                  <span className="dlgfb-form-check-title">{opt}</span>
+                                  {q.optionDetails[opt] && <span className="dlgfb-form-check-detail">{q.optionDetails[opt]}</span>}
+                                </span>
+                              ) : (
+                                <span>{opt}</span>
+                              )}
                             </label>
                           ))}
                         </div>
@@ -772,16 +728,20 @@ export default function FeedbackForm() {
                             maxLength={2000}
                             placeholder={q.placeholder || "Type here..."}
                             value={answers[q.key] || ""}
-                            onChange={(e) => {
-                              setAnswer(q.key, e.target.value);
-                              assistHelper?.onTextChange(e.target.value);
-                            }}
+                            // Held while Polish is working, so the polished text does not overwrite new typing.
+                            readOnly={assistHelper?.assist.status === "loading"}
+                            onChange={(e) => setAnswer(q.key, e.target.value)}
                           />
-                          {assistHelper && <PolishButton text={answers[q.key] || ""} helper={assistHelper} />}
+                          {assistHelper && (
+                            <div className="dlgfb-polish-actions">
+                              <PolishButton text={answers[q.key] || ""} helper={assistHelper} />
+                              <RollBackButton helper={assistHelper} />
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {assistHelper && <TestimonialAssist q={q} text={answers[q.key] || ""} helper={assistHelper} />}
+                      {assistHelper && <TestimonialAssist q={q} helper={assistHelper} />}
 
                       {q.type === "list" && (
                         <div className="dlgfb-form-list" role="group" aria-labelledby={labelId}>
@@ -802,7 +762,7 @@ export default function FeedbackForm() {
 
                       {invalid && (
                         <div className="dlgfb-form-error">
-                          {q.other && answers[q.key] === q.other ? "Please specify your answer to continue." : "Answer this question to continue."}
+                          {q.other && answers[q.key] === q.other ? "Please specify your answer." : "Please answer this question."}
                         </div>
                       )}
                     </div>
@@ -811,13 +771,8 @@ export default function FeedbackForm() {
               })}
 
               <button type="submit" className="dlgfb-form-submit">
-                {step < stepTotal ? "Continue" : "Submit Feedback"}
+                Submit Feedback
               </button>
-              {step > 1 && (
-                <button type="button" className="dlgfb-form-step-back" onClick={goBack}>
-                  Back
-                </button>
-              )}
             </form>
           )}
         </main>

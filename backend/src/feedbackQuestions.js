@@ -13,9 +13,9 @@ const QUESTIONS = [
 
 // Keys from earlier versions of the form.
 const LEGACY_LABELS = {
-  conference_thoughts_original: "Original words, before the suggested testimonial",
-  conference_thoughts_version: "Testimonial version used",
-  conference_thoughts_consent: "May be published with name and organization",
+  conference_thoughts_original: "Original words, before Polish",
+  conference_thoughts_version: "Polished with AI or own words",
+  conference_thoughts_consent: "May we use your comments to market future events?",
   overall_rating: "How would you rate the overall event?",
   session_format: "Which session format was most valuable to you?",
   valued_aspects: "Which aspects did you value most?",

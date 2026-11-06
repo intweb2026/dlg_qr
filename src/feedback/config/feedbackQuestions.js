@@ -2,9 +2,8 @@
 // Types: "radio" and "select" save the chosen option, "checkbox" saves a list of options, "textarea" saves text,
 // "list" shows one text field per entry in "fields" and saves the filled ones as a list.
 // A "radio" question with "other" set shows a text field when that option is picked, saved as "Other: <text>".
-// "showOptional" shows an Optional label on a question that is not required.
 // "aiSuggestion" on a textarea offers a polished testimonial written by Gemini from the attendee's words, see
-// components/TestimonialAssist.js; "consentLabel" is the publishing agreement shown with it.
+// components/TestimonialAssist.js; "consentLabel" is the Yes or No marketing question shown under it.
 // "optionsFrom" names a list the form loads from the API, each item { name, dates, location }, used as the options;
 // the question is left out while that list is empty. "upcomingConferences" comes from the event's website,
 // see backend/src/views/upcomingConferences.js.
@@ -14,11 +13,11 @@ const feedbackQuestions = [
     key: "conference_thoughts",
     step: 2,
     label: "What did you think of the conference?",
-    hint: "A few words are enough. No need for grammar, punctuation or complete sentences, we will tidy it up for you.",
+    hint: "A few words are enough.",
     type: "textarea",
     placeholder: "Type a few words about your experience...",
     aiSuggestion: true,
-    consentLabel: "I agree that my comments may be published with my name and organization in future event marketing.",
+    consentLabel: "May we use your comments to market future events?",
   },
   {
     key: "industry_challenges",
@@ -28,9 +27,9 @@ const feedbackQuestions = [
     type: "list",
     required: true,
     fields: [
-      { placeholder: "1. Enter first challenge *", required: true },
-      { placeholder: "2. Enter second challenge (optional)" },
-      { placeholder: "3. Enter third challenge (optional)" },
+      { placeholder: "1. Enter first challenge", required: true },
+      { placeholder: "2. Enter second challenge" },
+      { placeholder: "3. Enter third challenge" },
     ],
   },
   {
@@ -57,12 +56,12 @@ const feedbackQuestions = [
     key: "suggested_companies",
     step: 4,
     label: "Which companies or industry groups would you like to see at our next conference?",
-    hint: "You can suggest specific companies, organizations or types of industry professionals.",
+    hint: "You can suggest specific companies, organizations or types of industry professionals",
     type: "list",
     fields: [
-      { placeholder: "1. Enter suggestion (optional)" },
-      { placeholder: "2. Enter suggestion (optional)" },
-      { placeholder: "3. Enter suggestion (optional)" },
+      { placeholder: "1. Enter suggestion" },
+      { placeholder: "2. Enter suggestion" },
+      { placeholder: "3. Enter suggestion" },
     ],
   },
   {
@@ -72,7 +71,6 @@ const feedbackQuestions = [
     hint: "Emerging technologies, industry challenges or subjects needing deeper discussion.",
     type: "textarea",
     placeholder: "Enter your suggestion(s)...",
-    showOptional: true,
   },
   {
     key: "associations",
@@ -81,9 +79,9 @@ const feedbackQuestions = [
     hint: "List up to three. Names or abbreviations are fine.",
     type: "list",
     fields: [
-      { placeholder: "1. Association name (optional)" },
-      { placeholder: "2. Association name (optional)" },
-      { placeholder: "3. Association name (optional)" },
+      { placeholder: "1. Association name" },
+      { placeholder: "2. Association name" },
+      { placeholder: "3. Association name" },
     ],
   },
   {
@@ -93,19 +91,18 @@ const feedbackQuestions = [
     hint: "List up to three. Print or online publications are fine.",
     type: "list",
     fields: [
-      { placeholder: "1. Publication or newsletter (optional)" },
-      { placeholder: "2. Publication or newsletter (optional)" },
-      { placeholder: "3. Publication or newsletter (optional)" },
+      { placeholder: "1. Publication or newsletter" },
+      { placeholder: "2. Publication or newsletter" },
+      { placeholder: "3. Publication or newsletter" },
     ],
   },
   {
     key: "upcoming_interest",
     step: 6,
     label: "Which of our upcoming conferences interest you?",
-    hint: "Select any that catch your interest.",
-    type: "checkbox",
+    hint: "Select one conference that interests you.",
+    type: "radio",
     optionsFrom: "upcomingConferences",
-    showOptional: true,
   },
 ];
 
@@ -119,9 +116,9 @@ export const ratingScale = [
 
 // Labels for keys from earlier versions of the form, so older submissions still read well in the admin.
 const legacyLabels = {
-  conference_thoughts_original: "Original words, before the suggested testimonial",
-  conference_thoughts_version: "Testimonial version used",
-  conference_thoughts_consent: "May be published with name and organization",
+  conference_thoughts_original: "Original words, before Polish",
+  conference_thoughts_version: "Polished with AI or own words",
+  conference_thoughts_consent: "May we use your comments to market future events?",
   overall_rating: "How would you rate the overall event?",
   session_format: "Which session format was most valuable to you?",
   valued_aspects: "Which aspects did you value most?",

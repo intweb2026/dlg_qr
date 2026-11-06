@@ -159,12 +159,14 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
         </div>
         {value.is_new && (
           <>
+            <label htmlFor="q-company" className="dlgfb-form-name-label dlgfb-new-attendee-label">
+              Company name
+            </label>
             <input
               id="q-company"
               type="text"
               className={`dlgfb-form-control dlgfb-new-attendee-company${companyInvalid ? " dlgfb-is-invalid" : ""}`}
-              placeholder="Company Name (Required)"
-              aria-label="Company Name, required"
+              placeholder="Type here..."
               aria-required="true"
               aria-invalid={!!companyInvalid}
               maxLength={MAX_NAME}
@@ -172,14 +174,16 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               onChange={(e) => onChange({ ...value, company_name: e.target.value })}
             />
             {companyInvalid && <div className="dlgfb-invalid-feedback dlgfb-d-block">Enter your company name.</div>}
+            <label htmlFor="q-email" className="dlgfb-form-name-label dlgfb-new-attendee-label">
+              Your email ID
+            </label>
             <input
               id="q-email"
               type="email"
               inputMode="email"
               autoComplete="email"
               className={`dlgfb-form-control dlgfb-new-attendee-company${emailInvalid ? " dlgfb-is-invalid" : ""}`}
-              placeholder="Email (Required)"
-              aria-label="Email, required"
+              placeholder="Enter your email address"
               aria-required="true"
               aria-invalid={!!emailInvalid}
               maxLength={MAX_NAME}
@@ -213,7 +217,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
           id="attendee-search"
           type="text"
           className="dlgfb-form-control dlgfb-form-control-lg"
-          placeholder={loading ? "Loading attendees" : "Start typing your name"}
+          placeholder={loading ? "Loading attendees" : "Type here..."}
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}

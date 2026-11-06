@@ -492,6 +492,19 @@ body.dlgfb-body-active {
   }
 }
 
+/* The name and the question cards are fixed black and grey for every event: inside them the event's
+   theme.secondary is replaced, so radios, tick boxes, focus rings and labels are black too. */
+.dlgfb-app .dlgfb-form-page .dlgfb-form-name,
+.dlgfb-app .dlgfb-form-page .dlgfb-form-q {
+  --fb-blue: rgba(0, 0, 0, 1);
+  --fb-blue-dark: rgba(0, 0, 0, 1);
+  --fb-navy: rgba(0, 0, 0, 1);
+  --fb-tint: #f0f0f0;
+  --theme-secondary: rgba(0, 0, 0, 1);
+  --theme-secondary-dark: rgba(0, 0, 0, 1);
+  --theme-secondary-rgb: 0, 0, 0;
+}
+
 .dlgfb-app .dlgfb-form-page {
   /* The form's colours follow the event's theme.secondary, see backend/events.json. */
   --fb-blue: var(--theme-secondary);
@@ -598,7 +611,8 @@ body.dlgfb-body-active {
   padding: 0;
   overflow: hidden;
   border-radius: 14px;
-  background: var(--fb-tint);
+  /* Neutral grey under the black head, the same for every event. */
+  background: #f0f0f0;
   box-shadow: none;
 }
 
@@ -608,8 +622,8 @@ body.dlgfb-body-active {
   gap: 14px;
   margin: 0;
   padding: 16px 18px;
-  /* The same shade as the Continue button, over the event colour. */
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue);
+  /* Fixed black for every event, it does not follow the event's secondary colour. */
+  background: rgba(0, 0, 0, 1);
   color: #fff;
   font-family: var(--fb-title);
   font-size: 16px;
@@ -668,14 +682,6 @@ body.dlgfb-body-active {
   color: var(--fb-muted);
 }
 
-/* Suggested testimonial under question 1, with its three choices, the chosen wording and the agreement. */
-.dlgfb-app .dlgfb-testimonial {
-  margin-top: 16px;
-  padding: 16px;
-  border-radius: 10px;
-  background: rgba(var(--theme-secondary-rgb), 0.18);
-}
-
 /* The Polish button sits inside the bottom right corner of the text box. */
 .dlgfb-app .dlgfb-polish-wrap {
   position: relative;
@@ -686,85 +692,35 @@ body.dlgfb-body-active {
   resize: none; /* the box sizes itself to the text, see AutoGrowTextarea */
 }
 
-.dlgfb-app .dlgfb-polish-btn {
+/* Polish and Roll back, together at the bottom right of the text box. */
+.dlgfb-app .dlgfb-polish-actions {
   position: absolute;
   right: 8px;
   bottom: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.dlgfb-app .dlgfb-polish-btn {
   min-height: 26px;
   padding: 3px 10px;
   border: 0;
   border-radius: 6px;
-  background: linear-gradient(135deg, var(--fb-blue-dark), var(--fb-blue));
+  background: rgba(0, 0, 0, 1);
   color: #fff;
   font-family: var(--fb-title);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
   cursor: pointer;
   transition: filter 0.15s;
 }
 
 .dlgfb-app .dlgfb-polish-btn:hover:not(:disabled) {
-  filter: brightness(1.08);
+  background: #333;
+  filter: none;
 }
 
 .dlgfb-app .dlgfb-polish-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.dlgfb-app .dlgfb-testimonial-title {
-  margin: 0 0 8px;
-  font-family: var(--fb-title);
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--fb-blue);
-}
-
-.dlgfb-app .dlgfb-testimonial-text {
-  margin: 0 0 14px;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--fb-text);
-}
-
-.dlgfb-app .dlgfb-testimonial-wait {
-  margin: 0;
-  font-style: italic;
-  color: var(--fb-muted);
-}
-
-.dlgfb-app .dlgfb-testimonial-btn {
-  display: block;
-  width: 100%;
-  min-height: 46px;
-  margin-top: 10px;
-  padding: 10px 14px;
-  border: 0;
-  border-radius: 6px;
-  background: #eef3fb;
-  color: var(--fb-text);
-  font-family: var(--fb-title);
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background-color 0.15s, filter 0.15s;
-}
-
-.dlgfb-app .dlgfb-testimonial-btn:hover:not(:disabled) {
-  filter: brightness(0.97);
-}
-
-.dlgfb-app .dlgfb-testimonial-btn-primary {
-  margin-top: 0;
-  background: linear-gradient(135deg, var(--fb-blue-dark), var(--fb-blue));
-  color: #fff;
-}
-
-.dlgfb-app .dlgfb-testimonial-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
@@ -776,35 +732,41 @@ body.dlgfb-body-active {
   color: var(--fb-muted);
 }
 
-.dlgfb-app .dlgfb-testimonial-final {
-  margin: 14px 0 0;
-  font-size: 14px;
-  line-height: 1.55;
-  color: var(--fb-text);
-}
-
+/* "May we use your comments to market future events?" with Yes and No, in a white box under question 1's text. */
 .dlgfb-app .dlgfb-form-q-body .dlgfb-testimonial-consent {
   margin-top: 14px;
-  align-items: center;
+  padding: 16px;
+  border: 1px solid #e1e6ee;
+  border-radius: 8px;
+  background: #fff;
 }
 
-.dlgfb-app .dlgfb-testimonial-consent .dlgfb-form-check-title {
-  font-size: 14px;
+.dlgfb-app .dlgfb-testimonial-consent-q {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 500;
   line-height: 1.45;
+  color: rgba(0, 0, 0, 1);
 }
 
-.dlgfb-app .dlgfb-testimonial-modal .dlgfb-modal-footer {
-  display: block;
+.dlgfb-app .dlgfb-testimonial-consent-options {
+  display: flex;
+  gap: 28px;
 }
 
-.dlgfb-app .dlgfb-testimonial-modal-intro {
-  margin: 0 0 12px;
-  font-size: 14px;
+/* Yes and No are plain radios here, not the boxed options of the other questions. */
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-radio.dlgfb-testimonial-consent-opt {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 15px;
 }
 
-.dlgfb-app .dlgfb-testimonial-modal .dlgfb-testimonial-modal-text {
-  min-height: 120px;
-  background: #eef3fb;
+.dlgfb-app .dlgfb-testimonial-consent-opt .dlgfb-form-radio-mark {
+  width: 22px;
+  height: 22px;
 }
 
 /* Back, under Continue from step 2 on, a light tint of the event colour. */
@@ -941,10 +903,9 @@ body.dlgfb-body-active {
   border-color: var(--fb-blue);
 }
 
-/* The tick on the event colour is black, in a tick box question such as question 8 and in question 1's agreement. */
-.dlgfb-app .dlgfb-form-q-body .dlgfb-form-checks .dlgfb-form-check-mark,
-.dlgfb-app .dlgfb-testimonial-consent .dlgfb-form-check-mark {
-  color: #000;
+/* The tick is white on the black box, in a tick box question and in question 1's agreement. */
+.dlgfb-app .dlgfb-form-q-body .dlgfb-form-checks .dlgfb-form-check-mark {
+  color: #fff;
 }
 
 .dlgfb-app .dlgfb-form-check-label {
@@ -964,11 +925,6 @@ body.dlgfb-body-active {
   color: var(--fb-muted);
 }
 
-@media (min-width: 768px) {
-  .dlgfb-app .dlgfb-form-q-body .dlgfb-form-options {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 
 /* Progress above the name field, in the event's colour. */
 .dlgfb-app .dlgfb-form-progress {
@@ -987,7 +943,8 @@ body.dlgfb-body-active {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--fb-blue);
+  /* Fixed black for every event, it does not follow the event's secondary colour. */
+  color: rgba(0, 0, 0, 1);
 }
 
 .dlgfb-app .dlgfb-form-progress-track {
@@ -1356,21 +1313,21 @@ body.dlgfb-body-active {
   margin-top: 8px;
   border: 0;
   border-radius: 8px;
-  /* A light shade from left to right over the event colour, theme.secondary in backend/events.json. */
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue);
+  /* Fixed black for every event, it does not follow the event's secondary colour. */
+  background: linear-gradient(0deg, #000000, #000000);
   color: #fff;
   font-family: var(--fb-title);
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  box-shadow: 0 6px 16px rgba(var(--theme-secondary-rgb), 0.35);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   transition: background-color 0.15s, transform 0.1s;
 }
 
 .dlgfb-app .dlgfb-form-submit:hover {
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue-dark);
+  background: linear-gradient(0deg, #333333, #333333);
 }
 
 .dlgfb-app .dlgfb-form-submit:active {
@@ -1378,7 +1335,7 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-submit:focus-visible {
-  outline: 3px solid var(--fb-navy);
+  outline: 3px solid rgba(0, 0, 0, 0.35);
   outline-offset: 2px;
 }
 
@@ -1447,6 +1404,7 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-form-success h2 {
   font-size: 24px;
+  color: #141a2e;
 }
 
 /* checked.png is the whole green badge, the span only sizes it and the image fills it */
@@ -1530,10 +1488,10 @@ body.dlgfb-body-active {
 }
 
 .dlgfb-app .dlgfb-form-card .dlgfb-form-raffle-foot {
-  margin-top: 32px;
+  margin-top: 22px;
   font-family: var(--fb-title);
   font-size: 13px;
-  color: var(--fb-muted);
+  color: #6b7080;
 }
 
 /* draw number ticket */
@@ -1907,6 +1865,15 @@ body.dlgfb-body-active {
   margin-top: 0.6rem;
 }
 
+/* Company name and Your email ID, the titles above a new attendee's extra fields. */
+.dlgfb-app .dlgfb-new-attendee-label {
+  margin-top: 18px;
+}
+
+.dlgfb-app .dlgfb-new-attendee-label + .dlgfb-new-attendee-company {
+  margin-top: 0;
+}
+
 .dlgfb-app .dlgfb-btn-change {
   background: #fff;
   border: 1px solid var(--line);
@@ -1998,28 +1965,31 @@ body.dlgfb-body-active {
   color: #fff;
 }
 
+/* The picked name, fixed black for every event, it does not follow the event's secondary colour. */
 .dlgfb-app .dlgfb-form-page .dlgfb-selected-attendee {
-  border-color: var(--fb-blue);
-  background: var(--fb-tint);
+  border-color: rgba(0, 0, 0, 1);
+  background: #f0f0f0;
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-selected-attendee .dlgfb-attendee-avatar {
-  background: var(--fb-blue);
+  background: rgba(0, 0, 0, 1);
 }
 
+.dlgfb-app .dlgfb-form-page .dlgfb-selected-attendee-name,
 .dlgfb-app .dlgfb-form-page .dlgfb-selected-attendee-company {
-  color: var(--fb-muted);
+  color: rgba(0, 0, 0, 1);
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-btn-change {
   background: #fff;
-  border-color: var(--fb-border);
-  color: var(--fb-blue);
+  border-color: rgba(0, 0, 0, 1);
+  color: rgba(0, 0, 0, 1);
 }
 
 .dlgfb-app .dlgfb-form-page .dlgfb-btn-change:hover {
-  border-color: var(--fb-blue);
-  color: var(--fb-blue-dark);
+  background: rgba(0, 0, 0, 1);
+  border-color: rgba(0, 0, 0, 1);
+  color: #fff;
 }
 
 /* confirmation popup for the feedback page */
@@ -2212,7 +2182,8 @@ body.dlgfb-body-active {
   margin-top: 24px;
   padding: 0.9rem 1.25rem;
   border: 0;
-  background: linear-gradient(90deg, var(--fb-blue-dark) 0%, var(--fb-blue) 100%);
+  /* Fixed black for every event, it does not follow the event's secondary colour. */
+  background: rgba(0, 0, 0, 1);
   color: #fff;
   text-align: center;
   text-transform: uppercase;
@@ -2222,20 +2193,11 @@ body.dlgfb-body-active {
 
 .dlgfb-app .dlgfb-form-btn-home:hover,
 .dlgfb-app .dlgfb-form-btn-home:active {
-  background: var(--fb-blue-dark);
+  background: #333;
   color: #fff;
   text-decoration: none;
 }
 
-/* Submit in the Your Display Name popup, a light shade from top to bottom over the event colour. */
-.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue);
-}
-
-.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary:hover,
-.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary:not(:disabled):active {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%), var(--fb-blue-dark);
-}
 
 .dlgfb-app .dlgfb-form-btn-ghost {
   background: #fff;
@@ -2246,6 +2208,169 @@ body.dlgfb-body-active {
 .dlgfb-app .dlgfb-form-btn-ghost:hover {
   border-color: var(--fb-blue);
   color: var(--fb-blue);
+}
+
+/* The Your Display Name popup, fixed black and grey for every event, it does not follow the secondary colour. */
+.dlgfb-app .dlgfb-form-modal .dlgfb-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #d9dce1;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-modal-title {
+  font-weight: 700;
+  font-size: 22px;
+  color: #141a2e;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-modal-body {
+  padding: 20px 24px 24px;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-modal-note {
+  margin-bottom: 20px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #7a7f8c;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-modal-note strong {
+  color: #6b7080;
+}
+
+/* Display Name and Company Name in one light grey box, a line between the rows. */
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-list {
+  gap: 0;
+  padding: 4px 16px;
+  background: #f5f6f9;
+  border: 1px solid #dde0e6;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-row {
+  grid-template-columns: 9.5rem 1fr auto;
+  gap: 0.25rem 0.5rem;
+  min-height: 56px;
+  padding: 8px 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  font-size: 15px;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-row + .dlgfb-form-confirm-row {
+  border-top: 1px solid #dde0e6;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-label {
+  font-weight: 400;
+  color: #7a7f8c;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #141a2e;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-row.dlgfb-is-editing {
+  border-color: #dde0e6;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-input:focus {
+  border-color: rgba(0, 0, 0, 1);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-edit {
+  color: #a3a8b3;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-edit:hover:not(:disabled),
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-edit:focus-visible {
+  color: rgba(0, 0, 0, 1);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-is-editing .dlgfb-form-confirm-edit {
+  color: #fff;
+  background: rgba(0, 0, 0, 1);
+}
+
+/* GO BACK white with a grey border, SUBMIT black with a soft glow, side by side in the middle. */
+.dlgfb-app .dlgfb-form-modal .dlgfb-modal-footer {
+  gap: 36px;
+  padding: 28px 24px;
+  border-top: 1px solid #d9dce1;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn {
+  min-width: 148px;
+  min-height: 56px;
+  margin: 0;
+  padding: 12px 28px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 8px;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn:focus {
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-ghost {
+  background: #fff;
+  border: 1px solid #c9ccd3;
+  color: #141a2e;
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-ghost:hover {
+  border-color: rgba(0, 0, 0, 1);
+  color: rgba(0, 0, 0, 1);
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary,
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary:disabled {
+  min-width: 148px;
+  background: rgba(0, 0, 0, 1);
+  border: 1px solid rgba(0, 0, 0, 1);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(90, 110, 255, 0.22);
+}
+
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary:hover,
+.dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary:not(:disabled):active {
+  background: #333;
+  border-color: #333;
+  color: #fff;
+}
+
+@media (max-width: 575.98px) {
+  .dlgfb-app .dlgfb-form-modal .dlgfb-modal-footer {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .dlgfb-app .dlgfb-form-modal .dlgfb-modal-footer .dlgfb-btn {
+    width: auto;
+  }
+
+  .dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-row {
+    grid-template-columns: 8.2rem 1fr auto;
+    font-size: 14px;
+  }
+
+  .dlgfb-app .dlgfb-form-modal .dlgfb-form-confirm-value {
+    font-size: 15px;
+  }
+
+  .dlgfb-app .dlgfb-form-modal .dlgfb-form-btn,
+  .dlgfb-app .dlgfb-form-modal .dlgfb-form-btn-primary {
+    min-width: 0;
+    flex: 1;
+  }
 }
 
 /* Tablet and desktop. The mobile design above is the reference, these rules only widen and enlarge it. */
@@ -2335,11 +2460,11 @@ body.dlgfb-body-active {
     font-size: 14px;
   }
 
-  /* answer options become tiles laid out across the card */
+  /* answer options stay one per line on every screen, as in the design */
   .dlgfb-app .dlgfb-form-options,
   .dlgfb-app .dlgfb-form-checks {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
   }
 
