@@ -1,6 +1,7 @@
 const { parse } = require("csv-parse/sync");
 
 const { query } = require("../db");
+const { feedbackList } = require("../feedbackQuestions");
 const m = require("../models");
 const { escapeLike, padLengthFor, truthy } = require("../utils");
 const v = require("../validation");
@@ -126,7 +127,7 @@ async function feedbackResponses(req, res) {
       emailaddress: s.email,
       is_suspended: s.is_suspended,
       submitted_at: s.created_at,
-      feedback: s.feedback_data,
+      feedback: feedbackList(s.feedback_data),
     };
   });
   res.json({ count: results.length, results });

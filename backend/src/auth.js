@@ -1,3 +1,6 @@
+const crypto = require("crypto");
+
+const config = require("./config");
 const { query } = require("./db");
 
 const KEYWORD = "token";
@@ -35,4 +38,29 @@ function requireAdmin(req, res, next) {
   return next();
 }
 
-module.exports = { authenticate, requireAdmin };
+const MIN_ACCESS_TOKEN_LENGTH = 32;
+
+/** Constant time comparison, hashing first so the two sides have the same length. */
+function sameSecret(a, b) {
+  const digest = (s) => crypto.createHash("sha256").update(s).digest();
+  return crypto.timingSafeEqual(digest(a), digest(b));
+}
+
+/**
+ * Guards the CRM export routes with "Authorization: Bearer <token>", the token is EXPORT_ACCESS_TOKEN and is the same
+ * for every event. An admin login does not open these routes. With no usable token configured they answer 503.
+ */
+function requireAccessToken(req, res, next) {
+  const tokens = config.exportAccessTokens.filter((t) => t.length >= MIN_ACCESS_TOKEN_LENGTH);
+  if (!tokens.length) return res.status(503).json({ detail: "The access token is not configured on the server." });
+  const parts = (req.get("authorization") || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
+    return res.set("WWW-Authenticate", "Bearer").status(401).json({ detail: "Access token was not provided." });
+  }
+  // Every configured value is compared, so the time taken does not reveal which one matched.
+  const ok = tokens.map((t) => sameSecret(parts[1], t)).some(Boolean);
+  if (!ok) return res.set("WWW-Authenticate", "Bearer").status(401).json({ detail: "Invalid access token." });
+  return next();
+}
+
+module.exports = { authenticate, requireAdmin, requireAccessToken };

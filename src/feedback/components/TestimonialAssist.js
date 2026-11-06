@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import api, { eventKey } from "../api";
 import Modal from "./Modal";
 
@@ -33,9 +33,9 @@ function saveLeft(left) {
 }
 
 /**
- * The suggested testimonial under a text question with "aiSuggestion". When the attendee leaves the text box,
- * their words are sent to the API, which asks Gemini for a polished version. They can use it, edit it in a
- * popup, or keep their original. Everything is kept in the form's answers, so Back and Continue keep it:
+ * The suggested testimonial under a text question with "aiSuggestion". Only when the attendee presses the Polish
+ * button are their words sent to the API, which asks Gemini for a polished version. They can use it, edit it in a
+ * popup (the edit is used as typed, the Polish button can be pressed again), or keep their original. Everything is kept in the form's answers, so Back and Continue keep it:
  *   assist  { status, basis, suggestion, version, final }  status is idle, loading, ready or unavailable,
  *           basis is the text the suggestion was made for, version is suggested, edited or original.
  *   consent true or false, the publishing agreement.
@@ -51,28 +51,28 @@ export function testimonialHelper(q, answers, setAnswers) {
     if (assist.basis !== undefined && text.trim() !== assist.basis) setAssist({ status: "idle" });
   };
 
-  // Called when the attendee leaves the text box.
+  // Called by the Polish button. Nothing is sent to the AI until the attendee asks for it.
   const requestSuggestion = (text) => {
     const basis = text.trim();
-    if (wordCount(basis) < MIN_WORDS || (basis === assist.basis && assist.status !== "idle")) return;
+    if (wordCount(basis) < MIN_WORDS || assist.status === "loading") return;
     const session = readSession();
     if (session.left <= 0) {
-      setAssist({ status: "limit", basis });
+      setAssist((cur) => ({ ...cur, status: "limit" }));
       return;
     }
-    setAssist({ status: "loading", basis });
+    setAssist((cur) => ({ ...cur, status: "loading", basis }));
     api
       .post("/feedback/suggest-testimonial/", { text: basis, session: session.id })
       .then(({ data }) => {
         if (Number.isInteger(data.remaining)) saveLeft(data.remaining);
-        setAssist((cur) => (cur.basis === basis ? { status: "ready", basis, suggestion: data.suggestion } : cur));
+        setAssist((cur) => (cur.basis === basis ? { ...cur, status: "ready", suggestion: data.suggestion } : cur));
       })
       // No key, busy, declined or out of attempts: no suggestion, the attendee's words are used.
       .catch((err) => {
         const data = err?.response?.data || {};
         if (Number.isInteger(data.remaining)) saveLeft(data.remaining);
         const status = data.code === "limit_reached" ? "limit" : "unavailable";
-        setAssist((cur) => (cur.basis === basis ? { status, basis } : cur));
+        setAssist((cur) => (cur.basis === basis ? { ...cur, status } : cur));
       });
   };
 
@@ -83,8 +83,7 @@ export function testimonialHelper(q, answers, setAnswers) {
       const cur = a[assistKey] || { status: "idle" };
       const original = cur.original ?? String(a[q.key] || "").trim();
       const text = version === "original" ? original : final;
-      // basis is the box's new text, so leaving the box again does not ask for another suggestion.
-      return { ...a, [q.key]: text, [assistKey]: { ...cur, version, final: text, basis: text, original } };
+            return { ...a, [q.key]: text, [assistKey]: { ...cur, version, final: text, basis: text, original } };
     });
 
   return { assist, setAssist, choose, consent: !!answers[consentKey], setConsent: (v) => setAnswers((a) => ({ ...a, [consentKey]: v })), onTextChange, requestSuggestion };
@@ -94,6 +93,49 @@ export function testimonialHelper(q, answers, setAnswers) {
 export function testimonialFinal(answers, key) {
   const assist = answers[`${key}_assist`];
   return assist?.version ? assist.final : String(answers[key] || "").trim();
+}
+
+const MAX_BOX_HEIGHT = 340;
+
+/**
+ * The text box grows with what is typed so the attendee can read all of it, from the box's minimum height up to
+ * MAX_BOX_HEIGHT. Longer text scrolls inside the box, so it never takes over the page.
+ */
+export function AutoGrowTextarea({ value, ...props }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const fit = () => {
+      el.style.height = "auto";
+      const min = parseFloat(getComputedStyle(el).minHeight) || 0;
+      const wanted = Math.max(el.scrollHeight + 2, min);
+      el.style.height = `${Math.min(wanted, MAX_BOX_HEIGHT)}px`;
+      el.style.overflowY = wanted > MAX_BOX_HEIGHT ? "auto" : "hidden";
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [value]);
+  return <textarea ref={ref} value={value} {...props} />;
+}
+
+/** The Polish button, shown at the bottom right of the text box. It is the only thing that sends text to the AI. */
+export function PolishButton({ text, helper }) {
+  const { assist, requestSuggestion } = helper;
+  const loading = assist.status === "loading";
+  const disabled = loading || assist.status === "limit" || wordCount(text) < MIN_WORDS;
+  return (
+    <button
+      type="button"
+      className="dlgfb-polish-btn"
+      disabled={disabled}
+      onClick={() => requestSuggestion(text)}
+      title={wordCount(text) < MIN_WORDS ? `Write at least ${MIN_WORDS} words to polish` : "Rewrite your words as a polished testimonial with AI"}
+    >
+      {loading ? "Polishing..." : "Polish"}
+    </button>
+  );
 }
 
 export default function TestimonialAssist({ q, text, helper }) {
@@ -117,13 +159,17 @@ export default function TestimonialAssist({ q, text, helper }) {
           <button type="button" className="dlgfb-testimonial-btn dlgfb-testimonial-btn-primary" onClick={() => choose("suggested", assist.suggestion)}>
             Use this version
           </button>
-          <button type="button" className="dlgfb-testimonial-btn" onClick={() => setEditing(assist.version === "edited" ? assist.final : assist.suggestion)}>
+          <button type="button" className="dlgfb-testimonial-btn" onClick={() => setEditing(assist.suggestion)}>
             Edit suggestion
           </button>
           <button type="button" className="dlgfb-testimonial-btn" onClick={() => choose("original")}>
             Keep my original
           </button>
         </div>
+      )}
+
+      {assist.status === "unavailable" && (
+        <p className="dlgfb-testimonial-note">A suggestion is not available right now, your own words will be used.</p>
       )}
 
       {assist.status === "limit" && (
