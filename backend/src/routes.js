@@ -7,6 +7,7 @@ const auth = require("./views/auth");
 const luckyDraw = require("./views/luckyDraw");
 const pub = require("./views/public");
 const { upcomingConferences } = require("./views/upcomingConferences");
+const { speakerSessions } = require("./views/speakerSessions");
 const { suggestTestimonial } = require("./views/testimonial");
 
 const router = express.Router();
@@ -33,6 +34,7 @@ route("/form-status/", { get: pub.formStatus });
 route("/attendees/", { get: pub.attendeeList });
 route("/registered-attendees/", { get: pub.registeredAttendees });
 route("/upcoming-conferences/", { get: upcomingConferences });
+route("/speaker-sessions/", { get: speakerSessions });
 route("/feedback/submit/", { post: pub.feedbackSubmit });
 route("/feedback/suggest-testimonial/", { post: suggestTestimonial });
 // Admin auth

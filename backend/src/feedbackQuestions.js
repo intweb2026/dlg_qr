@@ -9,6 +9,7 @@ const QUESTIONS = [
   ["associations", "Which industry associations are you a member of?"],
   ["publications", "Which industry publications or newsletters do you regularly read?"],
   ["upcoming_interest", "Which of our upcoming conferences interest you?"],
+  ["speaker_reviews", "Speaker session reviews"],
 ];
 
 // Keys from earlier versions of the form.

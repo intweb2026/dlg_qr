@@ -1,5 +1,5 @@
 const { query, transaction } = require("../db");
-const { publicConfig } = require("../events");
+const { publicConfig, speakerReviewSettings } = require("../events");
 const { ALIAS_COMPANY, ALIAS_NAME, attendeeLookupJson, closedJson, getAttendee, isActive, loadSettings } = require("../models");
 const { collapseSpaces, deviceFingerprint, normalizeName } = require("../utils");
 const v = require("../validation");
@@ -69,6 +69,23 @@ const NEW_ATTENDEE_FIELDS = {
   },
 };
 
+/**
+ * The speaker session reviews, when sent, are a list with no more than maxPerDay on any one day. The limit is the
+ * event's own, "speakerReviews.maxPerDay" in events.json; the form reads the same value from the event config.
+ */
+function checkSpeakerReviews(reviews, maxPerDay) {
+  if (reviews === undefined) return;
+  if (!Array.isArray(reviews)) throw new v.ValidationError({ feedback_data: ["Speaker reviews must be a list."] });
+  const perDay = new Map();
+  for (const r of reviews) {
+    const day = String(r?.day ?? "");
+    perDay.set(day, (perDay.get(day) || 0) + 1);
+    if (perDay.get(day) > maxPerDay) {
+      throw new v.ValidationError({ feedback_data: [`You can review up to ${maxPerDay} sessions for each day.`] });
+    }
+  }
+}
+
 // Send attendee_id for a listed attendee, or new_attendee for a name that is not on the list.
 const SUBMIT_FIELDS = {
   attendee_id: {
@@ -86,7 +103,8 @@ const SUBMIT_FIELDS = {
     required: true,
     clean(value) {
       v.dict(value, { allowEmpty: false });
-      if (JSON.stringify(value).length > 20000) throw new v.FieldError("Feedback is too long.");
+      // Room for a rating and comment on every speaker session as well as the questions.
+      if (JSON.stringify(value).length > 60000) throw new v.FieldError("Feedback is too long.");
       return value;
     },
   },
@@ -106,6 +124,7 @@ async function feedbackSubmit(req, res) {
   }
   const { values, errors } = await v.validate(data, SUBMIT_FIELDS);
   if (errors) throw new v.ValidationError(errors);
+  checkSpeakerReviews(values.feedback_data.speaker_reviews, speakerReviewSettings(req.event).maxPerDay);
   if (("attendee_id" in values) === ("new_attendee" in values)) {
     throw new v.ValidationError({ attendee_id: ["Select your name from the list, or add it as a new attendee."] });
   }

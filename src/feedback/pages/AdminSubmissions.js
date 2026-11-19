@@ -53,6 +53,23 @@ function formatAnswer(val) {
   return typeof val === "object" ? JSON.stringify(val) : String(val);
 }
 
+/** The speaker session reviews of one submission, one line per reviewed session. */
+function SpeakerReviewList({ reviews }) {
+  return (
+    <ul className="dlgfb-review-list">
+      {reviews.map((r) => (
+        <li key={r.session_id}>
+          <strong>{r.title}</strong>
+          {r.speakers && <span className="dlgfb-text-muted"> ({r.speakers})</span>}
+          <div>
+            {[r.rating ? `${r.rating} of 5, ${r.rating_label}` : "", r.comment ? `"${r.comment}"` : ""].filter(Boolean).join(" · ")}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function SettingsPanel() {
   const notify = useToast();
   const [cfg, setCfg] = useState(null);
@@ -333,7 +350,7 @@ export default function AdminSubmissions() {
             {orderedAnswers(viewing.feedback_data).map(([key, val]) => (
               <div key={key} className="dlgfb-answer-row">
                 <dt>{questionLabel(key)}</dt>
-                <dd>{formatAnswer(val)}</dd>
+                <dd>{key === "speaker_reviews" && Array.isArray(val) ? <SpeakerReviewList reviews={val} /> : formatAnswer(val)}</dd>
               </div>
             ))}
           </dl>

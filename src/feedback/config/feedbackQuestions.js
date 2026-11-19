@@ -115,7 +115,9 @@ export const ratingScale = [
 ];
 
 // Labels for keys from earlier versions of the form, so older submissions still read well in the admin.
+// speaker_reviews is not a question in the list, it is saved by components/SpeakerReviews.js after the questions.
 const legacyLabels = {
+  speaker_reviews: "Speaker session reviews",
   conference_thoughts_original: "Original words, before Polish",
   conference_thoughts_version: "Polished with AI or own words",
   conference_thoughts_consent: "May we use your comments to market future events?",

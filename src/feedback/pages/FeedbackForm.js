@@ -4,6 +4,7 @@ import { useEvent, useEventPath } from "../../event/EventContext";
 import api, { errorMessage, eventKey, padId } from "../api";
 import AttendeeSearch from "../components/AttendeeSearch";
 import Modal from "../components/Modal";
+import SpeakerReviews, { REVIEWS_KEY, reviewsToSubmit } from "../components/SpeakerReviews";
 import TestimonialAssist, { AutoGrowTextarea, PolishButton, RollBackButton, testimonialHelper, testimonialOriginal } from "../components/TestimonialAssist";
 import feedbackQuestions from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
@@ -277,9 +278,14 @@ function clearDraft() {
 export default function FeedbackForm() {
   const notify = useToast();
   const eventPath = useEventPath();
-  const { logo, background } = useEvent().config.media || {};
+  const eventConfig = useEvent().config;
+  const { logo, background } = eventConfig.media || {};
+  // This event's limit on session reviews per day, "speakerReviews.maxPerDay" in backend/events.json.
+  const reviewsPerDay = eventConfig.speakerReviews?.maxPerDay;
   // The last question's options, the conferences listed on the event's website.
   const [upcomingConferences, setUpcomingConferences] = useState([]);
+  // The agenda's speaker sessions, each one can be reviewed after the questions.
+  const [speakerSessions, setSpeakerSessions] = useState([]);
   const [draft] = useState(readDraft);
   // Every question is on one screen, under the name.
   const questions = useMemo(() => eventQuestions({ upcomingConferences }), [upcomingConferences]);
@@ -336,6 +342,11 @@ export default function FeedbackForm() {
         api
           .get("/upcoming-conferences/")
           .then(({ data: list }) => !cancelled && setUpcomingConferences(Array.isArray(list) ? list : []))
+          .catch(() => {});
+        // Without the sessions the reviews are left out, so a failure needs no message.
+        api
+          .get("/speaker-sessions/")
+          .then(({ data: list }) => !cancelled && setSpeakerSessions(Array.isArray(list) ? list : []))
           .catch(() => {});
       })
       .catch(() => !cancelled && setView("offline"));
@@ -432,6 +443,8 @@ export default function FeedbackForm() {
       }
       if (isAnswered(v)) feedback_data[q.key] = typeof v === "string" ? v.trim() : v;
     });
+    const speakerReviews = reviewsToSubmit(speakerSessions, answers[REVIEWS_KEY]);
+    if (speakerReviews.length) feedback_data[REVIEWS_KEY] = speakerReviews;
     try {
       // A name that is not on the list is sent as new_attendee, the backend creates it with the submission.
       const who = attendee.is_new
@@ -583,7 +596,7 @@ export default function FeedbackForm() {
 
           {view === "form" && (
             <form className="dlgfb-form-panel" onSubmit={handleContinue} noValidate>
-              <FormProgress count={questions.length} />
+              <FormProgress count={questions.length + (speakerSessions.length ? 1 : 0)} />
 
               <section className={`dlgfb-form-name${errors.attendee || errors.company || errors.email ? " dlgfb-has-error" : ""}`} id="q-attendee">
                 <label htmlFor="attendee-search" className="dlgfb-form-name-label">
@@ -769,6 +782,16 @@ export default function FeedbackForm() {
                   </section>
                 );
               })}
+
+              {speakerSessions.length > 0 && (
+                <SpeakerReviews
+                  number={questions.length + 1}
+                  sessions={speakerSessions}
+                  reviews={answers[REVIEWS_KEY]}
+                  maxPerDay={reviewsPerDay}
+                  onChange={(next) => setAnswer(REVIEWS_KEY, next)}
+                />
+              )}
 
               <button type="submit" className="dlgfb-form-submit">
                 Submit Feedback

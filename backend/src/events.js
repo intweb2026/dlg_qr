@@ -10,6 +10,16 @@ const DATABASE = /^[A-Za-z0-9_]{1,64}$/;
 // "theme": { "secondary": "#278dff" } is optional, the site uses #278dff without it.
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
+// "speakerReviews" is optional; each key left out takes its default. maxPerDay is how many sessions an attendee can
+// review on each day of the agenda, titleMaxWords the most words in a session's AI shortened title.
+const SPEAKER_REVIEW_DEFAULTS = { maxPerDay: 3, titleMaxWords: 7 };
+const SPEAKER_REVIEW_RANGES = { maxPerDay: [1, 50], titleMaxWords: [3, 20] };
+
+/** The event's speaker review settings with the defaults filled in. */
+function speakerReviewSettings(event) {
+  return { ...SPEAKER_REVIEW_DEFAULTS, ...(event?.speakerReviews || {}) };
+}
+
 function loadEvents(file = EVENTS_FILE) {
   const name = path.basename(file);
   let entries;
@@ -40,7 +50,18 @@ function loadEvents(file = EVENTS_FILE) {
         fail('"theme.secondary" must be a colour like #278dff');
       }
     }
-    events.set(code, { ...event, code, active: event.active !== false });
+    if (event.speakerReviews !== undefined) {
+      const sr = event.speakerReviews;
+      if (!sr || typeof sr !== "object" || Array.isArray(sr)) fail('"speakerReviews" must be an object');
+      for (const key of Object.keys(sr)) {
+        const range = SPEAKER_REVIEW_RANGES[key];
+        if (!range) fail(`"speakerReviews.${key}" is not a setting, use ${Object.keys(SPEAKER_REVIEW_RANGES).join(" or ")}`);
+        if (!Number.isInteger(sr[key]) || sr[key] < range[0] || sr[key] > range[1]) {
+          fail(`"speakerReviews.${key}" must be a whole number from ${range[0]} to ${range[1]}`);
+        }
+      }
+    }
+    events.set(code, { ...event, code, active: event.active !== false, speakerReviews: speakerReviewSettings(event) });
   }
   return events;
 }
@@ -64,4 +85,4 @@ function publicConfig(event) {
   return rest;
 }
 
-module.exports = { EVENTS_FILE, loadEvents, getEvent, allEvents, publicConfig };
+module.exports = { EVENTS_FILE, loadEvents, getEvent, allEvents, publicConfig, speakerReviewSettings, SPEAKER_REVIEW_DEFAULTS };

@@ -10,6 +10,7 @@ Every event is one entry in `events.json`, keyed by its code. The code is the fi
 - `database` is the event's own MySQL database. Every event needs a different one. Its login is in `databases.json`, see below.
 - `active` set to `false` hides the event without deleting anything.
 - `media.favicon` is the browser tab icon and `theme.secondary` the accent colour, like `#278dff`. Both are optional.
+- `speakerReviews` is optional, `{ "maxPerDay": 3, "titleMaxWords": 7 }` by default. `maxPerDay` is how many speaker sessions an attendee can review on each day of the agenda (1 to 50), checked by the form and again on submit. `titleMaxWords` is the most words in the AI shortened session titles (3 to 20). The agenda is read from `links.agendaApi`, or `<links.website>/api/agenda` when that is not set.
 - Everything else, name, media, links, Wi-Fi and theme, is sent to the site by `GET /api/events/<code>/`. The database name is never sent. Do not put passwords or private keys in an event entry, the site shows its contents.
 
 ```json

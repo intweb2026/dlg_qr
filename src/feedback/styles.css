@@ -925,6 +925,253 @@ body.dlgfb-body-active {
   color: var(--fb-muted);
 }
 
+/* Speaker session reviews after the questions, one white card per session, one column on phones and two from 768px. */
+.dlgfb-app .dlgfb-sessions-day + .dlgfb-sessions-day {
+  margin-top: 22px;
+}
+
+.dlgfb-app .dlgfb-sessions-day-title {
+  margin: 0 0 12px;
+  font-family: var(--fb-title);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--fb-text);
+}
+
+.dlgfb-app .dlgfb-sessions-list {
+  display: grid;
+  gap: 10px;
+}
+
+/* One accordion item per session, the header shows the title, speakers and time, the body the rating. */
+.dlgfb-app .dlgfb-session {
+  border: 1px solid #e1e6ee;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.dlgfb-app .dlgfb-session.dlgfb-is-open,
+.dlgfb-app .dlgfb-session.dlgfb-is-reviewed {
+  border-color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-session-heading {
+  margin: 0;
+}
+
+.dlgfb-app .dlgfb-session-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.dlgfb-app .dlgfb-session-toggle:focus-visible {
+  outline: 2px solid var(--fb-blue);
+  outline-offset: -2px;
+}
+
+.dlgfb-app .dlgfb-session-summary {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dlgfb-app .dlgfb-session-title {
+  font-family: var(--fb-title);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.4;
+  color: var(--fb-text);
+  overflow-wrap: anywhere;
+}
+
+.dlgfb-app .dlgfb-session-speakers {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--fb-muted);
+}
+
+/* The row under the title, "time | speakers", as one line of text that wraps like a sentence, so a long
+   speaker list continues after the time instead of dropping below it. */
+.dlgfb-app .dlgfb-session-meta {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.dlgfb-app .dlgfb-session-time {
+  font-weight: 600;
+  color: var(--fb-text);
+  white-space: nowrap;
+}
+
+.dlgfb-app .dlgfb-session-sep {
+  margin: 0 6px;
+  color: var(--fb-placeholder);
+}
+
+.dlgfb-app .dlgfb-session-rated {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b07d00;
+  white-space: nowrap;
+}
+
+/* Takes the review off a session. */
+.dlgfb-app .dlgfb-session-clear {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fb-error);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* The session search above the days. */
+.dlgfb-app .dlgfb-sessions-search {
+  margin-bottom: 16px;
+}
+
+/* No clear cross from the browser, the search has its own. */
+.dlgfb-app .dlgfb-sessions-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.dlgfb-app .dlgfb-sessions-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fb-muted);
+}
+
+/* A session on a day that already has its most reviews, dimmed, with a note in place of the stars. */
+.dlgfb-app .dlgfb-session.dlgfb-is-locked .dlgfb-session-summary {
+  opacity: 0.55;
+}
+
+.dlgfb-app .dlgfb-session-limit {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff4e5;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #8a5300;
+}
+
+/* The full title, inside an open session when the header shows the short one. */
+.dlgfb-app .dlgfb-session-full {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fb-muted);
+}
+
+.dlgfb-app .dlgfb-session-caret {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--fb-muted);
+  transition: transform 0.2s;
+}
+
+.dlgfb-app .dlgfb-session.dlgfb-is-open .dlgfb-session-caret {
+  transform: rotate(180deg);
+}
+
+.dlgfb-app .dlgfb-session-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.dlgfb-app .dlgfb-session-rate {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--fb-divider);
+}
+
+.dlgfb-app .dlgfb-session-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.dlgfb-app .dlgfb-session-star {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.dlgfb-app .dlgfb-session-star svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: #b8c0cc;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  transition: fill 0.12s, stroke 0.12s, transform 0.12s;
+}
+
+.dlgfb-app .dlgfb-session-star.dlgfb-is-on svg {
+  fill: #f5b301;
+  stroke: #e0a100;
+}
+
+.dlgfb-app .dlgfb-session-star:hover svg {
+  transform: scale(1.1);
+}
+
+.dlgfb-app .dlgfb-session-star:focus-visible {
+  outline: 2px solid var(--fb-blue);
+  outline-offset: 1px;
+}
+
+.dlgfb-app .dlgfb-session-rate-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fb-muted);
+}
+
+.dlgfb-app .dlgfb-session-comment {
+  min-height: 64px;
+  font-size: 14px;
+}
+
+/* The reviews in the admin's submission popup. */
+.dlgfb-app .dlgfb-review-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+}
+
 
 /* Progress above the name field, in the event's colour. */
 .dlgfb-app .dlgfb-form-progress {
