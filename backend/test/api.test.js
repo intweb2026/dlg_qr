@@ -18,8 +18,14 @@ fs.writeFileSync(
 process.env.DATABASES_FILE = LOGINS_FILE;
 const EXPORT_TOKEN = "test-export-token-0123456789abcdef0123456789";
 process.env.EXPORT_ACCESS_TOKEN = EXPORT_TOKEN;
+const UPLOADS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "feedback-test-uploads-"));
+process.env.UPLOADS_DIR = UPLOADS_DIR;
+
+const http = require("node:http");
 
 const { createApp } = require("../src/app");
+const config = require("../src/config");
+const crm = require("../src/crmDelegates");
 const db = require("../src/db");
 const { allEvents } = require("../src/events");
 const { migrate } = require("../src/migrate");
@@ -55,6 +61,7 @@ after(async () => {
   await db.closeAll();
   await dropDatabases();
   fs.rmSync(LOGINS_FILE, { force: true });
+  fs.rmSync(UPLOADS_DIR, { recursive: true, force: true });
 });
 
 beforeEach(async () => {
@@ -512,22 +519,10 @@ describe("admin panel", () => {
     assert.deepEqual(r.data.map((a) => [a.full_name, a.has_submitted]), [["Ana Lopez", true]]);
   });
 
-  test("CSV import", async () => {
-    await createAttendee("Priya Sharma", "priya@example.com", "Shell");
-    const csv = "\ufeffName,Company,Email\nJames Smith,BP,james@example.com\n,,\nPriya Again,Shell,PRIYA@example.com\nAna Lopez,Total,\n";
+  test("CSV import is switched off", async () => {
     const form = new FormData();
-    form.append("file", new Blob([csv], { type: "text/csv" }), "attendees.csv");
-    const r = await api("POST", "/admin/attendees/import/", { token, form });
-    // The old list is cleared by an import, so Priya Sharma is gone and "Priya Again" is the only Priya.
-    assert.deepEqual(r.data, { created: 3, skipped: 1, errors: [] });
-    assert.equal((await query("SELECT COUNT(*) AS n FROM attendees WHERE full_name = 'Priya Sharma'"))[0].n, 0);
-    const [ana] = await query("SELECT email, company_name FROM attendees WHERE full_name = 'Ana Lopez'");
-    assert.deepEqual([ana.email, ana.company_name], [null, "Total"]);
-
-    const bad = new FormData();
-    bad.append("file", new Blob(["email\nx@example.com\n"]), "a.csv");
-    assert.equal((await api("POST", "/admin/attendees/import/", { token, form: bad })).status, 400);
-    assert.equal((await api("POST", "/admin/attendees/import/", { token, form: new FormData() })).data.detail, "Choose a CSV file to import.");
+    form.append("file", new Blob(["full_name\nJames Smith\n"], { type: "text/csv" }), "attendees.csv");
+    assert.equal((await api("POST", "/admin/attendees/import/", { token, form })).status, 404);
   });
 });
 
@@ -753,5 +748,291 @@ describe("events", () => {
     const tokenB = await login("benny", "testb");
     assert.notEqual(tokenB, token);
     assert.equal((await api("GET", "/admin/settings/", { token: tokenB, event: "testb" })).status, 200);
+  });
+});
+
+describe("event details", () => {
+  let token;
+  beforeEach(async () => {
+    for (const q of [query, queryB]) {
+      await q("DELETE FROM menu_items");
+      await q("DELETE FROM event_details");
+    }
+    token = await login("benny");
+  });
+
+  test("first read copies events.json and adds the default menu", async () => {
+    const r = await api("GET", "/");
+    assert.equal(r.data.name, "Test event a");
+    assert.deepEqual(r.data.theme, { secondary: "#ff6600" });
+    // testa has no agenda or LinkedIn link in events.json, so those two items are left out.
+    assert.deepEqual(r.data.menu.map((m) => m.target), ["/registered-attendees", "/feedback-form", "/wifipassword", "website"]);
+    assert.ok(r.data.menu.every((m) => m.icon.startsWith("/images/common/menu/") && !("is_visible" in m)));
+    const admin = await api("GET", "/admin/event-details/", { token });
+    assert.equal(admin.status, 200);
+    assert.equal(admin.data.name, "Test event a");
+    assert.equal(admin.data.secondary, "#ff6600");
+    assert.ok(!("agenda" in admin.data) && !("linkedin" in admin.data));
+    assert.equal(admin.data.menu.length, 4);
+    // testb's agenda link becomes the item's address, its LinkedIn value is not a URL and is left out.
+    const b = (await api("GET", "/", { event: "testb" })).data.menu;
+    assert.deepEqual(b.map((m) => m.target), ["https://example.com/agenda", "/registered-attendees", "/feedback-form", "/wifipassword", "website"]);
+  });
+
+  test("admin edits reach the site config, blanks are left out", async () => {
+    let r = await api("PATCH", "/admin/event-details/", {
+      token,
+      body: {
+        name: "Renamed",
+        tagline: "Line one\nLine two",
+        secondary: "#00AA11",
+        logo: "/uploads/testa/logo.png",
+        heroVideoMp4: "https://cdn.example.com/hero.mp4",
+        website: "https://example.com/",
+        network: "EventWiFi",
+        password: "secret1",
+      },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.secondary, "#00aa11");
+    r = await api("GET", "/");
+    assert.equal(r.data.name, "Renamed");
+    assert.equal(r.data.tagline, "Line one\nLine two");
+    assert.deepEqual(r.data.theme, { secondary: "#00aa11" });
+    assert.deepEqual(r.data.media, { logo: "/uploads/testa/logo.png", heroVideoMp4: "https://cdn.example.com/hero.mp4" });
+    assert.deepEqual(r.data.links, { website: "https://example.com/" });
+    assert.deepEqual(r.data.wifi, { network: "EventWiFi", password: "secret1" });
+    await api("PATCH", "/admin/event-details/", { token, body: { secondary: "" } });
+    assert.equal((await api("GET", "/")).data.theme, undefined);
+    // Another event keeps its own details.
+    assert.equal((await api("GET", "/", { event: "testb" })).data.name, "Test event b");
+  });
+
+  test("event details validation", async () => {
+    const r = await api("PATCH", "/admin/event-details/", {
+      token,
+      body: { name: " ", secondary: "blue", logo: "javascript:alert(1)", website: "/agenda", favicon: "//evil.example/x.png" },
+    });
+    assert.equal(r.status, 400);
+    assert.deepEqual(Object.keys(r.data).sort(), ["favicon", "logo", "name", "secondary", "website"]);
+    assert.equal((await api("GET", "/admin/event-details/")).status, 401);
+  });
+
+  test("menu items are added, sorted, hidden and deleted", async () => {
+    let r = await api("POST", "/admin/menu-items/", {
+      token,
+      body: { label: "Sponsors", icon: "/uploads/testa/s.svg", target: "https://example.com/sponsors", sort_order: 5 },
+    });
+    assert.equal(r.status, 201);
+    const id = r.data.id;
+    assert.equal(r.data.is_visible, true);
+    let menu = (await api("GET", "/")).data.menu;
+    assert.equal(menu[0].label, "Sponsors");
+
+    r = await api("PATCH", `/admin/menu-items/${id}/`, { token, body: { sort_order: 999, is_visible: false } });
+    assert.equal(r.status, 200);
+    menu = (await api("GET", "/")).data.menu;
+    assert.ok(!menu.some((m) => m.id === id));
+    assert.equal((await api("GET", "/admin/menu-items/", { token })).data.at(-1).id, id);
+
+    r = await api("POST", "/admin/menu-items/", { token, body: { label: "", target: "ftp://x", sort_order: -1 } });
+    assert.equal(r.status, 400);
+    assert.deepEqual(Object.keys(r.data).sort(), ["label", "sort_order", "target"]);
+
+    assert.equal((await api("DELETE", `/admin/menu-items/${id}/`, { token })).status, 204);
+    assert.equal((await api("DELETE", `/admin/menu-items/${id}/`, { token })).status, 404);
+  });
+
+  test("migrate moves the agenda and LinkedIn links into their menu items", async () => {
+    const { moveLinksIntoMenu } = require("../src/eventDetails");
+    await api("GET", "/");
+    await query("ALTER TABLE event_details ADD COLUMN agenda_url varchar(500) NOT NULL DEFAULT '', ADD COLUMN linkedin_url varchar(500) NOT NULL DEFAULT ''");
+    await query("UPDATE event_details SET agenda_url = 'https://example.com/agenda'");
+    for (const target of ["agenda", "linkedin"]) {
+      await query(
+        "INSERT INTO menu_items (label, icon, target, sort_order, is_visible, created_at, updated_at) VALUES (?, '', ?, 1, 1, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))",
+        [target, target]
+      );
+    }
+    await db.withDatabase(EVENT_A.database, () => moveLinksIntoMenu());
+    const targets = (await query("SELECT label, target FROM menu_items WHERE label IN ('agenda', 'linkedin')")).map((m) => `${m.label} ${m.target}`);
+    assert.deepEqual(targets, ["agenda https://example.com/agenda"]);
+    const columns = await query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'event_details' AND COLUMN_NAME IN ('agenda_url', 'linkedin_url')");
+    assert.equal(columns.length, 0);
+    // A second run finds nothing to do.
+    await db.withDatabase(EVENT_A.database, () => moveLinksIntoMenu());
+  });
+
+  test("deleting every menu item does not bring the defaults back", async () => {
+    const items = (await api("GET", "/admin/menu-items/", { token })).data;
+    for (const item of items) await api("DELETE", `/admin/menu-items/${item.id}/`, { token });
+    assert.deepEqual((await api("GET", "/")).data.menu, []);
+  });
+
+  test("uploads are checked and served", async () => {
+    const send = (name, content, kind) => {
+      const form = new FormData();
+      if (kind) form.append("kind", kind);
+      form.append("file", new Blob([content]), name);
+      return api("POST", "/admin/uploads/", { token, form });
+    };
+    let r = await send("logo.PNG", "png-bytes", "image");
+    assert.equal(r.status, 201);
+    assert.match(r.data.url, /^\/uploads\/testa\/[a-z0-9]+-[0-9a-f]{12}\.png$/);
+    const res = await fetch(`${root.replace(/\/events$/, "")}${r.data.url}`);
+    assert.equal(res.status, 200);
+    assert.equal(await res.text(), "png-bytes");
+    assert.match(res.headers.get("content-security-policy"), /sandbox/);
+
+    assert.equal((await send("clip.mp4", "x", "image")).status, 400);
+    assert.equal((await send("run.exe", "x")).status, 400);
+    assert.equal((await send("clip.webm", "x", "video")).data.kind, "video");
+  });
+});
+
+describe("CRM registered delegates", () => {
+  let crmServer;
+  let reply;
+  let requests;
+  let token;
+
+  before(async () => {
+    crmServer = http.createServer((req, res) => {
+      requests.push({ url: req.url, key: req.headers["x-data-api-key"] });
+      const [status, body] = typeof reply === "function" ? reply(req) : reply;
+      res.writeHead(status, { "Content-Type": "application/json" }).end(JSON.stringify(body));
+    });
+    await new Promise((resolve) => crmServer.listen(0, "127.0.0.1", resolve));
+    config.crmDataApiUrl = `http://127.0.0.1:${crmServer.address().port}/api/data/registered_delegates/`;
+  });
+
+  after(() => {
+    crmServer.close();
+    config.crmDataApiKey = "";
+    delete EVENT_A.event_code;
+    crm.resetSyncState();
+  });
+
+  beforeEach(async () => {
+    requests = [];
+    reply = [200, []];
+    EVENT_A.event_code = "AIU - AD";
+    config.crmDataApiKey = "test-data-key";
+    crm.resetSyncState();
+    await query("UPDATE form_settings SET crm_synced_at = NULL, crm_synced_count = NULL");
+    token = await login("benny");
+  });
+
+  test("sends the event code and key, and copies the delegates", async () => {
+    reply = [
+      200,
+      [
+        { full_name: "  Priya   Sharma ", company_name: "Shell", email: "Priya@Example.com" },
+        { first_name: "James", last_name: "Smith", company: "BP" },
+        { company_name: "No name" },
+      ],
+    ];
+    const r = await api("POST", "/admin/attendees/sync/", { token });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.data.result, { fetched: 2, skipped: 1, created: 2, updated: 0, removed: 0, kept: 0 });
+    assert.equal(requests[0].url, "/api/data/registered_delegates/?event_code=AIU+-+AD");
+    assert.equal(requests[0].key, "test-data-key");
+    const rows = await query("SELECT full_name, email, company_name, is_walk_in FROM attendees ORDER BY full_name");
+    assert.deepEqual(
+      rows.map((a) => [a.full_name, a.email, a.company_name, a.is_walk_in]),
+      [
+        ["James Smith", null, "BP", 0],
+        ["Priya Sharma", "priya@example.com", "Shell", 0],
+      ]
+    );
+    assert.equal((await api("GET", "/admin/attendees/sync/", { token })).data.result.created, 2);
+  });
+
+  test("updates, removes and keeps on a later sync", async () => {
+    const gone = await createAttendee("Gone Person", "gone@example.com");
+    const submitted = await createAttendee("Has Submitted", "sub@example.com");
+    await createSubmission(submitted);
+    const renamed = await createAttendee("Ana Lopes", "ana@example.com", "Total");
+    await query(
+      "INSERT INTO attendees (full_name, email, company_name, is_walk_in, created_at) VALUES ('Walk In', 'walk@example.com', 'X', 1, UTC_TIMESTAMP(6))"
+    );
+    reply = [200, { results: [{ name: "Ana Lopez", company: "TotalEnergies", email: "ANA@example.com" }] }];
+    const r = await api("POST", "/admin/attendees/sync/", { token });
+    assert.deepEqual(r.data.result, { fetched: 1, skipped: 0, created: 0, updated: 1, removed: 1, kept: 1 });
+    assert.equal((await query("SELECT 1 FROM attendees WHERE attendee_id = ?", [gone])).length, 0);
+    assert.equal((await query("SELECT 1 FROM attendees WHERE attendee_id = ?", [submitted])).length, 1);
+    const [ana] = await query("SELECT full_name, company_name FROM attendees WHERE attendee_id = ?", [renamed]);
+    assert.deepEqual([ana.full_name, ana.company_name], ["Ana Lopez", "TotalEnergies"]);
+    assert.equal((await query("SELECT COUNT(*) AS n FROM attendees WHERE is_walk_in = 1"))[0].n, 1);
+
+    // An empty list removes nobody.
+    reply = [200, []];
+    await api("POST", "/admin/attendees/sync/", { token });
+    assert.equal((await query("SELECT COUNT(*) AS n FROM attendees"))[0].n, 3);
+  });
+
+  test("a CRM error leaves the list as it was", async () => {
+    await createAttendee("Priya Sharma", "priya@example.com");
+    reply = [401, { detail: "Invalid API key format." }];
+    const r = await api("POST", "/admin/attendees/sync/", { token });
+    assert.equal(r.status, 502);
+    assert.equal(r.data.detail, "The CRM answered 401, Invalid API key format.");
+    assert.equal(r.data.error, r.data.detail);
+    assert.equal((await query("SELECT COUNT(*) AS n FROM attendees"))[0].n, 1);
+    // The public page still answers from the saved list.
+    assert.deepEqual((await api("GET", "/registered-attendees/")).data, [{ name: "Priya Sharma", company: "" }]);
+  });
+
+  test("the first visitor syncs once, and it is remembered", async () => {
+    reply = [200, [{ full_name: "James Smith", company_name: "BP", email: "james@example.com" }]];
+    assert.deepEqual((await api("GET", "/registered-attendees/")).data, [{ name: "James Smith", company: "BP" }]);
+    assert.deepEqual((await api("GET", "/attendees/")).data.map((a) => a.full_name), ["James Smith"]);
+    await api("GET", "/");
+    assert.equal(requests.length, 1);
+    const status = (await api("GET", "/admin/attendees/sync/", { token })).data;
+    assert.equal(status.synced_count, 1);
+    assert.ok(Math.abs(new Date(status.synced_at) - Date.now()) < 60000); // read back as UTC
+
+    // A restart forgets the memory, the saved mark still stops a second fetch.
+    crm.resetSyncState();
+    await api("GET", "/registered-attendees/");
+    assert.equal(requests.length, 1);
+
+    // Sync now still fetches it again.
+    await api("POST", "/admin/attendees/sync/", { token });
+    assert.equal(requests.length, 2);
+  });
+
+  test("an empty CRM list is tried again later", async () => {
+    await api("GET", "/registered-attendees/");
+    await api("GET", "/registered-attendees/"); // within the minute, not tried again
+    assert.equal(requests.length, 1);
+    assert.equal((await api("GET", "/admin/attendees/sync/", { token })).data.synced_at, null);
+
+    crm.resetSyncState(); // as if the minute had passed
+    reply = [200, [{ full_name: "James Smith", company_name: "BP" }]];
+    assert.deepEqual((await api("GET", "/registered-attendees/")).data, [{ name: "James Smith", company: "BP" }]);
+    assert.equal(requests.length, 2);
+  });
+
+  test("the home page config starts the sync without waiting", async () => {
+    reply = [200, [{ full_name: "James Smith", company_name: "BP" }]];
+    assert.equal((await api("GET", "/")).status, 200);
+    // The attendee page waits for the sync the config started, it does not start a second one.
+    assert.deepEqual((await api("GET", "/registered-attendees/")).data, [{ name: "James Smith", company: "BP" }]);
+    assert.equal(requests.length, 1);
+  });
+
+  test("an event without a CRM code or a key does not sync", async () => {
+    delete EVENT_A.event_code;
+    let r = await api("POST", "/admin/attendees/sync/", { token });
+    assert.equal(r.status, 502);
+    assert.equal(r.data.enabled, false);
+    EVENT_A.event_code = "AIU - AD";
+    config.crmDataApiKey = "";
+    r = await api("GET", "/admin/attendees/sync/", { token });
+    assert.equal(r.data.reason, "CRM_DATA_API_KEY is not set in the backend .env.");
+    await api("GET", "/registered-attendees/");
+    assert.equal(requests.length, 0);
   });
 });

@@ -8,8 +8,9 @@ export default function WifiPasswordMobile() {
   const { config } = useEvent();
   const eventPath = useEventPath();
   const [copiedField, setCopiedField] = useState(null);
-  // The network, password and venue come from "wifi" in the event file, the logo and QR code from "media".
-  const { network: WIFI_NETWORK = "", password: WIFI_PASSWORD = "", venueName = "" } = config.wifi || {};
+  // The network and password come from "wifi" in the event config, the logo and QR code from "media", all set on the
+  // admin Event Details page.
+  const { network: WIFI_NETWORK = "", password: WIFI_PASSWORD = "" } = config.wifi || {};
   const media = config.media || {};
 
   const handleCopy = async (field, value) => {
@@ -75,7 +76,7 @@ export default function WifiPasswordMobile() {
     //   </div>
 
     //   <div className="wifi-mobile__card">
-    //     {media.venueLogo && <img src={media.venueLogo} alt={venueName} className="wifi-mobile__logo" />}
+    //     {media.venueLogo && <img src={media.venueLogo} alt="Venue logo" className="wifi-mobile__logo" />}
 
     //     <img
     //       src={media.wifiQr}
@@ -158,7 +159,7 @@ export default function WifiPasswordMobile() {
         </div>
       </div>
       <div className="card">
-        <img src={media.venueLogo} alt={venueName} className="logo"></img>
+        <img src={media.venueLogo} alt="Venue logo" className="logo"></img>
         <img src={media.wifiQr} alt="Wi-Fi QR code" className="qr_code"></img>
         <div className="field">
           <div className="field-text">

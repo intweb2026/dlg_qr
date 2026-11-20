@@ -20,6 +20,7 @@ const AdminSubmissions = feedbackPage("AdminSubmissions");
 const LuckyDraw = feedbackPage("LuckyDraw");
 const LuckyDrawStandalone = feedbackPage("LuckyDrawStandalone");
 const AdminAttendees = feedbackPage("AdminAttendees");
+const AdminEventDetails = feedbackPage("AdminEventDetails");
 const NotFound = feedbackPage("NotFound");
 
 // Each lazy page gets its own boundary, so the admin menu stays on screen while a page loads.
@@ -50,6 +51,7 @@ function App() {
             <Route path="feedback-submission" element={load(AdminSubmissions)} />
             <Route path="raffle-draw" element={load(LuckyDraw)} />
             <Route path="attendees" element={load(AdminAttendees)} />
+            <Route path="event-details" element={load(AdminEventDetails)} />
             <Route path="*" element={load(NotFound)} />
           </Route>
         </Route>

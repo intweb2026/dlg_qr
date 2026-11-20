@@ -1,9 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
-import api, { setEventCode } from "../feedback/api";
+import api, { mediaUrl, setEventCode } from "../feedback/api";
 
 // The event comes from the first part of the address, /dle26/feedback-form is event dle26.
-// Its config (name, media, links, Wi-Fi, theme) is loaded once from the API, see backend/events.json.
+// Its config (name, media, links, Wi-Fi, theme and the home page menu) is loaded once from the API. It is edited on
+// the admin Event Details page, which calls reload() after saving so the change shows without a page refresh.
 // media.favicon is the browser tab icon and theme.secondary the accent colour, both optional.
 const EventContext = createContext(null);
 
@@ -42,6 +43,13 @@ function applyFavicon(href) {
   link.href = href;
 }
 
+/** The config with uploaded media and menu icons pointed at the API, which serves them. */
+function resolveConfig(data) {
+  const media = Object.fromEntries(Object.entries(data.media || {}).map(([key, value]) => [key, mediaUrl(value)]));
+  const menu = (data.menu || []).map((item) => ({ ...item, icon: mediaUrl(item.icon) }));
+  return { ...data, media, menu };
+}
+
 /** Address inside the current event, eventPath("/feedback-form") -> "/dle26/feedback-form". */
 export function useEventPath() {
   const { code } = useEvent();
@@ -68,7 +76,7 @@ export default function EventLayout() {
     setEventCode(code);
     api
       .get("/")
-      .then(({ data }) => !cancelled && setState({ status: "ready", config: data }))
+      .then(({ data }) => !cancelled && setState({ status: "ready", config: resolveConfig(data) }))
       .catch((err) => {
         // Only the API's own answer means the code is wrong, any other failure (offline, an older API) is a load error.
         const missing = err?.response?.status === 404 && err.response.data?.detail === "Event not found.";
@@ -78,6 +86,16 @@ export default function EventLayout() {
       cancelled = true;
     };
   }, [code]);
+
+  // Loads the config again without unmounting the page, a failure keeps the config already shown.
+  const reload = useCallback(async () => {
+    try {
+      const { data } = await api.get("/");
+      setState({ status: "ready", config: resolveConfig(data) });
+    } catch (err) {
+      // The page keeps working with the config it has.
+    }
+  }, []);
 
   useEffect(() => {
     if (state.config) document.title = state.config.name || code;
@@ -98,7 +116,7 @@ export default function EventLayout() {
     return <EventMessage title="Cannot load this event" text="Check your connection and refresh the page." />;
   }
   return (
-    <EventContext.Provider value={{ code, config: state.config }}>
+    <EventContext.Provider value={{ code, config: state.config, reload }}>
       <Outlet />
     </EventContext.Provider>
   );

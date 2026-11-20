@@ -925,18 +925,55 @@ body.dlgfb-body-active {
   color: var(--fb-muted);
 }
 
-/* Speaker session reviews after the questions, one white card per session, one column on phones and two from 768px. */
+/* Speaker session reviews, question 6. One closed accordion per day, the day's sessions inside it, one white card each. */
+.dlgfb-app .dlgfb-sessions-day {
+  border: 1px solid #e1e6ee;
+  border-radius: 12px;
+  background: #f5f7fb;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
 .dlgfb-app .dlgfb-sessions-day + .dlgfb-sessions-day {
-  margin-top: 22px;
+  margin-top: 12px;
+}
+
+.dlgfb-app .dlgfb-sessions-day.dlgfb-is-open,
+.dlgfb-app .dlgfb-sessions-day.dlgfb-is-reviewed {
+  border-color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-sessions-day-toggle {
+  padding: 16px 14px;
 }
 
 .dlgfb-app .dlgfb-sessions-day-title {
-  margin: 0 0 12px;
   font-family: var(--fb-title);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  line-height: 1.4;
   color: var(--fb-text);
+  overflow-wrap: anywhere;
+}
+
+.dlgfb-app .dlgfb-sessions-day-meta {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fb-muted);
+}
+
+.dlgfb-app .dlgfb-sessions-day-count {
+  font-weight: 600;
+  color: var(--fb-blue);
+}
+
+.dlgfb-app .dlgfb-sessions-day.dlgfb-is-open > .dlgfb-session-heading .dlgfb-session-caret {
+  transform: rotate(180deg);
+}
+
+.dlgfb-app .dlgfb-sessions-day-body {
+  padding: 0 10px 10px;
 }
 
 .dlgfb-app .dlgfb-sessions-list {
@@ -5101,4 +5138,320 @@ body.dlgfb-body-active {
   background: var(--draw-button-hover);
   border-color: var(--draw-button-hover);
   color: #fff;
+}
+
+/* ------------------------------------------------------------------ admin Event Details page */
+.dlgfb-app .dlgfb-mt-2 {
+  margin-top: 0.5rem;
+}
+
+.dlgfb-app .dlgfb-text-danger {
+  color: var(--danger);
+}
+
+.dlgfb-app .dlgfb-ed-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+}
+
+.dlgfb-app .dlgfb-ed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.dlgfb-app .dlgfb-ed-wide {
+  grid-column: 1 / -1;
+}
+
+.dlgfb-app .dlgfb-ed-color {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dlgfb-app .dlgfb-ed-color .dlgfb-form-control {
+  max-width: 9rem;
+}
+
+.dlgfb-app .dlgfb-ed-color-swatch {
+  width: 2.75rem;
+  height: 2.5rem;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dlgfb-app .dlgfb-ed-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.dlgfb-app .dlgfb-ed-media {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.dlgfb-app .dlgfb-ed-media-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dlgfb-app .dlgfb-ed-media-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* A checkerboard, so white and dark artwork both show. */
+.dlgfb-app .dlgfb-ed-preview {
+  flex: 0 0 auto;
+  width: 112px;
+  height: 112px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #cbd5e1;
+  background-image: linear-gradient(45deg, #94a3b8 25%, transparent 25%), linear-gradient(-45deg, #94a3b8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #94a3b8 75%), linear-gradient(-45deg, transparent 75%, #94a3b8 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+.dlgfb-app .dlgfb-ed-preview-dark {
+  background: var(--ink-deep);
+}
+
+.dlgfb-app .dlgfb-ed-preview span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+
+.dlgfb-app .dlgfb-ed-preview img,
+.dlgfb-app .dlgfb-ed-preview video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.dlgfb-app .dlgfb-ed-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--ink-deep);
+}
+
+.dlgfb-app .dlgfb-ed-icon img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.dlgfb-app .dlgfb-ed-sort-input {
+  width: 5.5rem;
+}
+
+.dlgfb-app .dlgfb-ed-row-hidden td {
+  color: var(--slate-light);
+}
+
+.dlgfb-app .dlgfb-ed-row-hidden .dlgfb-ed-icon {
+  opacity: 0.45;
+}
+
+.dlgfb-app .dlgfb-ed-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.dlgfb-app .dlgfb-ed-check input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--teal);
+}
+
+.dlgfb-app .dlgfb-ed-modal-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.dlgfb-app .dlgfb-ed-modal-row .dlgfb-ed-check {
+  padding-bottom: 0.6rem;
+}
+
+/* Stays at the bottom of the screen while the form scrolls. */
+.dlgfb-app .dlgfb-ed-savebar {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.dlgfb-app .dlgfb-ed-savebar-dirty {
+  border-color: var(--brass);
+  background: var(--brass-tint);
+}
+
+.dlgfb-app .dlgfb-ed-savebar-text {
+  margin-right: auto;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--slate);
+}
+
+@media (max-width: 575px) {
+  .dlgfb-app .dlgfb-ed-media-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dlgfb-app .dlgfb-ed-preview {
+    width: 84px;
+    height: 84px;
+  }
+
+  .dlgfb-app .dlgfb-ed-savebar-text {
+    flex-basis: 100%;
+  }
+}
+
+/* An input with a fixed https:// in front, for the website domain. */
+.dlgfb-app .dlgfb-ed-prefixed {
+  display: flex;
+  align-items: stretch;
+}
+
+.dlgfb-app .dlgfb-ed-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 0.7rem;
+  font-size: 0.9rem;
+  color: var(--slate);
+  background: var(--mist);
+  border: 1px solid var(--line);
+  border-right: 0;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.dlgfb-app .dlgfb-ed-prefixed .dlgfb-form-control {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.dlgfb-app .dlgfb-ed-prefixed.dlgfb-is-invalid .dlgfb-ed-prefix {
+  border-color: var(--danger);
+}
+
+/* Wi-Fi QR code generator */
+.dlgfb-app .dlgfb-ed-qr-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.dlgfb-app .dlgfb-ed-qr {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.dlgfb-app .dlgfb-ed-qr-image {
+  flex: 0 0 auto;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--slate);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.dlgfb-app .dlgfb-ed-qr-image img {
+  width: 100%;
+  height: 100%;
+}
+
+.dlgfb-app .dlgfb-ed-qr-fields {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+@media (max-width: 575px) {
+  .dlgfb-app .dlgfb-ed-qr-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    max-width: 260px;
+    margin: 0 auto;
+  }
+}
+
+.dlgfb-app .dlgfb-ed-qr-row .dlgfb-ed-qr-current {
+  background: #fff;
+}
+
+.dlgfb-app .dlgfb-ed-qr-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+/* Admin Attendees, the CRM sync panel */
+.dlgfb-crm-sync {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.dlgfb-crm-sync > div {
+  flex: 1 1 18rem;
+  min-width: 0;
 }

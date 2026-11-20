@@ -79,6 +79,15 @@ export function errorMessage(err, fallback = "Something went wrong, try again.")
   return fallback;
 }
 
+/**
+ * Address of an image or video for the page. Files uploaded on the admin Event Details page are saved as
+ * /uploads/<code>/<file> and served by the API, every other value (a site path or full URL) is used as it is.
+ */
+export function mediaUrl(value) {
+  if (typeof value !== "string" || !value.startsWith("/uploads/")) return value || "";
+  return `${String(api.defaults.baseURL).replace(/\/+$/, "")}${value}`;
+}
+
 export function padId(id, length) {
   return String(id).padStart(length || 3, "0");
 }

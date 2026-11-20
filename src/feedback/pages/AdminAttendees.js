@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api, { errorMessage, padId } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Pagination, { pageCount, pageSlice } from "../components/Pagination";
@@ -14,12 +14,15 @@ export default function AdminAttendees() {
   const [form, setForm] = useState(EMPTY);
   // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
   const [saving, setSaving] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [pendingFile, setPendingFile] = useState(null);
+  // The CSV import is switched off, the list comes from the CRM.
+  // const [importing, setImporting] = useState(false);
+  // const [pendingFile, setPendingFile] = useState(null);
+  const [sync, setSync] = useState(null);
+  const [syncing, setSyncing] = useState(false);
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
-  const fileRef = useRef(null);
+  // const fileRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -34,6 +37,37 @@ export default function AdminAttendees() {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
   }, [load]);
+
+  const loadSync = useCallback(async () => {
+    try {
+      const { data } = await api.get("/admin/attendees/sync/");
+      setSync(data);
+    } catch (err) {
+      notify(errorMessage(err), "danger");
+    }
+  }, [notify]);
+
+  useEffect(() => {
+    loadSync();
+  }, [loadSync]);
+
+  const syncNow = async () => {
+    setSyncing(true);
+    try {
+      const { data } = await api.post("/admin/attendees/sync/");
+      setSync(data);
+      const r = data.result;
+      notify(`${r.fetched} delegates in the CRM. ${r.created} added, ${r.updated} updated, ${r.removed} removed.`, "success", {
+        title: "Attendees synced",
+      });
+      load();
+    } catch (err) {
+      if (err.response?.data?.last_sync_at !== undefined) setSync(err.response.data);
+      notify(errorMessage(err), "danger", { title: "Sync failed" });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => setPage(1), [q, walkIn]);
   useEffect(() => {
@@ -74,39 +108,39 @@ export default function AdminAttendees() {
 
   const submitted = list.filter((a) => a.has_submitted).length;
 
-  // Choosing a file only stages it, the import clears the old list, so it waits for a confirmation.
-  const chooseCsv = (e) => setPendingFile(e.target.files?.[0] || null);
-  const cancelImport = () => {
-    setPendingFile(null);
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
-  const importCsv = async () => {
-    if (!pendingFile) return;
-    setImporting(true);
-    const body = new FormData();
-    body.append("file", pendingFile);
-    try {
-      const { data } = await api.post("/admin/attendees/import/", body);
-      notify(`${data.created} added, ${data.skipped} skipped as duplicates or blank rows.`, data.created ? "success" : "info", {
-        title: "CSV imported",
-      });
-      if (data.errors?.length) notify(data.errors[0], "danger", { title: `${data.errors.length} row${data.errors.length > 1 ? "s" : ""} failed` });
-      load();
-    } catch (err) {
-      notify(errorMessage(err), "danger", { title: "Import failed" });
-    } finally {
-      setImporting(false);
-      cancelImport();
-    }
-  };
+  // // Choosing a file only stages it, the import clears the old list, so it waits for a confirmation.
+  // const chooseCsv = (e) => setPendingFile(e.target.files?.[0] || null);
+  // const cancelImport = () => {
+  //   setPendingFile(null);
+  //   if (fileRef.current) fileRef.current.value = "";
+  // };
+  //
+  // const importCsv = async () => {
+  //   if (!pendingFile) return;
+  //   setImporting(true);
+  //   const body = new FormData();
+  //   body.append("file", pendingFile);
+  //   try {
+  //     const { data } = await api.post("/admin/attendees/import/", body);
+  //     notify(`${data.created} added, ${data.skipped} skipped as duplicates or blank rows.`, data.created ? "success" : "info", {
+  //       title: "CSV imported",
+  //     });
+  //     if (data.errors?.length) notify(data.errors[0], "danger", { title: `${data.errors.length} row${data.errors.length > 1 ? "s" : ""} failed` });
+  //     load();
+  //   } catch (err) {
+  //     notify(errorMessage(err), "danger", { title: "Import failed" });
+  //   } finally {
+  //     setImporting(false);
+  //     cancelImport();
+  //   }
+  // };
 
   return (
     <>
       <div className="dlgfb-page-head">
         <div>
           <h1>Attendees</h1>
-          <p className="dlgfb-text-muted dlgfb-mb-0">Everyone listed here can find their name on the feedback form.</p>
+          <p className="dlgfb-text-muted dlgfb-mb-0">The registered delegates from the CRM and the self-registered walk-ins. Everyone listed here can find their name on the feedback form.</p>
         </div>
       </div>
 
@@ -117,6 +151,34 @@ export default function AdminAttendees() {
       </div>
 
       <div className="dlgfb-panel dlgfb-mb-3">
+        <div className="dlgfb-crm-sync">
+          <div>
+            <h2 className="dlgfb-h6 dlgfb-mb-1">Registered delegates from the CRM</h2>
+            <p className="dlgfb-small dlgfb-text-muted dlgfb-mb-0">
+              {!sync
+                ? "Checking the CRM sync."
+                : !sync.enabled
+                  ? sync.reason
+                  : <>
+                      CRM event code <strong>{sync.event_code}</strong>.{" "}
+                      {sync.synced_at
+                        ? `${sync.synced_count} delegates copied on ${new Date(sync.synced_at).toLocaleString()}. Press Sync now to fetch the list again.`
+                        : "Not copied yet. The first visitor to the site fetches the list, or press Sync now."}
+                    </>}
+            </p>
+            {sync?.error && <p className="dlgfb-small dlgfb-text-danger dlgfb-mb-0 dlgfb-mt-2">Last try failed, {sync.error}</p>}
+            {sync?.ok && !sync.synced_at && sync.result?.fetched === 0 && (
+              <p className="dlgfb-small dlgfb-text-danger dlgfb-mb-0 dlgfb-mt-2">The CRM has no delegates for this event code yet.</p>
+            )}
+          </div>
+          <button type="button" className="dlgfb-btn dlgfb-btn-primary dlgfb-btn-sm" onClick={syncNow} disabled={syncing || !sync?.enabled}>
+            {syncing ? "Syncing" : "Sync now"}
+          </button>
+        </div>
+      </div>
+
+      {/* The CSV import is switched off, the list comes from the CRM.
+      <div className="dlgfb-panel dlgfb-mb-3">
         <h2 className="dlgfb-h6 dlgfb-mb-2">Import attendees from CSV</h2>
         <p className="dlgfb-small dlgfb-text-muted">
           Columns full_name, company_name, email. Importing replaces the whole list, the current attendees, feedback submissions and
@@ -126,7 +188,7 @@ export default function AdminAttendees() {
           <input ref={fileRef} type="file" accept=".csv" className="dlgfb-custom-file-input" id="csv-file" onChange={chooseCsv} disabled={importing} />
           <label className="dlgfb-custom-file-label" htmlFor="csv-file">{importing ? "Importing" : pendingFile ? pendingFile.name : "Choose CSV file"}</label>
         </div>
-      </div>
+      </div> */}
 
       {/* <div className="dlgfb-row">
         <div className="dlgfb-col-lg-8 dlgfb-mb-3">
@@ -166,7 +228,7 @@ export default function AdminAttendees() {
           value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search attendees" />
         <select className="dlgfb-custom-select" value={walkIn} onChange={(e) => setWalkIn(e.target.value)} aria-label="Filter by source">
           <option value="">All attendees</option>
-          <option value="false">From the list</option>
+          <option value="false">From the CRM</option>
           <option value="true">Self-registered</option>
         </select>
       </div>
@@ -188,7 +250,7 @@ export default function AdminAttendees() {
           <tbody>
             {list.length === 0 && (
               <tr className="dlgfb-empty-row"><td colSpan={8} className="dlgfb-text-center dlgfb-text-muted dlgfb-py-4">
-                {q || walkIn ? "No attendees match these filters." : "No attendees yet. Add one above or import a CSV."}
+                {q || walkIn ? "No attendees match these filters." : "No attendees yet. Use Sync now to fetch them from the CRM."}
               </td></tr>
             )}
             {pageSlice(list, page).map((a) => (
@@ -226,7 +288,7 @@ export default function AdminAttendees() {
           Delete <strong>{deleting.full_name}</strong>{deleting.company_name ? ` from ${deleting.company_name}` : ""}. They will no longer appear in the feedback form.
         </ConfirmDialog>
       )}
-      {pendingFile && (
+      {/* {pendingFile && (
         <ConfirmDialog
           title="Replace the attendee list"
           confirmLabel="Clear and import"
@@ -237,7 +299,7 @@ export default function AdminAttendees() {
           Importing <strong>{pendingFile.name}</strong> deletes every current attendee, feedback submission and lucky draw winner,
           then adds the attendees from the file. This cannot be undone.
         </ConfirmDialog>
-      )}
+      )} */}
     </>
   );
 }

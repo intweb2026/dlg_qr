@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useEvent, useEventPath } from "../../event/EventContext";
 import api, { errorMessage, eventKey, padId } from "../api";
@@ -6,7 +6,7 @@ import AttendeeSearch from "../components/AttendeeSearch";
 import Modal from "../components/Modal";
 import SpeakerReviews, { REVIEWS_KEY, reviewsToSubmit } from "../components/SpeakerReviews";
 import TestimonialAssist, { AutoGrowTextarea, PolishButton, RollBackButton, testimonialHelper, testimonialOriginal } from "../components/TestimonialAssist";
-import feedbackQuestions from "../config/feedbackQuestions";
+import feedbackQuestions, { SESSIONS_AFTER } from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
 import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryNumber, saveEntryNumber } from "../utils/device";
 
@@ -495,6 +495,18 @@ export default function FeedbackForm() {
 
   const showIntro = view === "form" || view === "loading";
 
+  // "How would you rate the sessions?", question SESSIONS_AFTER + 1 when the agenda has speaker sessions.
+  const hasSessions = speakerSessions.length > 0;
+  const sessionsQuestion = hasSessions && (
+    <SpeakerReviews
+      number={Math.min(SESSIONS_AFTER, questions.length) + 1}
+      sessions={speakerSessions}
+      reviews={answers[REVIEWS_KEY]}
+      maxPerDay={reviewsPerDay}
+      onChange={(next) => setAnswer(REVIEWS_KEY, next)}
+    />
+  );
+
   // The thank you screens, after a submit or for a device that already submitted.
   const submitted = view === "success" || view === "already";
 
@@ -596,7 +608,7 @@ export default function FeedbackForm() {
 
           {view === "form" && (
             <form className="dlgfb-form-panel" onSubmit={handleContinue} noValidate>
-              <FormProgress count={questions.length + (speakerSessions.length ? 1 : 0)} />
+              <FormProgress count={questions.length + (hasSessions ? 1 : 0)} />
 
               <section className={`dlgfb-form-name${errors.attendee || errors.company || errors.email ? " dlgfb-has-error" : ""}`} id="q-attendee">
                 <label htmlFor="attendee-search" className="dlgfb-form-name-label">
@@ -617,7 +629,9 @@ export default function FeedbackForm() {
                 />
               </section>
 
-              {questions.map((q) => {
+              {questions.map((q, index) => {
+                // The speaker sessions take number SESSIONS_AFTER + 1, the questions after them move down one.
+                const number = index + 1 + (hasSessions && index >= SESSIONS_AFTER ? 1 : 0);
                 const invalid = !!errors[q.key];
                 const labelId = `${q.key}-label`;
                 const labelled = q.type === "select" || q.type === "textarea";
@@ -625,9 +639,11 @@ export default function FeedbackForm() {
                 const assistHelper = q.aiSuggestion ? testimonialHelper(q, answers, setAnswers) : null;
                 const TextBox = assistHelper ? AutoGrowTextarea : "textarea";
                 return (
-                  <section className={`dlgfb-form-q${invalid ? " dlgfb-has-error" : ""}`} key={q.key} id={`q-${q.key}`}>
+                  <Fragment key={q.key}>
+                  {hasSessions && index === SESSIONS_AFTER && sessionsQuestion}
+                  <section className={`dlgfb-form-q${invalid ? " dlgfb-has-error" : ""}`} id={`q-${q.key}`}>
                     <LabelTag className="dlgfb-form-q-head" id={labelId} htmlFor={labelled ? q.key : undefined}>
-                      <span className="dlgfb-form-q-num">{String(questions.indexOf(q) + 1).padStart(2, "0")}</span>
+                      <span className="dlgfb-form-q-num">{String(number).padStart(2, "0")}</span>
                       <span className="dlgfb-form-q-text">{q.label}</span>
                     </LabelTag>
 
@@ -780,18 +796,12 @@ export default function FeedbackForm() {
                       )}
                     </div>
                   </section>
+                  </Fragment>
                 );
               })}
 
-              {speakerSessions.length > 0 && (
-                <SpeakerReviews
-                  number={questions.length + 1}
-                  sessions={speakerSessions}
-                  reviews={answers[REVIEWS_KEY]}
-                  maxPerDay={reviewsPerDay}
-                  onChange={(next) => setAnswer(REVIEWS_KEY, next)}
-                />
-              )}
+              {/* Fewer questions than SESSIONS_AFTER, the sessions go last. */}
+              {hasSessions && questions.length <= SESSIONS_AFTER && sessionsQuestion}
 
               <button type="submit" className="dlgfb-form-submit">
                 Submit Feedback

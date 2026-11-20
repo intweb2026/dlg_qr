@@ -59,6 +59,7 @@ export default function AdminLayout() {
           <div className={`dlgfb-admin-menu${open ? " dlgfb-show" : ""}`} id="admin-menu">
             <nav className="dlgfb-admin-links" aria-label="Admin">
               <NavLink className={link} to={eventPath("/raffle-draw")} onClick={openLuckyDraw}>Raffle draw</NavLink>
+              <NavLink className={link} to={eventPath("/admin/event-details")}>Event Details</NavLink>
               <NavLink className={link} to={eventPath("/admin/feedback-submission")}>Submissions</NavLink>
               <NavLink className={link} to={eventPath("/admin/attendees")}>Attendees</NavLink>
             </nav>

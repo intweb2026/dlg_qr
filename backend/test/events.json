@@ -13,6 +13,10 @@
   },
   "testb": {
     "database": "feedback_testb_test",
-    "name": "Test event b"
+    "name": "Test event b",
+    "links": {
+      "agenda": "https://example.com/agenda",
+      "linkedin": "not a url"
+    }
   }
 }

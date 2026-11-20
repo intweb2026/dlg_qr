@@ -9,18 +9,40 @@ Every event is one entry in `events.json`, keyed by its code. The code is the fi
 - The key is the event code, lower case letters, digits and dashes.
 - `database` is the event's own MySQL database. Every event needs a different one. Its login is in `databases.json`, see below.
 - `active` set to `false` hides the event without deleting anything.
-- `media.favicon` is the browser tab icon and `theme.secondary` the accent colour, like `#278dff`. Both are optional.
-- `speakerReviews` is optional, `{ "maxPerDay": 3, "titleMaxWords": 7 }` by default. `maxPerDay` is how many speaker sessions an attendee can review on each day of the agenda (1 to 50), checked by the form and again on submit. `titleMaxWords` is the most words in the AI shortened session titles (3 to 20). The agenda is read from `links.agendaApi`, or `<links.website>/api/agenda` when that is not set.
-- Everything else, name, media, links, Wi-Fi and theme, is sent to the site by `GET /api/events/<code>/`. The database name is never sent. Do not put passwords or private keys in an event entry, the site shows its contents.
+- `media.successIcon` is the tick shown after feedback is sent.
+- `speakerReviews` is optional, `{ "maxPerDay": 3, "titleMaxWords": 7 }` by default. `maxPerDay` is how many speaker sessions an attendee can review on each day of the agenda (1 to 50), checked by the form and again on submit. `titleMaxWords` is the most words in the AI shortened session titles (3 to 20). The agenda is read from `links.agendaApi`, or `<website link>/api/agenda` when that is not set.
+- `event_code` is the event's code in the iQ Hub CRM, such as `"AIU - AD"`. The registered attendee list is copied from the CRM's registered delegates API for this code, using `CRM_DATA_API_KEY` from `.env`. See "Attendees from the CRM" below.
+- The name, tagline, colour, media, links and Wi-Fi are set on the admin Event Details page, see below. They can still be written here for a new event, and are then copied to the page the first time.
+- The entry, with the Event Details in place, is sent to the site by `GET /api/events/<code>/`. The database name is never sent. Do not put passwords or private keys in an event entry, the site shows its contents.
 
 ```json
 {
-  "dle26": { "database": "feedback_db", "name": "Direct Lithium Extraction 2026", "media": { ... } },
-  "afs26": { "database": "feedback_afs26", "name": "...", "media": { ... } }
+  "dle26": { "database": "feedback_db", "active": true, "media": { "successIcon": "/images/common/checked.png" } },
+  "afs26": { "database": "feedback_afs26", "media": { "successIcon": "/images/common/checked.png" } }
 }
 ```
 
 Copy the `dle26` entry as a starting point.
+
+## Event Details in the admin panel
+
+The name, tagline, theme colour (`theme.secondary`), media (`logo`, `favicon`, `heroVideoMp4`, `heroVideoWebm`, `heroPoster`, `background`, `venueLogo`, `wifiQr`), the website link (`links.website`) and Wi-Fi (`network`, `password`) are edited on the admin **Event Details** page, `/<code>/admin/event-details`. They are kept in the `event_details` table of the event's own database. The first time an event is read, or on `npm run migrate`, that row is copied from the event's entry in `events.json`. After that the admin page decides, and changing those keys in `events.json` has no effect. Keys the page does not manage, such as `media.successIcon` and `links.agendaApi`, still come from `events.json`.
+
+The same page manages the home page menu, the `menu_items` table. Each item has a label, an icon, a sort no. (lowest first), a visible switch and what it opens, a page of the event such as `/feedback-form` or a full URL. New events start with the six standard items. The agenda and LinkedIn items take their address from `links.agenda` and `links.linkedin` in `events.json` and are left out when those are not set. The website item follows the Website link until its address is changed. Databases made before the agenda and LinkedIn links left the page are moved over by `npm run migrate`, which writes each address into its menu item.
+
+Images and videos uploaded on the page are saved in `UPLOADS_DIR`, `backend/uploads` by default, one folder per event, and served at `/api/uploads/<code>/<file>`. Images can be up to 10 MB and videos up to 100 MB. On a host that wipes its disk on redeploy, point `UPLOADS_DIR` at a persistent volume.
+
+## Attendees from the CRM
+
+The attendee list is no longer imported from a CSV; it comes from the CRM. The delegates are copied into the event's `attendees` table, because the feedback form, the submissions and the lucky draw all point at an attendee row.
+
+- The CRM publishes the list once, so it is fetched once. The first visitor to the site starts the sync, and the Registered Attendees page and the feedback form wait for it. The time and count are saved in `form_settings` (`crm_synced_at`, `crm_synced_count`), so later visits, restarts and redeploys never call the CRM again.
+- If the CRM fails, or has no delegates for the code yet, nothing is saved and a visit at least a minute later tries again.
+- To fetch the list again, an admin presses **Sync now** on the admin **Attendees** page.
+- Run `npm run migrate` after deploying this change, it adds the two `form_settings` columns.
+- A delegate is matched by email, or by name and company when the CRM has no email. A matched attendee takes the CRM's name and company.
+- An attendee the CRM no longer lists is removed, unless they have submitted feedback. Walk-ins added on the feedback form are never removed.
+- If the CRM fails, or returns an empty list, the saved list is left as it is.
 
 ## Database logins
 
@@ -52,8 +74,8 @@ Use `npm run dev` to restart on file changes. Restart the API after changing `ev
 ## Add an event
 
 1. Add an entry to `events.json` with a new code as its key and a new `database`, and add that database's login to `databases.json`.
-2. Put its media in `public/images/<code>/` and `public/videos/<code>/` in the site, and point `media` at them.
-3. Run `npm run migrate -- --event <code>`, then restart the API.
+2. Run `npm run migrate -- --event <code>`, then restart the API.
+3. Sign in at `/<code>/admin/login` and fill in **Event Details**, uploading the logo, videos and images there.
 4. Open `/<code>` on the site.
 
 ## Commands

@@ -2,8 +2,11 @@ const express = require("express");
 const multer = require("multer");
 
 const { requireAccessToken, requireAdmin } = require("./auth");
+const os = require("os");
+
 const admin = require("./views/admin");
 const auth = require("./views/auth");
+const eventDetails = require("./views/eventDetails");
 const luckyDraw = require("./views/luckyDraw");
 const pub = require("./views/public");
 const { upcomingConferences } = require("./views/upcomingConferences");
@@ -11,7 +14,11 @@ const { speakerSessions } = require("./views/speakerSessions");
 const { suggestTestimonial } = require("./views/testimonial");
 
 const router = express.Router();
+// CSV attendee import, its route is switched off below.
+// eslint-disable-next-line no-unused-vars
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 5 } });
+// Event Details media, written to a temporary file since videos can be large, then moved into UPLOADS_DIR.
+const mediaUpload = multer({ dest: os.tmpdir(), limits: { fileSize: eventDetails.MAX_UPLOAD_BYTES, files: 1 } });
 
 /** Registers handlers by method for one path, other methods get a 405 as they did from the Django API. */
 function route(path, handlers) {
@@ -49,8 +56,15 @@ route("/admin/submissions/:pk/suspend/", { patch: [requireAdmin, admin.submissio
 route("/admin/interested-attendees/", { get: [requireAccessToken, admin.interestedAttendees] });
 route("/admin/feedback-responses/", { get: [requireAccessToken, admin.feedbackResponses] });
 route("/admin/attendees/", { get: [requireAdmin, admin.attendeeList], post: [requireAdmin, admin.attendeeCreate] });
-route("/admin/attendees/import/", { post: [requireAdmin, upload.any(), admin.attendeeImport] });
+// The CSV import is switched off, the attendee list comes from the CRM.
+// route("/admin/attendees/import/", { post: [requireAdmin, upload.any(), admin.attendeeImport] });
+route("/admin/attendees/sync/", { get: [requireAdmin, admin.attendeeSyncStatus], post: [requireAdmin, admin.attendeeSync] });
 route("/admin/attendees/:pk/", { patch: [requireAdmin, admin.attendeePatch], delete: [requireAdmin, admin.attendeeDelete] });
+// Event Details, the event's content and the home page menu
+route("/admin/event-details/", { get: [requireAdmin, eventDetails.getDetails], patch: [requireAdmin, eventDetails.patchDetails] });
+route("/admin/menu-items/", { get: [requireAdmin, eventDetails.menuList], post: [requireAdmin, eventDetails.menuCreate] });
+route("/admin/menu-items/:pk/", { patch: [requireAdmin, eventDetails.menuPatch], delete: [requireAdmin, eventDetails.menuDelete] });
+route("/admin/uploads/", { post: [requireAdmin, mediaUpload.single("file"), eventDetails.upload] });
 // Lucky draw
 route("/lucky-draw/pool/", { get: luckyDraw.pool });
 route("/lucky-draw/spin/", { post: luckyDraw.spin });

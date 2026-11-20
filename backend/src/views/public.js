@@ -1,4 +1,6 @@
+const { syncOnFirstVisit } = require("../crmDelegates");
 const { query, transaction } = require("../db");
+const { menuItems } = require("../eventDetails");
 const { publicConfig, speakerReviewSettings } = require("../events");
 const { ALIAS_COMPANY, ALIAS_NAME, attendeeLookupJson, closedJson, getAttendee, isActive, loadSettings } = require("../models");
 const { collapseSpaces, deviceFingerprint, normalizeName } = require("../utils");
@@ -6,9 +8,13 @@ const v = require("../validation");
 
 const ALREADY_SUBMITTED = { detail: "Feedback has already been submitted for this attendee.", code: "already_submitted" };
 
-/** The event's settings for the site, its name, media, links and Wi-Fi. */
-function eventConfig(req, res) {
-  res.json(publicConfig(req.event));
+/** The event's settings for the site, its name, media, links, Wi-Fi and the visible home page menu. */
+async function eventConfig(req, res) {
+  // Every page loads the config, so the first visitor starts the one CRM sync. It runs in the background, the
+  // attendee lists below wait for it.
+  syncOnFirstVisit(req.event).catch((err) => console.error(`${req.event.code}: CRM delegates sync failed, ${err.message}`));
+  const menu = (await menuItems({ visibleOnly: true })).map(({ is_visible, ...item }) => item);
+  res.json({ ...publicConfig(req.event), menu });
 }
 
 async function formStatus(req, res) {
@@ -20,6 +26,7 @@ async function formStatus(req, res) {
 async function attendeeList(req, res) {
   const cfg = await loadSettings();
   if (!isActive(cfg)) return res.status(403).json(closedJson(cfg));
+  await syncOnFirstVisit(req.event);
   // Hide people who already submitted.
   const rows = await query(
     `SELECT a.attendee_id, a.full_name, a.company_name, a.email
@@ -30,10 +37,11 @@ async function attendeeList(req, res) {
 }
 
 /**
- * The Registered Attendees page. Name and company only, walk-ins added on the feedback form are left out.
+ * The Registered Attendees page, the delegates copied from the CRM. Name and company only, walk-ins added on the feedback form are left out.
  * Attendees who submitted are shown by the alias they confirmed, the others by the name on the list.
  */
 async function registeredAttendees(req, res) {
+  await syncOnFirstVisit(req.event);
   const rows = await query(
     `SELECT IF(s.id IS NULL, a.full_name, ${ALIAS_NAME}) AS name, IF(s.id IS NULL, a.company_name, ${ALIAS_COMPANY}) AS company
      FROM attendees a LEFT JOIN feedback_submissions s ON s.attendee_id = a.attendee_id

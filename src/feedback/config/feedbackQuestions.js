@@ -115,7 +115,8 @@ export const ratingScale = [
 ];
 
 // Labels for keys from earlier versions of the form, so older submissions still read well in the admin.
-// speaker_reviews is not a question in the list, it is saved by components/SpeakerReviews.js after the questions.
+// speaker_reviews is not a question in the list, it is saved by components/SpeakerReviews.js, shown after question
+// SESSIONS_AFTER.
 const legacyLabels = {
   speaker_reviews: "Speaker session reviews",
   conference_thoughts_original: "Original words, before Polish",
@@ -143,9 +144,14 @@ const EXTRA_SUFFIXES = ["_original", "_version", "_consent"];
  * by name, so the order they come back in is not the order of the questions. Each question's extra answers, such as
  * conference_thoughts_original, follow it, and keys from earlier versions of the form go last in their saved order.
  */
+// The speaker session reviews come after this many questions, so they are question 6 and the later ones move down
+// one. Keep in step with backend/src/feedbackQuestions.js.
+export const SESSIONS_AFTER = 5;
+
 export function orderedAnswers(data) {
   const entries = Object.entries(data || {});
   const rank = (key) => {
+    if (key === "speaker_reviews") return (SESSIONS_AFTER - 1) * 10 + 9;
     const index = feedbackQuestions.findIndex((q) => q.key === key);
     if (index !== -1) return index * 10;
     for (const [i, suffix] of EXTRA_SUFFIXES.entries()) {

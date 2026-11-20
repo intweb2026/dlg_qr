@@ -26,6 +26,13 @@ module.exports = {
   sendFeedbackSubmissionToCrm: (process.env.SEND_FEEDBACK_SUBMISSION_TO_CRM || "false").toLowerCase() === "true",
   crmWebhookUrl: process.env.CRM_WEBHOOK_URL || "",
   crmApiKey: process.env.CRM_API_KEY || "",
+  // The CRM's registered delegates API, read with the X-DATA-API-KEY header. Each event names its CRM event code as
+  // "event_code" in events.json. Without a key the attendee list is left as it is in the database.
+  crmDataApiUrl: process.env.CRM_DATA_API_URL || "https://www.app.iq-hub.com/api/data/registered_delegates/",
+  crmDataApiKey: process.env.CRM_DATA_API_KEY || "",
   // Logins for every event database, keyed by database name. Each event names its database in backend/events.json.
   databasesFile: process.env.DATABASES_FILE || path.join(__dirname, "..", "databases.json"),
+  // Images and videos uploaded on the admin Event Details page, one folder per event, served at /api/uploads/.
+  // Keep it on a disk that survives a redeploy.
+  uploadsDir: path.resolve(process.env.UPLOADS_DIR || path.join(__dirname, "..", "uploads")),
 };

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { ratingScale } from "../config/feedbackQuestions";
 
-// The speaker session reviews after the questions, an accordion with one item per "speaker" entry of the event's agenda, see
-// backend/src/views/speakerSessions.js. Every review is optional. Reviews are kept as { [session id]: { rating, comment } }.
+// The speaker session reviews, question 6 of the form. One accordion per day of the agenda, closed to keep the form
+// short, and inside it one accordion item per "speaker" entry of that day, see backend/src/views/speakerSessions.js.
+// Every review is optional. Reviews are kept as { [session id]: { rating, comment } }.
 
 export const REVIEWS_KEY = "speaker_reviews";
 
@@ -77,6 +78,12 @@ export function reviewsToSubmit(sessions, reviews) {
     });
 }
 
+const CARET = (
+  <svg className="dlgfb-session-caret" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 // eslint-disable-next-line no-unused-vars -- kept for when the star rating is switched back on
 const STAR = (
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -121,9 +128,7 @@ function SessionItem({ session, review, open, locked, maxPerDay, onToggle, onCha
               </span>
             )}
           </span>
-          <svg className="dlgfb-session-caret" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          {CARET}
         </button>
       </h3>
 
@@ -182,7 +187,8 @@ function SessionItem({ session, review, open, locked, maxPerDay, onToggle, onCha
 }
 
 export default function SpeakerReviews({ number, sessions, reviews, maxPerDay = DEFAULT_MAX_PER_DAY, onChange }) {
-  // One session open at a time, tapping its header again closes it.
+  // One day and one session open at a time, tapping a header again closes it. Every day starts closed.
+  const [openDay, setOpenDay] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [query, setQuery] = useState("");
   const terms = normalize(query).split(/\s+/).filter(Boolean);
@@ -236,29 +242,72 @@ export default function SpeakerReviews({ number, sessions, reviews, maxPerDay = 
           </p>
         )}
 
-        {days.map((d) => {
+        {days.map((d, index) => {
           // Once a day has its most reviews, its other sessions cannot be rated. Counted over the whole day, not
           // only the sessions the search shows.
-          const full = d.sessions.filter((s) => hasReview(reviews?.[s.id])).length >= maxPerDay;
+          const reviewed = d.sessions.filter((s) => hasReview(reviews?.[s.id])).length;
+          const full = reviewed >= maxPerDay;
           const shown = terms.length ? d.sessions.filter((s) => matches(s, terms)) : d.sessions;
           if (!shown.length) return null;
+          const list = (
+            <div className="dlgfb-sessions-list">
+              {shown.map((s) => (
+                <SessionItem
+                  key={s.id}
+                  session={s}
+                  review={reviews?.[s.id]}
+                  open={openId === s.id}
+                  locked={full && !hasReview(reviews?.[s.id])}
+                  maxPerDay={maxPerDay}
+                  onToggle={() => setOpenId((id) => (id === s.id ? null : s.id))}
+                  onChange={(r) => setReview(s.id, r)}
+                />
+              ))}
+            </div>
+          );
+          // A one day agenda needs no day accordion.
+          if (days.length === 1) return <div key={d.day || "day"}>{list}</div>;
+
+          const dayKey = d.day || `day-${index}`;
+          // A search opens every day with a match, so nothing found is hidden.
+          const open = terms.length > 0 || openDay === dayKey;
+          const panelId = `sessions-day-${index}-panel`;
+          const headId = `sessions-day-${index}-head`;
           return (
-            <div className="dlgfb-sessions-day" key={d.day || "day"}>
-              {d.day && days.length > 1 && <h3 className="dlgfb-sessions-day-title">{d.day}</h3>}
-              <div className="dlgfb-sessions-list">
-                {shown.map((s) => (
-                  <SessionItem
-                    key={s.id}
-                    session={s}
-                    review={reviews?.[s.id]}
-                    open={openId === s.id}
-                    locked={full && !hasReview(reviews?.[s.id])}
-                    maxPerDay={maxPerDay}
-                    onToggle={() => setOpenId((id) => (id === s.id ? null : s.id))}
-                    onChange={(r) => setReview(s.id, r)}
-                  />
-                ))}
-              </div>
+            <div className={`dlgfb-sessions-day${open ? " dlgfb-is-open" : ""}${reviewed ? " dlgfb-is-reviewed" : ""}`} key={dayKey}>
+              <h3 className="dlgfb-session-heading">
+                <button
+                  type="button"
+                  id={headId}
+                  className="dlgfb-session-toggle dlgfb-sessions-day-toggle"
+                  aria-expanded={open}
+                  aria-controls={panelId}
+                  onClick={() => setOpenDay((k) => (k === dayKey ? null : dayKey))}
+                >
+                  <span className="dlgfb-session-summary">
+                    <span className="dlgfb-sessions-day-title">{d.day || `Day ${index + 1}`}</span>
+                    <span className="dlgfb-sessions-day-meta">
+                      {terms.length ? `${shown.length} of ${d.sessions.length} sessions match` : `${d.sessions.length} sessions`}
+                      {reviewed > 0 && (
+                        <>
+                          <span className="dlgfb-session-sep" aria-hidden="true">
+                            |
+                          </span>
+                          <span className="dlgfb-sessions-day-count">
+                            {reviewed} of {maxPerDay} reviewed
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  </span>
+                  {CARET}
+                </button>
+              </h3>
+              {open && (
+                <div className="dlgfb-sessions-day-body" id={panelId} role="region" aria-labelledby={headId}>
+                  {list}
+                </div>
+              )}
             </div>
           );
         })}

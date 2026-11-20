@@ -4,6 +4,8 @@ const path = require("path");
 // Every event is one entry in backend/events.json, keyed by the event code, { "dle26": { ... }, "afs26": { ... } }.
 // The code is the first part of every address, /dle26/feedback-form on the site and /api/events/dle26/... on the API.
 // "database" is the event's own MySQL database. Everything else in the entry is sent to the site as the event config.
+// The name, tagline, colour, media, links and Wi-Fi only fill the event's Event Details the first time, after that the
+// admin page's values are used, see eventDetails.js.
 const EVENTS_FILE = process.env.EVENTS_FILE || path.join(__dirname, "..", "events.json");
 const CODE = /^[a-z0-9][a-z0-9-]{1,31}$/;
 const DATABASE = /^[A-Za-z0-9_]{1,64}$/;
@@ -50,6 +52,9 @@ function loadEvents(file = EVENTS_FILE) {
         fail('"theme.secondary" must be a colour like #278dff');
       }
     }
+    if (event.event_code !== undefined && (typeof event.event_code !== "string" || !event.event_code.trim())) {
+      fail('"event_code" must be the event code in the CRM, such as "AIU - AD"');
+    }
     if (event.speakerReviews !== undefined) {
       const sr = event.speakerReviews;
       if (!sr || typeof sr !== "object" || Array.isArray(sr)) fail('"speakerReviews" must be an object');
@@ -79,9 +84,9 @@ function allEvents() {
   return [...events.values()];
 }
 
-/** What the site receives, the entry with its code and without the database name. */
+/** What the site receives, the entry with its code and without the database name or the CRM event code. */
 function publicConfig(event) {
-  const { database, ...rest } = event;
+  const { database, event_code, ...rest } = event;
   return rest;
 }
 

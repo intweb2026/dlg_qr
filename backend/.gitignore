@@ -5,3 +5,5 @@ node_modules/
 # Left over from the old Django backend, safe to delete.
 venv/
 __pycache__/
+# Images and videos uploaded on the admin Event Details page.
+uploads/

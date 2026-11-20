@@ -6,10 +6,11 @@ const QUESTIONS = [
   ["heard_about", "How did you first hear about this conference?"],
   ["suggested_companies", "Which companies or industry groups would you like to see at our next conference?"],
   ["specialist_topics", "Are there any specialist topics you feel deserve a dedicated conference?"],
+  // Question 6 on the form, between the fifth and sixth questions.
+  ["speaker_reviews", "Speaker session reviews"],
   ["associations", "Which industry associations are you a member of?"],
   ["publications", "Which industry publications or newsletters do you regularly read?"],
   ["upcoming_interest", "Which of our upcoming conferences interest you?"],
-  ["speaker_reviews", "Speaker session reviews"],
 ];
 
 // Keys from earlier versions of the form.

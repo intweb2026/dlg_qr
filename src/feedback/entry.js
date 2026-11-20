@@ -10,6 +10,7 @@ export { default as AdminLogin } from "./pages/AdminLogin";
 export { default as AdminSubmissions } from "./pages/AdminSubmissions";
 export { LuckyDraw };
 export { default as AdminAttendees } from "./pages/AdminAttendees";
+export { default as AdminEventDetails } from "./pages/AdminEventDetails";
 export { default as NotFound } from "./pages/NotFound";
 
 export function AdminArea() {

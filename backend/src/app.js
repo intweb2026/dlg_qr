@@ -4,16 +4,41 @@ const express = require("express");
 const { authenticate } = require("./auth");
 const config = require("./config");
 const { withDatabase } = require("./db");
+const { withEventDetails } = require("./eventDetails");
 const { getEvent } = require("./events");
 const routes = require("./routes");
 const { ValidationError } = require("./validation");
 
-/** Finds the event from the code in the address, and runs the rest of the request against its database. */
+/**
+ * Finds the event from the code in the address, and runs the rest of the request against its database.
+ * req.event has the name, media, links and Wi-Fi saved on the admin Event Details page in place of events.json's.
+ */
 function resolveEvent(req, res, next) {
   const event = getEvent(req.params.eventCode);
   if (!event) return res.status(404).json({ detail: "Event not found." });
-  req.event = event;
-  return withDatabase(event.database, next);
+  return withDatabase(event.database, async () => {
+    try {
+      req.event = await withEventDetails(event);
+    } catch (err) {
+      return next(err);
+    }
+    return next();
+  });
+}
+
+/** Files uploaded on the Event Details page. SVGs could hold scripts, so nothing on these responses may run. */
+function serveUploads() {
+  return express.static(config.uploadsDir, {
+    index: false,
+    dotfiles: "ignore",
+    fallthrough: true,
+    maxAge: "7d",
+    setHeaders(res) {
+      res.set("X-Content-Type-Options", "nosniff");
+      res.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+      res.set("Cross-Origin-Resource-Policy", "cross-origin");
+    },
+  });
 }
 
 /** Rejects requests whose Host header is not in ALLOWED_HOSTS, as Django did. "*" allows any host. */
@@ -47,6 +72,7 @@ function createApp() {
   app.use(allowedHosts);
   app.use(cors({ origin: config.corsAllowedOrigins, credentials: true }));
   app.use(express.json({ limit: "2.5mb" }));
+  app.use("/api/uploads", serveUploads());
   app.use("/api/events/:eventCode", resolveEvent, authenticate, routes);
   app.use((req, res) => res.status(404).json({ detail: "Not found." }));
   app.use(errorHandler);

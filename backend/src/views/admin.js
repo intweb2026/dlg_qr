@@ -1,6 +1,7 @@
 const { parse } = require("csv-parse/sync");
 
 const config = require("../config");
+const crm = require("../crmDelegates");
 const { query } = require("../db");
 const { feedbackList } = require("../feedbackQuestions");
 const m = require("../models");
@@ -234,7 +235,25 @@ async function saveAttendee(write) {
   }
 }
 
-/** CSV upload. Header row: full_name, company_name, email (email optional). */
+/** The CRM sync's state, shown on the admin Attendees page. */
+async function attendeeSyncStatus(req, res) {
+  res.json(await crm.syncStatus(req.event));
+}
+
+/** Fetches the registered delegates from the CRM now, the admin page's Sync now button. */
+async function attendeeSync(req, res) {
+  try {
+    const result = await crm.syncDelegates(req.event);
+    return res.json({ ...(await crm.syncStatus(req.event)), result });
+  } catch (err) {
+    if (!(err instanceof crm.CrmSyncError)) throw err;
+    return res.status(502).json({ ...(await crm.syncStatus(req.event)), detail: err.message });
+  }
+}
+
+/**
+ * CSV upload. Switched off, the list now comes from the CRM, see crmDelegates.js. Its route is commented out in
+ * routes.js. Header row: full_name, company_name, email (email optional). */
 async function attendeeImport(req, res) {
   const upload = (req.files || []).find((f) => f.fieldname === "file");
   if (!upload) return res.status(400).json({ detail: "Choose a CSV file to import." });
@@ -319,4 +338,6 @@ module.exports = {
   attendeePatch,
   attendeeDelete,
   attendeeImport,
+  attendeeSync,
+  attendeeSyncStatus,
 };
