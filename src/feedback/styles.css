@@ -3990,6 +3990,282 @@ body.dlgfb-body-active {
   background-color: var(--ink);
 }
 
+/* Standalone /raffle-draw welcome screen, shown before the draw so the Enter click can switch to full screen. */
+.dlgfb-app .dlgfb-draw-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  overflow-y: auto;
+  /* Same font and colours as the draw stage, so the welcome screen matches the current theme. */
+  font-family: "Montserrat", "Segoe UI", Arial, sans-serif;
+  --draw-title: var(--theme-secondary);
+  --draw-button: var(--theme-secondary);
+  --draw-button-hover: var(--theme-secondary-dark);
+}
+
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-white {
+  background:
+    radial-gradient(120% 55% at 50% 112%, rgba(255, 255, 255, 0.95), transparent 62%),
+    radial-gradient(120% 55% at 50% -12%, rgba(255, 255, 255, 0.95), transparent 62%),
+    #e6e6e6;
+  color: #181e35;
+}
+
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-grey {
+  background: radial-gradient(ellipse at 50% 0%, #e3e6ea 0%, #c4c9d0 70%);
+  color: #1f2226;
+}
+
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-black {
+  background: radial-gradient(ellipse at 50% 32%, #1f1f23 0%, #0a0a0b 60%, #000 100%);
+  color: #fff;
+}
+
+/* Theme button in the top right corner, where the draw keeps its own top bar buttons. */
+.dlgfb-app .dlgfb-draw-intro-actions {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dlgfb-app .dlgfb-draw-intro-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  max-width: 44rem;
+  width: 100%;
+}
+
+.dlgfb-app .dlgfb-draw-intro-logo {
+  display: block;
+  max-width: min(22rem, 72vw);
+  max-height: 26vh;
+  object-fit: contain;
+}
+
+/* The event logo is white, so on the light White and Grey themes it sits on a dark panel in the event colour,
+   with a soft glow and a slow shine. The Black theme shows the logo as it is. */
+.dlgfb-app .dlgfb-draw-intro-logo-plate {
+  position: relative;
+  border-radius: 20px;
+}
+
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-white .dlgfb-draw-intro-logo-plate,
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-grey .dlgfb-draw-intro-logo-plate {
+  padding: clamp(1.25rem, 3vw, 2rem) clamp(1.75rem, 4vw, 3rem);
+  overflow: hidden;
+  background:
+    radial-gradient(120% 140% at 50% 0%, rgba(255, 255, 255, 0.14), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-secondary) 45%, #0b1020), color-mix(in srgb, var(--theme-secondary) 25%, #0b1020));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.25) inset,
+    0 18px 40px rgba(var(--theme-secondary-rgb), 0.35),
+    0 6px 14px rgba(0, 0, 0, 0.18);
+}
+
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-white .dlgfb-draw-intro-logo-plate::after,
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-grey .dlgfb-draw-intro-logo-plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.22) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: dlgfb-intro-shine 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes dlgfb-intro-shine {
+  0%, 55% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dlgfb-app .dlgfb-draw-intro-logo-plate::after {
+    animation: none;
+    display: none;
+  }
+}
+
+.dlgfb-app .dlgfb-draw-intro-title {
+  margin: 0;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: clamp(1.8rem, 5vw, 3.6rem);
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--draw-title);
+  /* Highlighted, a gradient in the event colour running across the letters, a soft glow and an accent line below. */
+  position: relative;
+  padding-bottom: 0.9rem;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--theme-secondary) 70%, #000),
+    var(--theme-secondary) 50%,
+    color-mix(in srgb, var(--theme-secondary) 70%, #000));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 14px rgba(var(--theme-secondary-rgb), 0.35));
+}
+
+/* White and Grey, the event colour alone can be too light on a light stage, so it is mixed with deep navy for
+   strong contrast with any event colour. A white edge underneath embosses the letters and a shimmer runs across. */
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-white .dlgfb-draw-intro-title,
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-grey .dlgfb-draw-intro-title {
+  background-image: linear-gradient(100deg,
+    color-mix(in srgb, var(--theme-secondary) 35%, #0b1020) 0%,
+    color-mix(in srgb, var(--theme-secondary) 35%, #0b1020) 38%,
+    color-mix(in srgb, var(--theme-secondary) 60%, #0b1020) 50%,
+    color-mix(in srgb, var(--theme-secondary) 35%, #0b1020) 62%,
+    color-mix(in srgb, var(--theme-secondary) 35%, #0b1020) 100%);
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  animation: dlgfb-intro-title-shimmer 5s ease-in-out infinite;
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9))
+    drop-shadow(0 8px 18px rgba(11, 16, 32, 0.22));
+}
+
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-white .dlgfb-draw-intro-title::after,
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-grey .dlgfb-draw-intro-title::after {
+  height: 5px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--theme-secondary) 60%, #0b1020), transparent);
+}
+
+@keyframes dlgfb-intro-title-shimmer {
+  0%, 40% { background-position: 100% 0; }
+  100% { background-position: 0% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dlgfb-app .dlgfb-draw-intro-title {
+    animation: none;
+  }
+}
+
+/* Black, a very dark event colour (navy, dark green) would vanish on black, so the letters are kept light enough.
+   The first gradient is the fallback for older browsers, mixed with white. Browsers that support relative colours
+   use the second, which keeps the event colour exactly when it is already bright and only lifts a dark one. */
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-black .dlgfb-draw-intro-title {
+  background-image: linear-gradient(90deg,
+    color-mix(in srgb, var(--theme-secondary) 70%, #fff),
+    color-mix(in srgb, var(--theme-secondary) 40%, #fff) 50%,
+    color-mix(in srgb, var(--theme-secondary) 70%, #fff));
+  background-image: linear-gradient(90deg,
+    oklch(from var(--theme-secondary) max(l, 0.68) c h),
+    oklch(from var(--theme-secondary) max(l, 0.85) c h) 50%,
+    oklch(from var(--theme-secondary) max(l, 0.68) c h));
+  filter: drop-shadow(0 0 18px rgba(var(--theme-secondary-rgb), 0.55)) drop-shadow(0 0 1px rgba(255, 255, 255, 0.35));
+}
+
+/* Black, a dark event colour button would blend into the black stage, a light ring keeps its edge visible. */
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-black .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn,
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-black .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn:is(:focus, :focus-visible, :active) {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45), 0 6px 18px rgba(var(--theme-secondary-rgb), 0.35);
+}
+
+.dlgfb-app .dlgfb-draw-intro-title::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: min(9rem, 40%);
+  height: 4px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, var(--theme-secondary), transparent);
+}
+
+.dlgfb-app .dlgfb-draw-intro-btn {
+  padding: 0.9rem 2.5rem;
+  font-family: inherit;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  color: #fff;
+  background: var(--draw-button);
+  border-color: var(--draw-button);
+  box-shadow: 0 6px 18px rgba(var(--theme-secondary-rgb), 0.35);
+}
+
+.dlgfb-app .dlgfb-draw-intro-btn:hover,
+.dlgfb-app .dlgfb-draw-intro-btn:disabled {
+  color: #fff;
+  background: var(--draw-button-hover);
+  border-color: var(--draw-button-hover);
+}
+
+/* No blue focus ring. Strong enough to beat the shared primary button focus and pressed rules in base.css. */
+/* The button has focus from page load, so focus keeps the normal colour, only hover and press go darker. */
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn:is(:focus, :focus-visible, :active) {
+  outline: none;
+  color: #fff;
+  background: var(--draw-button);
+  border-color: var(--draw-button);
+  box-shadow: 0 6px 18px rgba(var(--theme-secondary-rgb), 0.35);
+}
+
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn:is(:hover, :active) {
+  background: var(--draw-button-hover);
+  border-color: var(--draw-button-hover);
+}
+
+/* White and Grey, the button matches the event name, the event colour mixed with deep navy so it stands out on a
+   light stage, the same shimmer running across it, a white top edge and a lifted shadow.
+   Written with the theme class so it beats the focus and press rules above. */
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-white .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn,
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-grey .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn,
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-white .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn:is(:focus, :focus-visible, :disabled),
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-grey .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn:is(:focus, :focus-visible, :disabled) {
+  color: #fff;
+  border-color: color-mix(in srgb, var(--theme-secondary) 35%, #0b1020);
+  background-image: linear-gradient(100deg,
+    color-mix(in srgb, var(--theme-secondary) 35%, #0b1020) 0%,
+    color-mix(in srgb, var(--theme-secondary) 35%, #0b1020) 38%,
+    color-mix(in srgb, var(--theme-secondary) 60%, #0b1020) 50%,
+    color-mix(in srgb, var(--theme-secondary) 35%, #0b1020) 62%,
+    color-mix(in srgb, var(--theme-secondary) 35%, #0b1020) 100%);
+  background-color: color-mix(in srgb, var(--theme-secondary) 35%, #0b1020);
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  animation: dlgfb-intro-title-shimmer 5s ease-in-out infinite;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 10px 24px rgba(11, 16, 32, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-white .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn:is(:hover, :active),
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-grey .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn:is(:hover, :active) {
+  background-color: color-mix(in srgb, var(--theme-secondary) 25%, #0b1020);
+  background-image: linear-gradient(100deg,
+    color-mix(in srgb, var(--theme-secondary) 25%, #0b1020) 0%,
+    color-mix(in srgb, var(--theme-secondary) 25%, #0b1020) 38%,
+    color-mix(in srgb, var(--theme-secondary) 50%, #0b1020) 50%,
+    color-mix(in srgb, var(--theme-secondary) 25%, #0b1020) 62%,
+    color-mix(in srgb, var(--theme-secondary) 25%, #0b1020) 100%);
+  border-color: color-mix(in srgb, var(--theme-secondary) 25%, #0b1020);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dlgfb-app .dlgfb-draw-intro .dlgfb-draw-intro-btn {
+    animation: none !important;
+  }
+}
+
+/* Same for the Theme button in the corner. */
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn-fullscreen:is(:focus, :focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
 /* Standalone /raffle-draw, the full screen layout covers the whole window before the browser goes full screen.
    Below the toasts (2000) so messages still show on top. */
 .dlgfb-app .dlgfb-draw-stage.dlgfb-is-window {
@@ -4848,7 +5124,8 @@ body.dlgfb-body-active {
   font-size: clamp(1.9rem, 3.5vw, 2.8rem);
 }
 
-/* Top bar buttons, the same in every theme */
+/* Top bar buttons, the same in every theme, the welcome screen's Theme button included */
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn-fullscreen,
 .dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen,
 .dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen.dlgfb-is-on {
   border-radius: 4px;
@@ -4861,6 +5138,7 @@ body.dlgfb-body-active {
   color: #fff;
 }
 
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn-fullscreen:hover,
 .dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen:hover,
 .dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen.dlgfb-is-on:hover {
   background: var(--draw-button-hover);

@@ -16,10 +16,11 @@ const SUSPENSE_MS = 3000; // suspense between the reels stopping and the name sh
 const EMPTY_DRAW = { attempts: 0, phase: "idle", entryId: null, padLength: 3, winner: null };
 
 // White is the one a fresh screen opens with, the theme button then goes to grey and black.
-const THEMES = ["white", "grey", "black"];
+export const THEMES = ["white", "grey", "black"];
 const themeKey = () => eventKey("luckyDrawTheme");
 
-function readTheme() {
+// Also read by the standalone /raffle-draw welcome screen, so it opens in the same theme as the draw.
+export function readTheme() {
   try {
     const saved = sessionStorage.getItem(themeKey());
     if (THEMES.includes(saved)) return saved;
@@ -29,7 +30,7 @@ function readTheme() {
   return "white";
 }
 
-function saveTheme(theme) {
+export function saveTheme(theme) {
   try {
     sessionStorage.setItem(themeKey(), theme);
   } catch (e) {
