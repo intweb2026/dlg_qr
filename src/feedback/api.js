@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   "/",
   "/attendees/",
   "/registered-attendees/",
+  "/wifi/",
   "/feedback/submit/",
   "/auth/login/",
   "/lucky-draw/pool/",

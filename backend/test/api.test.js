@@ -784,7 +784,9 @@ describe("event details", () => {
     assert.deepEqual(r.data.theme, { secondary: "#00aa11" });
     assert.deepEqual(r.data.media, { logo: "/uploads/testa/logo.png", heroVideoMp4: "https://cdn.example.com/hero.mp4" });
     assert.deepEqual(r.data.links, { website: "https://example.com/" });
-    assert.deepEqual(r.data.wifi, { network: "EventWiFi", password: "secret1" });
+    // The Wi-Fi details are not in the config every page loads, only in /wifi/ for the Wi-Fi page.
+    assert.equal(r.data.wifi, undefined);
+    assert.deepEqual((await api("GET", "/wifi/")).data, { network: "EventWiFi", password: "secret1", qr: "" });
     await api("PATCH", "/admin/event-details/", { token, body: { secondary: "" } });
     assert.equal((await api("GET", "/")).data.theme, undefined);
     // Another event keeps its own details.
@@ -969,12 +971,34 @@ describe("feedback submissions report", () => {
   });
 });
 
+describe("feedback form default", () => {
+  test("the automatic opening is off by default, the form is open before the first day", async () => {
+    const token = await login("benny");
+    EVENT_A.timeZone = "America/Los_Angeles";
+    EVENT_A.eventStartDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+    try {
+      const s = (await api("GET", "/admin/settings/", { token })).data;
+      assert.deepEqual([s.form_open_auto, s.form_closed, s.feedback_open], [false, false, true]);
+      assert.equal((await api("GET", "/attendees/")).status, 200);
+    } finally {
+      delete EVENT_A.eventStartDate;
+      delete EVENT_A.timeZone;
+    }
+  });
+});
+
 describe("feedback form opening", () => {
   const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
 
-  after(() => {
+  // These tests check the automatic opening, so it is turned on for them.
+  beforeEach(async () => {
+    await query("UPDATE form_settings SET form_open_auto = 1, form_closed = 0 WHERE id = 1");
+  });
+
+  after(async () => {
     delete EVENT_A.eventStartDate;
     delete EVENT_A.timeZone;
+    await query("UPDATE form_settings SET form_open_auto = 0, form_closed = 0 WHERE id = 1");
   });
 
   test("before the first day the form is not open, from 12:00 AM there it is", async () => {
@@ -1017,6 +1041,29 @@ describe("feedback form opening", () => {
     s = (await api("PATCH", "/admin/settings/", { token, body: { form_open_auto: true } })).data;
     assert.deepEqual([s.form_open_auto, s.feedback_open], [true, false]);
     assert.equal((await api("GET", "/attendees/")).status, 403);
+  });
+
+  test("an admin closes the form and opens it again", async () => {
+    const token = await login("benny");
+    const a1 = await createAttendee("Closed Tester", "closed@example.com", "Shell");
+    delete EVENT_A.eventStartDate; // open by date
+    let s = (await api("PATCH", "/admin/settings/", { token, body: { form_closed: true } })).data;
+    assert.deepEqual([s.form_closed, s.feedback_open, s.feedback_closed], [true, false, true]);
+    let config = (await api("GET", "/")).data;
+    assert.deepEqual([config.feedback_open, config.feedback_closed], [false, true]);
+    const list = await api("GET", "/attendees/");
+    assert.deepEqual([list.status, list.data.code], [403, "closed"]);
+    const r = await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } });
+    assert.deepEqual([r.status, r.data.code], [403, "closed"]);
+    // Closed wins over the automatic opening switched off.
+    await api("PATCH", "/admin/settings/", { token, body: { form_open_auto: false } });
+    assert.equal((await api("GET", "/attendees/")).status, 403);
+
+    s = (await api("PATCH", "/admin/settings/", { token, body: { form_closed: false, form_open_auto: true } })).data;
+    assert.deepEqual([s.form_closed, s.feedback_open], [false, true]);
+    config = (await api("GET", "/")).data;
+    assert.deepEqual([config.feedback_open, config.feedback_closed], [true, false]);
+    assert.equal((await api("GET", "/attendees/")).status, 200);
   });
 
   test("with no first day known the form is open", async () => {

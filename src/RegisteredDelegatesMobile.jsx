@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./RegisteredDelegatesMobile.css";
 import { useEvent, useEventPath } from "./event/EventContext";
 import api from "./feedback/api";
@@ -91,9 +91,10 @@ export default function RegisteredDelegatesMobile() {
     <div className="page" style={background ? { "--delegates-bg": `url(${background})` } : undefined}>
       <div className="card">
         <div className="title-container">
-          <a className="back_btn" href={eventPath()}>
+          {/* Back to the event home inside the app, with no page reload. */}
+          <Link className="back_btn" to={eventPath()} aria-label="Back">
             <img src={backButtonBlue} alt="" />
-          </a>
+          </Link>
           <h1 className="title">Registered Attendees</h1>
         </div>
         <div className="table-wrap">

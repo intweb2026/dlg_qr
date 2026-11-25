@@ -1,17 +1,30 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./WifiPasswordMobile.css";
 import { useEvent, useEventPath } from "./event/EventContext";
+import api, { mediaUrl } from "./feedback/api";
 
 export default function WifiPasswordMobile() {
   const navigate = useNavigate();
   const { config } = useEvent();
   const eventPath = useEventPath();
   const [copiedField, setCopiedField] = useState(null);
-  // The network and password come from "wifi" in the event config, the logo and QR code from "media", all set on the
-  // admin Event Details page.
-  const { network: WIFI_NETWORK = "", password: WIFI_PASSWORD = "" } = config.wifi || {};
+  // The network, password and QR code are loaded only when this page is opened, from /wifi/, they are not in the
+  // event config every page loads. The logo and background come from "media". All are set on the admin Event Details page.
+  const [wifi, setWifi] = useState({ network: "", password: "", qr: "" });
+  const { network: WIFI_NETWORK, password: WIFI_PASSWORD } = wifi;
   const media = config.media || {};
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get("/wifi/")
+      .then(({ data }) => !cancelled && setWifi({ network: data.network || "", password: data.password || "", qr: mediaUrl(data.qr) || "" }))
+      .catch(() => {}); // The page shows --- for the values it could not load.
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCopy = async (field, value) => {
     try {
@@ -160,7 +173,7 @@ export default function WifiPasswordMobile() {
       </div>
       <div className="card">
         <img src={media.venueLogo} alt="Venue logo" className="logo"></img>
-        <img src={media.wifiQr} alt="Wi-Fi QR code" className="qr_code"></img>
+        {wifi.qr && <img src={wifi.qr} alt="Wi-Fi QR code" className="qr_code"></img>}
         <div className="field">
           <div className="field-text">
             <span className="field-label">Network</span>

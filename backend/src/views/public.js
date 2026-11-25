@@ -1,5 +1,5 @@
 const { syncOnFirstVisit } = require("../crmDelegates");
-const { openingFor } = require("../formOpening");
+const { formState, notOpenJson, stateJson } = require("../formOpening");
 const { query, transaction } = require("../db");
 const { menuItems } = require("../eventDetails");
 const { publicConfig, speakerReviewSettings } = require("../events");
@@ -9,37 +9,30 @@ const v = require("../validation");
 
 const ALREADY_SUBMITTED = { detail: "Feedback has already been submitted for this attendee.", code: "already_submitted" };
 
-/** The 403 body before the feedback form opens, with the opening time and the event's time zone for the message. */
-function notOpenJson(opening) {
-  return {
-    detail: "The feedback form opens when the event starts.",
-    code: "not_open",
-    opens_at: opening.opensAt.toISOString(),
-    time_zone: opening.timeZone,
-  };
-}
-
 /** The event's settings for the site, its name, media, links, Wi-Fi and the visible home page menu. */
 async function eventConfig(req, res) {
   // Every page loads the config, so the first visitor starts the one CRM sync. It runs in the background, the
   // attendee lists below wait for it.
   syncOnFirstVisit(req.event).catch((err) => console.error(`${req.event.code}: CRM delegates sync failed, ${err.message}`));
-  const [items, opening] = await Promise.all([menuItems({ visibleOnly: true }), openingFor(req.event)]);
+  const [items, state] = await Promise.all([menuItems({ visibleOnly: true }), formState(req.event)]);
   const menu = items.map(({ is_visible, ...item }) => item);
-  // The feedback form opens at 12:00 AM of the event's first day where it is held, and then stays open for good.
-  res.json({
-    ...publicConfig(req.event),
-    menu,
-    feedback_open: opening ? opening.open : true,
-    feedback_opens_at: opening?.opensAt ? opening.opensAt.toISOString() : null,
-    time_zone: opening?.timeZone || null,
-  });
+  // The Wi-Fi network, password and QR code are left out, the Wi-Fi page loads them from /wifi/ when it is opened.
+  const { wifi, ...config } = publicConfig(req.event);
+  const { wifiQr, ...media } = config.media || {};
+  // Whether the feedback form is open, closed by an admin, or waiting for the event's first day, see formOpening.js.
+  res.json({ ...config, media, menu, ...stateJson(state) });
+}
+
+/** The Wi-Fi network, password and QR code, only for the Wi-Fi password page. */
+async function wifiDetails(req, res) {
+  const wifi = req.event.wifi || {};
+  res.json({ network: wifi.network || "", password: wifi.password || "", qr: req.event.media?.wifiQr || "" });
 }
 
 /** Full lookup list, loaded once with the feedback form. The browser filters it after 3 typed characters. */
 async function attendeeList(req, res) {
-  const opening = await openingFor(req.event);
-  if (opening && !opening.open) return res.status(403).json(notOpenJson(opening));
+  const state = await formState(req.event);
+  if (!state.open) return res.status(403).json(notOpenJson(state));
   await syncOnFirstVisit(req.event);
   // Hide people who already submitted.
   const rows = await query(
@@ -128,10 +121,10 @@ const SUBMIT_FIELDS = {
 };
 
 async function feedbackSubmit(req, res) {
-  // The form opens at 12:00 AM of the event's first day where it is held, and never closes after that, also not
-  // after the raffle draw.
-  const opening = await openingFor(req.event);
-  if (opening && !opening.open) return res.status(403).json(notOpenJson(opening));
+  // Answers are taken while the form is open: not closed by an admin, and from the event's first day when the
+  // automatic opening is on. The raffle draw does not close it.
+  const state = await formState(req.event);
+  if (!state.open) return res.status(403).json(notOpenJson(state));
   // 1. The one entry per device check is done by the form, with a cookie and localStorage on its own site.
   // A cookie set here would live on the API domain, which clearing the form site's cookies does not remove.
 
@@ -210,4 +203,4 @@ async function feedbackSubmit(req, res) {
   return res.status(201).json({ id: submissionId, submission_status: true, detail: "Thank you, your feedback has been submitted." });
 }
 
-module.exports = { eventConfig, attendeeList, registeredAttendees, feedbackSubmit };
+module.exports = { wifiDetails, eventConfig, attendeeList, registeredAttendees, feedbackSubmit };

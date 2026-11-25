@@ -4,8 +4,8 @@ const { isoDate, maskEmail } = require("./utils");
 // Queries and response shapes for each table, the Node side of the old models.py and serializers.py.
 
 // ------------------------------------------------------------------ Form settings, a single row with id 1
-// The form_status column is no longer read or changed. form_open_auto says whether the feedback form waits for the
-// event's first day; when it is off, or the opening time cannot be worked out, the form is open.
+// The old form_status column is no longer read or changed. form_closed is an admin's close, form_open_auto says
+// whether the feedback form waits for the event's first day; see formOpening.js.
 const SETTINGS_DEFAULTS = { max_spin_attempts: 0, spin_duration_seconds: 5 };
 
 async function loadSettings() {
@@ -26,7 +26,10 @@ function settingsJson(row) {
     max_spin_attempts: row.max_spin_attempts,
     spin_duration_seconds: row.spin_duration_seconds,
     // Missing before the migration adds the column, then the scheduler is on, the column's default.
-    form_open_auto: row.form_open_auto === undefined ? true : Boolean(row.form_open_auto),
+    // Off unless an admin turns it on, also before the migration adds the column.
+    form_open_auto: Boolean(row.form_open_auto),
+    // Missing before the migration adds the column, then the form is not closed, the column's default.
+    form_closed: Boolean(row.form_closed),
     updated_at: isoDate(row.updated_at),
   };
 }

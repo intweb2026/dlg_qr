@@ -4,7 +4,7 @@ const config = require("../config");
 const crm = require("../crmDelegates");
 const report = require("../feedbackReport");
 const { query } = require("../db");
-const { openingFor } = require("../formOpening");
+const { formState, stateJson } = require("../formOpening");
 const { feedbackList } = require("../feedbackQuestions");
 const m = require("../models");
 const { escapeLike, padLengthFor, truthy } = require("../utils");
@@ -13,32 +13,29 @@ const v = require("../validation");
 // ==================================================================
 // Settings and submissions
 // ==================================================================
+/** 1 or 0 from true/false, 1/0 or "true"/"false". */
+function cleanBoolean(value) {
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if ([1, "1", "true"].includes(value)) return 1;
+  if ([0, "0", "false"].includes(value)) return 0;
+  throw new v.FieldError("Must be a valid boolean.");
+}
+
 const SETTINGS_FIELDS = {
   // 0 means unlimited spins
   max_spin_attempts: { clean: (value) => v.integer(value, { min: 0, max: 4294967295 }) },
   // How long the lucky draw reels spin before stopping on the winning number
   spin_duration_seconds: { clean: (value) => v.integer(value, { min: 1, max: 60 }) },
-  // On: the feedback form opens by itself when the event starts. Off: the form is open now, with no condition.
-  form_open_auto: {
-    clean: (value) => {
-      if (typeof value === "boolean") return value ? 1 : 0;
-      if ([1, "1", "true"].includes(value)) return 1;
-      if ([0, "0", "false"].includes(value)) return 0;
-      throw new v.FieldError("Must be a valid boolean.");
-    },
-  },
+  // On: the feedback form opens by itself when the event starts. Off: the form is open now, unless closed.
+  form_open_auto: { clean: cleanBoolean },
+  // On: an admin closed the form, it takes no answers whatever the date. Off: it follows form_open_auto.
+  form_closed: { clean: cleanBoolean },
 };
 
 /** The settings, with when the feedback form opens and whether it is open now, for the admin page. */
 async function settingsWithOpening(event) {
   const settings = m.settingsJson(await m.loadSettings());
-  const opening = await openingFor(event, settings);
-  return {
-    ...settings,
-    feedback_open: opening ? opening.open : true,
-    feedback_opens_at: opening?.opensAt ? opening.opensAt.toISOString() : null,
-    time_zone: opening?.timeZone || null,
-  };
+  return { ...settings, ...stateJson(await formState(event, settings)) };
 }
 
 async function getSettings(req, res) {

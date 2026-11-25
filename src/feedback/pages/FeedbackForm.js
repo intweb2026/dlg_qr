@@ -17,6 +17,12 @@ const REQUIRED_TOTAL = feedbackQuestions.filter((q) => q.required).length + 1; /
 const checkedIcon = "/images/common/checked.png" 
 
 const PANEL_ICONS = {
+  closed: (
+    <>
+      <rect x="5.5" y="10.5" width="13" height="9" rx="2" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+    </>
+  ),
   upcoming: (
     <>
       <circle cx="12" cy="12" r="8" />
@@ -296,7 +302,7 @@ export default function FeedbackForm() {
   const [draft] = useState(readDraft);
   // Every question is on one screen, under the name.
   const questions = useMemo(() => eventQuestions({ upcomingConferences }), [upcomingConferences]);
-  // loading | already | upcoming | form | success | offline
+  // loading | already | upcoming | closed | form | success | offline
   const [view, setView] = useState("loading");
   const [attendees, setAttendees] = useState(null);
   const [attendeesError, setAttendeesError] = useState(false);
@@ -320,9 +326,14 @@ export default function FeedbackForm() {
   // the server's refusal when a page loaded before the opening is used.
   const [opening, setOpening] = useState({ opensAt: eventConfig.feedback_opens_at, timeZone: eventConfig.time_zone });
 
-  /** Shows the not open yet card when the server says the form has not opened. */
+  /** Shows the closed or not open yet card when the server refuses because the form takes no answers now. */
   const notOpenYet = (err) => {
-    if (err?.response?.status !== 403 || err.response.data?.code !== "not_open") return false;
+    const code = err?.response?.status === 403 ? err.response.data?.code : null;
+    if (code === "closed") {
+      setView("closed");
+      return true;
+    }
+    if (code !== "not_open") return false;
     setOpening({ opensAt: err.response.data.opens_at, timeZone: err.response.data.time_zone });
     setView("upcoming");
     return true;
@@ -335,7 +346,9 @@ export default function FeedbackForm() {
       .get("/attendees/")
       .then(({ data }) => setAttendees(Array.isArray(data) ? data : []))
       .catch((err) => {
-        if (err?.response?.status === 403 && err.response.data?.code === "not_open") {
+        const code = err?.response?.status === 403 ? err.response.data?.code : null;
+        if (code === "closed") setView("closed");
+        else if (code === "not_open") {
           setOpening({ opensAt: err.response.data.opens_at, timeZone: err.response.data.time_zone });
           setView("upcoming");
         } else setAttendeesError(true);
@@ -351,6 +364,11 @@ export default function FeedbackForm() {
     }
     // Before 12:00 AM of the event's first day where it is held, the form says when it opens. After that it is open
     // for good, also after the raffle draw.
+    // An admin can also close the form, it then says so until they open it again.
+    if (eventConfig.feedback_closed) {
+      setView("closed");
+      return undefined;
+    }
     if (eventConfig.feedback_open === false) {
       setView("upcoming");
       return undefined;
@@ -593,6 +611,12 @@ export default function FeedbackForm() {
               holder={entryHolder}
               homePath={eventPath()}
             />
+          )}
+
+          {view === "closed" && (
+            <StatusPanel tone="closed" title="The feedback form is closed">
+              Feedback is not being taken at the moment. Thank you for your interest.
+            </StatusPanel>
           )}
 
           {view === "upcoming" && (

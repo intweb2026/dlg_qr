@@ -9,6 +9,27 @@ function envList(name, fallback = "") {
     .filter(Boolean);
 }
 
+/**
+ * Admin accounts made in every new event database, from DEFAULT_ADMINS as "username:password:Full Name" entries,
+ * comma separated. Without it, the four team accounts below are made. Change their passwords before the event.
+ */
+function defaultAdmins() {
+  const raw = process.env.DEFAULT_ADMINS;
+  if (!raw || !raw.trim()) {
+    return [
+      ["benny", "benny123", "Benny"],
+      ["maxwell", "maxwell123", "Maxwell"],
+      ["nolan", "nolan123", "Nolan"],
+      ["ramon", "ramon123", "Ramon"],
+    ];
+  }
+  return raw
+    .split(",")
+    .map((entry) => entry.split(":").map((part) => part.trim()))
+    .filter(([username, password]) => username && password)
+    .map(([username, password, ...name]) => [username, password, name.join(":") || username]);
+}
+
 module.exports = {
   port: Number(process.env.PORT || "8000"),
   debug: (process.env.DEBUG || "True").toLowerCase() === "true",
@@ -37,11 +58,17 @@ module.exports = {
   uploadsDir: path.resolve(process.env.UPLOADS_DIR || path.join(__dirname, "..", "uploads")),
   // The feedback submissions PDF, emailed the day after each event ends. Without SMTP_HOST it is not emailed, an
   // admin can still download it. FEEDBACK_REPORT_TO takes a comma separated list.
-  feedbackReportTo: envList("FEEDBACK_REPORT_TO", "int.web@iq-hub.com"),
+  feedbackReportTo: envList("FEEDBACK_REPORT_TO", "linq-web@iq-hub.com"),
   smtpHost: process.env.SMTP_HOST || "",
   smtpPort: Number(process.env.SMTP_PORT || "587"),
   smtpSecure: (process.env.SMTP_SECURE || "false").toLowerCase() === "true",
   smtpUser: process.env.SMTP_USER || "",
   smtpPass: process.env.SMTP_PASS || "",
   mailFrom: process.env.MAIL_FROM || "",
+  defaultAdmins: defaultAdmins(),
+  // Gemini writes the suggested testimonial (Polish). The model is tried first; when it is busy, the backup models
+  // in views/testimonial.js are tried. Without a key the form keeps the attendee's own words.
+  geminiApiKey: (process.env.GEMINI_API_KEY || "").trim(),
+  geminiModel: (process.env.GEMINI_MODEL || "gemini-3.5-flash-lite").trim(),
+  geminiApiUrl: (process.env.GEMINI_API_URL || "https://generativelanguage.googleapis.com/v1beta/models").replace(/\/+$/, ""),
 };

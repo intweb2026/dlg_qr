@@ -38,6 +38,7 @@ router.param("pk", (req, res, next, pk) => (/^\d+$/.test(pk) ? next() : res.stat
 // Public
 route("/", { get: pub.eventConfig });
 route("/attendees/", { get: pub.attendeeList });
+route("/wifi/", { get: pub.wifiDetails });
 route("/registered-attendees/", { get: pub.registeredAttendees });
 route("/upcoming-conferences/", { get: upcomingConferences });
 route("/speaker-sessions/", { get: speakerSessions });

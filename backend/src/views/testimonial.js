@@ -2,13 +2,14 @@
 // Gemini into one or two polished sentences; the attendee then uses it, edits it or keeps their original.
 // Without GEMINI_API_KEY the endpoint answers 503 and the form keeps the original text.
 
-// GEMINI_MODEL in .env picks the first model to try. When Google answers that a model is overloaded or it cannot be
-// reached, the next one in the list is tried, so a busy model does not stop the suggestion. A one sentence rewrite
-// does not need a big model, the lite ones answer in about a second and are rarely busy. gemini-2.5-flash is retired.
-const MODELS = [
-  ...new Set([process.env.GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.6-flash", "gemini-3.8-flash"].filter(Boolean)),
-];
-const API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+const config = require("../config");
+
+// The model and API address come from config.js (GEMINI_MODEL, GEMINI_API_URL). When Google answers that the model
+// is overloaded or it cannot be reached, the backup models below are tried in turn, so a busy model does not stop the
+// suggestion. A one sentence rewrite does not need a big model, the lite ones answer in about a second.
+const BACKUP_MODELS = ["gemini-flash-lite-latest", "gemini-3.6-flash", "gemini-3.8-flash"];
+const MODELS = [...new Set([config.geminiModel, ...BACKUP_MODELS].filter(Boolean))];
+const API_URL = config.geminiApiUrl;
 const REQUEST_TIMEOUT_MS = 10000;
 const MAX_INPUT = 1000;
 const MIN_WORDS = 3;
@@ -133,7 +134,7 @@ async function suggestTestimonial(req, res) {
     return res.status(429).json({ detail: `You have used all ${SESSION_LIMIT} suggestions.`, code: "limit_reached", remaining: 0 });
   }
 
-  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  const apiKey = config.geminiApiKey;
   if (!apiKey) {
     console.error("Testimonial suggestion: GEMINI_API_KEY is not set.");
     return res.status(503).json({ detail: "Suggestions are not available.", code: "ai_unavailable" });

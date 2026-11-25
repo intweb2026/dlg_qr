@@ -10,10 +10,10 @@ const SCHEMA = path.join(__dirname, "..", "db", "schema.sql");
 
 // Created in every new event database, the same accounts the Django migration added. Change the passwords before the event.
 const DEFAULT_ADMINS = [
-  ["benny", "benny123", "Benny"],
-  ["maxwell", "maxwell123", "Maxwell"],
-  ["nolan", "nolan123", "Nolan"],
-  ["ramon", "ramon123", "Ramon"],
+  ["benny", "Benny_iqHub", "Benny"],
+  ["maxwell", "Maxwell_iqHub", "Maxwell"],
+  ["parker", "Parker_iqHub", "Parker"],
+  ["ramon", "Ramon_iqHub", "Ramon"],
 ];
 
 // [table, column, definition, after], kept the same as db/schema.sql.
@@ -22,9 +22,10 @@ const ADDED_COLUMNS = [
   ["feedback_submissions", "userComapnyAliesName", "varchar(255) NOT NULL DEFAULT ''", "userAliesName"],
   ["form_settings", "crm_synced_at", "datetime(6) DEFAULT NULL", "spin_duration_seconds"],
   ["form_settings", "crm_synced_count", "int unsigned DEFAULT NULL", "crm_synced_at"],
-  ["form_settings", "form_open_auto", "tinyint(1) NOT NULL DEFAULT 1", "crm_synced_count"],
+  ["form_settings", "form_open_auto", "tinyint(1) NOT NULL DEFAULT 0", "crm_synced_count"],
   ["form_settings", "report_sent_at", "datetime(6) DEFAULT NULL", "form_open_auto"],
   ["form_settings", "report_sent_count", "int unsigned DEFAULT NULL", "report_sent_at"],
+  ["form_settings", "form_closed", "tinyint(1) NOT NULL DEFAULT 0", "form_open_auto"],
 ];
 
 // [table, column] no longer used, dropped from databases made before they were removed from db/schema.sql.

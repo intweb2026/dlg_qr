@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import api, { errorMessage, padId } from "../api";
+import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
 import Pagination, { pageCount, pageSlice } from "../components/Pagination";
 import { orderedAnswers, questionLabel, ratingScale } from "../config/feedbackQuestions";
@@ -52,46 +53,100 @@ function venueTime(iso, timeZone) {
 function FormOpeningPanel({ cfg, onSaved }) {
   const notify = useToast();
   const [saving, setSaving] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
 
-  const toggle = async () => {
-    const auto = !cfg.form_open_auto;
+  const save = async (body, title, message) => {
     setSaving(true);
     try {
-      const { data } = await api.patch("/admin/settings/", { form_open_auto: auto });
+      const { data } = await api.patch("/admin/settings/", body);
       onSaved(data);
-      notify(
-        auto ? "The form opens by itself when the event starts." : "The form is open now for everyone.",
-        "success",
-        { title: auto ? "Automatic opening on" : "Automatic opening off" }
-      );
+      notify(message, "success", { title });
+      return true;
     } catch (err) {
       notify(errorMessage(err), "danger", { title: "Setting not saved" });
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
+  const toggleAuto = () => {
+    const auto = !cfg.form_open_auto;
+    save(
+      { form_open_auto: auto },
+      auto ? "Automatic opening on" : "Automatic opening off",
+      auto ? "The form opens by itself when the event starts." : "The form no longer waits for the event to start."
+    );
+  };
+
+  // The open switch turned on: undoes a close, or, before the event starts, turns the automatic opening off so it opens now.
+  const openForm = () =>
+    save(cfg.form_closed ? { form_closed: false } : { form_open_auto: false }, "Form opened", "Attendees can send feedback now.");
+
+  const closeForm = async () => {
+    if (await save({ form_closed: true }, "Form closed", "Attendees see that the form is closed until you open it again.")) {
+      setConfirmClose(false);
+    }
+  };
+
+  let state;
   let status;
-  if (!cfg.form_open_auto) status = "Open now, with no condition.";
-  else if (cfg.feedback_open && cfg.feedback_opens_at) status = `Open since ${venueTime(cfg.feedback_opens_at, cfg.time_zone)} at the venue.`;
-  else if (cfg.feedback_open) status = "Open now. The event's first day could not be read, so the form opened by default.";
-  else status = `Opens ${venueTime(cfg.feedback_opens_at, cfg.time_zone)} at the venue${cfg.time_zone ? ` (${cfg.time_zone})` : ""}.`;
+  if (cfg.form_closed) {
+    state = "closed";
+    status = "Closed by an admin. No feedback is taken until you open it again.";
+  } else if (cfg.feedback_open) {
+    state = "open";
+    // Open with the automatic opening off needs no explanation, so no line is shown.
+    if (!cfg.form_open_auto) status = "";
+    else if (cfg.feedback_opens_at) status = `Open since ${venueTime(cfg.feedback_opens_at, cfg.time_zone)} at the venue.`;
+    else status = "Open now. The event's first day could not be read, so the form opened by default.";
+  } else {
+    state = "waiting";
+    status = `Opens ${venueTime(cfg.feedback_opens_at, cfg.time_zone)} at the venue${cfg.time_zone ? ` (${cfg.time_zone})` : ""}.`;
+  }
+  const label = { open: "Open", closed: "Closed", waiting: "Not open yet" }[state];
 
   return (
     <div className="dlgfb-panel dlgfb-form-opening">
       <span className="dlgfb-panel-label">Feedback form</span>
-      <p className={`dlgfb-form-opening-status ${cfg.feedback_open ? "is-open" : "is-waiting"}`}>
+      <p className={`dlgfb-form-opening-status is-${state}`}>
         <span className="dlgfb-form-opening-dot" aria-hidden="true" />
-        {cfg.feedback_open ? "Open" : "Not open yet"}
+        {label}
       </p>
-      <p className="dlgfb-text-muted dlgfb-form-opening-note">{status}</p>
-      <label className="dlgfb-form-opening-switch">
-        <input type="checkbox" checked={cfg.form_open_auto} disabled={saving} onChange={toggle} />
-        <span>Open automatically when the event starts</span>
+      {status && <p className="dlgfb-text-muted dlgfb-form-opening-note">{status}</p>}
+      {/* On: attendees can send feedback. Off: closed, after a confirm. */}
+      <label className="dlgfb-switch">
+        <input
+          type="checkbox"
+          role="switch"
+          checked={state === "open"}
+          disabled={saving}
+          onChange={(e) => (e.target.checked ? openForm() : setConfirmClose(true))}
+        />
+        <span className="dlgfb-switch-track" aria-hidden="true" />
+        <span className="dlgfb-switch-label">Feedback form open</span>
+      </label>
+      <label className="dlgfb-switch">
+        <input type="checkbox" role="switch" checked={cfg.form_open_auto} disabled={saving || cfg.form_closed} onChange={toggleAuto} />
+        <span className="dlgfb-switch-track" aria-hidden="true" />
+        <span className="dlgfb-switch-label">Open automatically when the event starts</span>
       </label>
       <small className="dlgfb-form-text dlgfb-text-muted">
-        Turn off to open the form right away, for example if the automatic opening fails.
+        {cfg.form_closed
+          ? "The form stays closed while you have it closed, whatever the date."
+          : "Turn off to open the form right away, for example if the automatic opening fails."}
       </small>
+      {confirmClose && (
+        <ConfirmDialog
+          title="Close the feedback form?"
+          confirmLabel="Close form"
+          busy={saving}
+          onConfirm={closeForm}
+          onCancel={() => setConfirmClose(false)}
+        >
+          Attendees will not be able to send feedback until you open it again. Feedback already sent is kept.
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

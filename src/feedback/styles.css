@@ -535,6 +535,7 @@ body.dlgfb-body-active {
   min-height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
+  /* The event colour. The darker shading is drawn on the fixed ::before layer below, so it fits the screen. */
   background-color: var(--theme-secondary);
   /* The pattern sits on its own layer behind the content, so it stays fixed while the form scrolls. */
   isolation: isolate;
@@ -546,11 +547,59 @@ body.dlgfb-body-active {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  /* The event's media.background, set as --event-pattern by FeedbackForm.js. */
-  background-image: var(--event-pattern, none);
-  background-position: right center;
+  /* The event colour darkened towards the top left. Fixed, so the shading covers the screen and does not stretch
+     over the whole form. The event's background pattern (media.background, set as --event-pattern by
+     FeedbackForm.js) is commented out. To bring it back, put this line first in background-image:
+       var(--event-pattern, none),
+     and use these two lines in place of the background-position and background-size below:
+       background-position: right center, 0 0, 0 0;
+       background-size: auto 100%, 100% 100%, 100% 100%; */
+  background-image:
+    /* The design's black to grey fade, 134.71deg from 19.536% to 80.464%. The in-between stops copy the design
+       tool's blend, which browsers would otherwise draw a little darker in the middle. */
+    linear-gradient(
+      134.7148590698986deg,
+      rgba(0, 0, 0, 0.5) 19.536%,
+      rgba(26, 26, 26, 0.375) 34.768%,
+      rgba(51, 51, 51, 0.25) 50%,
+      rgba(77, 77, 77, 0.125) 65.232%,
+      rgba(102, 102, 102, 0) 80.464%
+    ),
+    linear-gradient(90deg, var(--theme-secondary) 0%, var(--theme-secondary) 100%);
+  background-position: 0 0, 0 0;
   background-repeat: no-repeat;
-  background-size: auto 100%;
+  background-size: 100% 100%, 100% 100%;
+}
+
+/* The event's background pattern (media.background, set as --event-pattern by FeedbackForm.js), drawn in black at
+   35% opacity over the gradient. The image is used as a mask, so its shapes take the black colour. */
+.dlgfb-app .feedback-form-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: #000;
+  opacity: 0.15;
+  -webkit-mask-image: var(--event-pattern, none);
+  mask-image: var(--event-pattern, none);
+  -webkit-mask-position: right center;
+  mask-position: right center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: auto 100%;
+  mask-size: auto 100%;
+}
+
+/* Portrait screens, as in the design: the pattern sits on the bottom edge, starts about 17% in from the left and
+   runs past the right edge, 94% of the screen width wide. */
+@media (orientation: portrait) {
+  .dlgfb-app .feedback-form-page::after {
+    -webkit-mask-position: 17.4vw 100%;
+    mask-position: 17.4vw 100%;
+    -webkit-mask-size: 93.75vw auto;
+    mask-size: 93.75vw auto;
+  }
 }
 
 .dlgfb-app .dlgfb-form-shell {  
@@ -1261,8 +1310,6 @@ body.dlgfb-body-active {
   max-width: 70%;
   margin: 16px auto;
   object-fit: contain;
-  /* 0 4px 4px rgba(0, 0, 0, 0.25), as a drop shadow so it follows the logo's shape, not the image's box. */
-  filter: drop-shadow(0px 4px 4px rgba(0, 0, 0, 0.25));
 }
 
 /* The logo's own bottom margin is the gap below it, so it always matches the gap above. */
@@ -5782,11 +5829,14 @@ body.dlgfb-body-active {
   filter: none !important;
 }
 
-/* Raffle draw, a plain black screen from the welcome screen through to the draw, with no grey centre glow,
-   and no white page showing while the browser switches to full screen. */
+/* Raffle draw, black theme. The welcome screen and the draw have a soft dark glow at the top centre that fades to
+   black. The page behind stays black, so no white shows while the browser switches to full screen. */
 .dlgfb-app .dlgfb-draw-intro.dlgfb-theme-black,
 .dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black,
-.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black:fullscreen,
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black:fullscreen {
+  background: radial-gradient(69.44% 80.65% at 50% 16.13%, #202024 0%, #121214 50%, #000000 100%);
+}
+
 .dlgfb-app .dlgfb-draw-standalone {
   background: #000;
 }
@@ -6343,15 +6393,21 @@ html:has(.dlgfb-draw-standalone) body {
   height: 46px;
   margin-top: 0;
   border-radius: 8px;
-  background: linear-gradient(90deg, var(--theme-secondary), color-mix(in srgb, var(--theme-secondary) 80%, #fff));
+  /* The same as the raffle draw buttons: the event colour with a soft dark shading from the left, the shading on
+     top of the colour. */
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%),
+    linear-gradient(0deg, var(--theme-secondary), var(--theme-secondary));
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
   box-shadow: none;
 }
 
-.dlgfb-app .dlgfb-form-panel .dlgfb-form-submit:hover {
-  background: var(--theme-secondary-dark);
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-submit:is(:hover, :active) {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.32) 0%, rgba(102, 102, 102, 0.2) 100%),
+    linear-gradient(0deg, var(--theme-secondary), var(--theme-secondary));
 }
 
 /* The intro under the logo, a little smaller and in plain white. */
@@ -6467,4 +6523,221 @@ html:has(.dlgfb-draw-standalone) body {
   .dlgfb-app .dlgfb-report-actions .dlgfb-btn {
     flex: 1;
   }
+}
+
+/* ------------------------------------------------------------------ raffle draw banner, transitions
+   RAFFLE DRAW comes in first, the button after it. Are We Ready? zooms the banner out and the draw fades in. */
+.dlgfb-app .dlgfb-draw-intro .dlgfb-draw-intro-kicker {
+  /* The event name is no longer shown, the button's own margin is the one gap. */
+  margin-bottom: 0;
+  animation: dlgfbIntroTitleIn 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dlgfb-app .dlgfb-draw-intro .dlgfb-draw-intro-btn {
+  animation: dlgfbIntroRise 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.45s both;
+}
+
+.dlgfb-app .dlgfb-draw-intro.is-leaving .dlgfb-draw-intro-card {
+  animation: dlgfbIntroOut 0.65s cubic-bezier(0.55, 0, 0.75, 0.2) forwards;
+}
+
+.dlgfb-app .dlgfb-draw-fade-in {
+  animation: dlgfbDrawIn 0.7s ease-out both;
+}
+
+/* Opacity and transform only, they animate smoothly everywhere and always end fully shown. */
+@keyframes dlgfbIntroTitleIn {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dlgfbIntroRise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dlgfbIntroOut {
+  to {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+/* Opacity only, a transform here would move the draw's fixed full screen stage while it plays. */
+@keyframes dlgfbDrawIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dlgfb-app .dlgfb-draw-intro .dlgfb-draw-intro-kicker,
+  .dlgfb-app .dlgfb-draw-intro .dlgfb-draw-intro-btn,
+  .dlgfb-app .dlgfb-draw-intro.is-leaving .dlgfb-draw-intro-card,
+  .dlgfb-app .dlgfb-draw-fade-in {
+    animation: none;
+  }
+}
+
+/* Raffle draw, black theme buttons: Are We Ready?, Spin, Spin Again and Try again. The event colour with a soft
+   dark shading from the left. The shading is listed first so it sits on top of the colour; listed second it would
+   be hidden under it. Hover and press darken the shading a little. */
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-black .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn,
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-black .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn:is(:focus, :focus-visible),
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-btn-draw:not(:disabled),
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-btn-reveal:not(:disabled) {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.21) 0%, rgba(102, 102, 102, 0.14) 100%),
+    linear-gradient(0deg, var(--theme-secondary), var(--theme-secondary));
+  border-color: var(--theme-secondary);
+}
+
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-black .dlgfb-btn.dlgfb-btn-primary.dlgfb-draw-intro-btn:is(:hover, :active),
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-btn-draw:not(:disabled):is(:hover, :active),
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black .dlgfb-btn-reveal:not(:disabled):is(:hover, :active) {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.32) 0%, rgba(102, 102, 102, 0.2) 100%),
+    linear-gradient(0deg, var(--theme-secondary), var(--theme-secondary));
+  border-color: var(--theme-secondary);
+}
+
+/* Phones: the full screen button sits in the top right corner, not in the middle. In full screen it is pinned to
+   the corner of the screen, clear of a notch or rounded corner, as on larger screens. */
+@media (max-width: 575px) {
+  .dlgfb-app .dlgfb-draw-stage .dlgfb-draw-actions {
+    justify-content: flex-end;
+  }
+
+  .dlgfb-app .dlgfb-draw-stage.dlgfb-is-fullscreen .dlgfb-draw-topbar {
+    position: absolute;
+    top: calc(1rem + env(safe-area-inset-top));
+    right: calc(1rem + env(safe-area-inset-right));
+    left: auto;
+    width: auto;
+    margin: 0;
+    z-index: 2;
+  }
+}
+
+/* Full screen button: no background or border, only the icon, in the event's secondary colour. Hover brightens
+   it a little so it still reacts to the mouse. */
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn-fullscreen,
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen,
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen.dlgfb-is-on,
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn-fullscreen:is(:hover, :focus, :focus-visible, :active),
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen:is(:hover, :focus, :focus-visible, :active),
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen.dlgfb-is-on:is(:hover, :focus, :focus-visible, :active) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--theme-secondary);
+}
+
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn-fullscreen:hover,
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen:hover {
+  filter: brightness(1.2);
+}
+
+/* A larger full screen icon, now that it has no box around it. */
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn-fullscreen svg,
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.dlgfb-app .dlgfb-draw-intro .dlgfb-btn-fullscreen,
+.dlgfb-app .dlgfb-draw-stage .dlgfb-btn-fullscreen {
+  padding: 0.3rem;
+}
+
+/* Admin, feedback form panel: Closed shows a red dot, and the Open form or Close form button sits above the switch. */
+.dlgfb-app .dlgfb-form-opening-status.is-closed .dlgfb-form-opening-dot {
+  background: #dc2626;
+}
+
+.dlgfb-app .dlgfb-form-opening-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+/* Admin, on/off switches in the feedback form panel. A checkbox drawn as a sliding switch, green when on. */
+.dlgfb-app .dlgfb-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dlgfb-app .dlgfb-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.dlgfb-app .dlgfb-switch-track {
+  position: relative;
+  flex: none;
+  width: 2.6rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #cbd2dc;
+  transition: background-color 0.2s;
+}
+
+.dlgfb-app .dlgfb-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s;
+}
+
+.dlgfb-app .dlgfb-switch input:checked + .dlgfb-switch-track {
+  background: #16a34a;
+}
+
+.dlgfb-app .dlgfb-switch input:checked + .dlgfb-switch-track::after {
+  transform: translateX(1.1rem);
+}
+
+.dlgfb-app .dlgfb-switch input:focus-visible + .dlgfb-switch-track {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.dlgfb-app .dlgfb-switch input:disabled + .dlgfb-switch-track,
+.dlgfb-app .dlgfb-switch input:disabled ~ .dlgfb-switch-label {
+  opacity: 0.5;
+}
+
+.dlgfb-app .dlgfb-switch:has(input:disabled) {
+  cursor: not-allowed;
 }

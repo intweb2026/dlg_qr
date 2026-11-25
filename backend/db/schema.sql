@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `feedback_submissions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Single row with id 1 holding the global form configuration. max_spin_attempts 0 means unlimited.
--- form_status is no longer used, the feedback form is always open. The column is kept so existing databases need no change.
+-- form_status is no longer used, see form_closed and form_open_auto. The column is kept so existing databases need no change.
 CREATE TABLE IF NOT EXISTS `form_settings` (
   `id` int NOT NULL AUTO_INCREMENT,
   `form_status` varchar(10) NOT NULL DEFAULT 'active',
@@ -65,7 +65,10 @@ CREATE TABLE IF NOT EXISTS `form_settings` (
   `crm_synced_at` datetime(6) DEFAULT NULL,
   `crm_synced_count` int unsigned DEFAULT NULL,
   -- 1: the feedback form opens by itself at 12:00 AM of the event's first day where it is held. 0: always open.
-  `form_open_auto` tinyint(1) NOT NULL DEFAULT 1,
+  -- Off by default: the form is open unless an admin closes it. On: it waits for the event's first day.
+  `form_open_auto` tinyint(1) NOT NULL DEFAULT 0,
+  -- 1: an admin closed the feedback form, it takes no answers whatever the date. 0: it follows form_open_auto.
+  `form_closed` tinyint(1) NOT NULL DEFAULT 0,
   -- When the feedback submissions PDF was last emailed and how many submissions it had, null until it is sent.
   `report_sent_at` datetime(6) DEFAULT NULL,
   `report_sent_count` int unsigned DEFAULT NULL,

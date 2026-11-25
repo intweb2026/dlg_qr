@@ -149,9 +149,10 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
           {/* <span className="dlgfb-attendee-avatar" aria-hidden="true">{initials(value.full_name)}</span> */}
           <div className="dlgfb-selected-attendee-text">
             <div className="dlgfb-selected-attendee-name">{value.full_name}</div>
-            <div className="dlgfb-selected-attendee-company">
-              {value.is_new ? "New attendee, not on the list" : value.company_name || "No company listed"}
-            </div>
+            {/* A new attendee shows only the name, their company is typed in the field below. */}
+            {!value.is_new && (
+              <div className="dlgfb-selected-attendee-company">{value.company_name || "No company listed"}</div>
+            )}
           </div>
           <button type="button" className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-change" onClick={() => onChange(null)}>
             Change

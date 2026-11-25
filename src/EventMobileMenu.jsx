@@ -1,5 +1,4 @@
 import React from "react";
-// eslint-disable-next-line no-unused-vars -- used by the commented-out menu below
 import { Link } from "react-router-dom";
 import "./EventMobileMenu.css";
 import { useEvent, useEventPath } from "./event/EventContext";
@@ -113,20 +112,27 @@ export default function EventMobileMenu() {
           {menu.map((item) => {
             const href = menuHref(item, config, eventPath);
             if (!href) return null;
-            return (
-              <a
-                className="action-button"
-                key={item.id}
-                href={href}
-              >
+            const content = (
+              <>
                 <span className="icon">
                   {item.icon && <img src={item.icon} alt="" />}
                 </span>
                 <span className="divider"></span>
                 <span className="label">{item.label}</span>
-                <svg class="arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
+                <svg className="arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" strokeWidth="2" xmlns="http://www.w3.org/2000/svg">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
+              </>
+            );
+            // A page of this site opens inside the app, with no reload, so the event config is not fetched again.
+            // An outside address, such as the event website, stays a normal link.
+            return (item.target || "").startsWith("/") ? (
+              <Link className="action-button" key={item.id} to={href}>
+                {content}
+              </Link>
+            ) : (
+              <a className="action-button" key={item.id} href={href}>
+                {content}
               </a>
             );
           })}
