@@ -4,47 +4,29 @@ const { isoDate, maskEmail } = require("./utils");
 // Queries and response shapes for each table, the Node side of the old models.py and serializers.py.
 
 // ------------------------------------------------------------------ Form settings, a single row with id 1
-const SETTINGS_DEFAULTS = { form_status: "active", max_spin_attempts: 0, spin_duration_seconds: 5 };
+// The form_status column is no longer read or changed. form_open_auto says whether the feedback form waits for the
+// event's first day; when it is off, or the opening time cannot be worked out, the form is open.
+const SETTINGS_DEFAULTS = { max_spin_attempts: 0, spin_duration_seconds: 5 };
 
 async function loadSettings() {
   let [row] = await query("SELECT * FROM form_settings WHERE id = 1");
   if (!row) {
     await query(
-      "INSERT IGNORE INTO form_settings (id, form_status, max_spin_attempts, spin_duration_seconds, updated_at) " +
-        "VALUES (1, ?, ?, ?, UTC_TIMESTAMP(6))",
-      [SETTINGS_DEFAULTS.form_status, SETTINGS_DEFAULTS.max_spin_attempts, SETTINGS_DEFAULTS.spin_duration_seconds]
+      "INSERT IGNORE INTO form_settings (id, max_spin_attempts, spin_duration_seconds, updated_at) " +
+        "VALUES (1, ?, ?, UTC_TIMESTAMP(6))",
+      [SETTINGS_DEFAULTS.max_spin_attempts, SETTINGS_DEFAULTS.spin_duration_seconds]
     );
     [row] = await query("SELECT * FROM form_settings WHERE id = 1");
   }
   return row;
 }
 
-// The event's status, set on the admin Submissions page. Only "active" takes responses.
-// inactive: the admin has not enabled the form. upcoming: the event has not started. active: open for responses.
-// ended: the event is over. closed: the event is closed. Every status other than active stops responses.
-const FORM_STATUSES = ["inactive", "upcoming", "active", "ended", "closed"];
-
-const CLOSED_MESSAGES = {
-  inactive: "The feedback form has not been enabled yet.",
-  upcoming: "The event has not started yet.",
-  ended: "This event has ended.",
-  closed: "This event is closed.",
-};
-
-function isActive(settings) {
-  return settings.form_status === "active";
-}
-
-/** The 403 body sent while the form is not taking responses, the form uses form_status to pick its message. */
-function closedJson(settings) {
-  return { detail: CLOSED_MESSAGES[settings.form_status] || CLOSED_MESSAGES.inactive, form_status: settings.form_status };
-}
-
 function settingsJson(row) {
   return {
-    form_status: row.form_status,
     max_spin_attempts: row.max_spin_attempts,
     spin_duration_seconds: row.spin_duration_seconds,
+    // Missing before the migration adds the column, then the scheduler is on, the column's default.
+    form_open_auto: row.form_open_auto === undefined ? true : Boolean(row.form_open_auto),
     updated_at: isoDate(row.updated_at),
   };
 }
@@ -174,9 +156,6 @@ function winnerJson(row) {
 module.exports = {
   SETTINGS_DEFAULTS,
   loadSettings,
-  FORM_STATUSES,
-  isActive,
-  closedJson,
   settingsJson,
   ALIAS_NAME,
   ALIAS_COMPANY,

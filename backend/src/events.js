@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { isTimeZone } = require("./timeZones");
 
 // Every event is one entry in backend/events.json, keyed by the event code, { "dle26": { ... }, "afs26": { ... } }.
 // The code is the first part of every address, /dle26/feedback-form on the site and /api/events/dle26/... on the API.
@@ -12,10 +13,10 @@ const DATABASE = /^[A-Za-z0-9_]{1,64}$/;
 // "theme": { "secondary": "#278dff" } is optional, the site uses #278dff without it.
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
-// "speakerReviews" is optional; each key left out takes its default. maxPerDay is how many sessions an attendee can
-// review on each day of the agenda, titleMaxWords the most words in a session's AI shortened title.
-const SPEAKER_REVIEW_DEFAULTS = { maxPerDay: 3, titleMaxWords: 7 };
-const SPEAKER_REVIEW_RANGES = { maxPerDay: [1, 50], titleMaxWords: [3, 20] };
+// "speakerReviews" is optional; each key left out takes its default. maxReviews is how many sessions an attendee can
+// review in all, across every day of the agenda, titleMaxWords the most words in a session's AI shortened title.
+const SPEAKER_REVIEW_DEFAULTS = { maxReviews: 3, titleMaxWords: 7 };
+const SPEAKER_REVIEW_RANGES = { maxReviews: [1, 50], titleMaxWords: [3, 20] };
 
 /** The event's speaker review settings with the defaults filled in. */
 function speakerReviewSettings(event) {
@@ -54,6 +55,21 @@ function loadEvents(file = EVENTS_FILE) {
     }
     if (event.event_code !== undefined && (typeof event.event_code !== "string" || !event.event_code.trim())) {
       fail('"event_code" must be the event code in the CRM, such as "AIU - AD"');
+    }
+    // "eventEndDate" is optional, the event's last day; without it the last day is read from the website's agenda.
+    // The daily CRM delegate sync stops after it, see eventDates.js.
+    if (event.eventEndDate !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(event.eventEndDate)) {
+      fail('"eventEndDate" must be a date like 2026-11-10');
+    }
+    // "eventStartDate" is optional, the event's first day; the feedback form opens at 12:00 AM of it where the event
+    // is held. Without it the first day is read from the website's agenda.
+    if (event.eventStartDate !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(event.eventStartDate)) {
+      fail('"eventStartDate" must be a date like 2026-11-09');
+    }
+    // "timeZone" is optional, where the event is held, such as "America/Los_Angeles"; without it the time zone comes
+    // from the location on the event website. The daily CRM sync stops at 11:59 PM of the last day there.
+    if (event.timeZone !== undefined && !isTimeZone(event.timeZone)) {
+      fail('"timeZone" must be a time zone like "America/Los_Angeles"');
     }
     if (event.speakerReviews !== undefined) {
       const sr = event.speakerReviews;

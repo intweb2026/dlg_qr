@@ -1,33 +1,35 @@
 import { useState } from "react";
 import { ratingScale } from "../config/feedbackQuestions";
 
-// The speaker session reviews, question 6 of the form. One accordion per day of the agenda, closed to keep the form
-// short, and inside it one accordion item per "speaker" entry of that day, see backend/src/views/speakerSessions.js.
-// Every review is optional. Reviews are kept as { [session id]: { rating, comment } }.
+// "Which presentations did you find most valuable?", question 6 of the form. The agenda's speaker sessions, see
+// backend/src/views/speakerSessions.js, listed under a heading per day, each with a tick box. Picking is optional.
+// Picks are kept as { [session id]: { selected: true } }. Reviews from the earlier version of this question, with a
+// rating or a comment, are still read the same way, so a saved draft keeps them.
 
 export const REVIEWS_KEY = "speaker_reviews";
 
-// How many sessions an attendee can review on each day is set per event, "speakerReviews.maxPerDay" in
-// backend/events.json, and comes in the event config. This is the default for a config without it; the backend
+// How many presentations an attendee can pick in all, whatever the day, is set per event, "speakerReviews.maxReviews"
+// in backend/events.json, and comes in the event config. This is the default for a config without it; the backend
 // checks the same limit on submit.
-const DEFAULT_MAX_PER_DAY = 3;
+const DEFAULT_MAX_REVIEWS = 3;
 
 const MODERATOR_RE = /\s*\|\s*moderator\s*$/i;
 
-/** A panel lists the speakers' names only, any other session "Name - Company". */
-function speakerText(session, s) {
-  if (session.is_panel) return s.name;
+/** "Name - Company", or the name alone when the agenda gives no company. Saved with each pick. */
+function speakerText(s) {
   const company = s.company.replace(MODERATOR_RE, "").trim();
   return company ? `${s.name} - ${company}` : s.name;
 }
 
 export function speakerLine(session) {
-  return session.speakers.map((s) => speakerText(session, s)).join(", ");
+  return session.speakers.map(speakerText).join(", ");
 }
 
-/** "09:10 - 09:35", or the one time the agenda gives. */
-function timeRange(session) {
-  return [session.start_time, session.end_time].filter(Boolean).join(" - ");
+/** One speaker on the list, "Name | Company", with "(moderator)" after a moderator's company. */
+function speakerRow(s) {
+  const moderator = MODERATOR_RE.test(s.company);
+  const company = s.company.replace(MODERATOR_RE, "").trim();
+  return `${company ? `${s.name} | ${company}` : s.name}${moderator ? " (moderator)" : ""}`;
 }
 
 // Lowercase and strip accents, so "bajio" finds "Bajío", the same as the attendee search.
@@ -51,10 +53,10 @@ function matches(session, terms) {
 }
 
 function hasReview(r) {
-  return !!r && (r.rating > 0 || String(r.comment || "").trim() !== "");
+  return !!r && (r.selected === true || r.rating > 0 || String(r.comment || "").trim() !== "");
 }
 
-/** The reviews to save, one per session with a rating or a comment, in the order of the agenda. */
+/** The picks to save, one per ticked session, in the order of the agenda. */
 export function reviewsToSubmit(sessions, reviews) {
   return sessions
     .filter((s) => hasReview(reviews?.[s.id]))
@@ -78,121 +80,41 @@ export function reviewsToSubmit(sessions, reviews) {
     });
 }
 
-const CARET = (
-  <svg className="dlgfb-session-caret" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+const CHECK = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
   </svg>
 );
 
-// eslint-disable-next-line no-unused-vars -- kept for when the star rating is switched back on
-const STAR = (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9z" />
-  </svg>
-);
-
-function SessionItem({ session, review, open, locked, maxPerDay, onToggle, onChange }) {
-  const rating = review?.rating || 0;
-  const comment = review?.comment || "";
-  // eslint-disable-next-line no-unused-vars -- used by the star rating, switched off for now
-  const ratingLabel = ratingScale.find((x) => x.value === rating)?.label;
-  const panelId = `session-${session.id}-panel`;
-  const headId = `session-${session.id}-head`;
-  const time = timeRange(session);
-  // The header shows the short title from the backend, or the full one when there is none.
-  const shortTitle = session.short_title || session.title;
-
+function SessionPick({ session, picked, locked, onToggle }) {
   return (
-    <div className={`dlgfb-session${open ? " dlgfb-is-open" : ""}${hasReview(review) ? " dlgfb-is-reviewed" : ""}${locked ? " dlgfb-is-locked" : ""}`}>
-      <h3 className="dlgfb-session-heading">
-        <button type="button" id={headId} className="dlgfb-session-toggle" aria-expanded={open} aria-controls={panelId} onClick={onToggle}>
-          <span className="dlgfb-session-summary">
-            <span className="dlgfb-session-title">{shortTitle}</span>
-            {/* Second row, "time | speakers", and the rating when the stars are on. */}
-            {(time || session.speakers.length > 0) && (
-              <span className="dlgfb-session-meta">
-                {time && <span className="dlgfb-session-time">{time}</span>}
-                {time && session.speakers.length > 0 && (
-                  <span className="dlgfb-session-sep" aria-hidden="true">
-                    |
-                  </span>
-                )}
-                {session.speakers.length > 0 && <span className="dlgfb-session-speakers">{speakerLine(session)}</span>}
-                {/* The rating beside the time, switched off with the stars for now.
-                {rating > 0 && (
-                  <span className="dlgfb-session-rated">
-                    {"★"} {rating} {ratingLabel}
-                  </span>
-                )}
-                */}
-              </span>
-            )}
+    <label className={`dlgfb-session-pick${picked ? " dlgfb-is-selected" : ""}${locked ? " dlgfb-is-locked" : ""}`}>
+      <input type="checkbox" className="dlgfb-sr-only" checked={picked} disabled={locked} onChange={onToggle} />
+      <span className="dlgfb-form-check-mark" aria-hidden="true">
+        {CHECK}
+      </span>
+      <span className="dlgfb-session-pick-text">
+        {session.start_time && <span className="dlgfb-session-pick-time">{session.start_time}</span>}
+        {/* The short title from the backend, or the full one when there is none. */}
+        <span className="dlgfb-session-pick-title">{session.short_title || session.title}</span>
+        {session.speakers.map((s, i) => (
+          <span className="dlgfb-session-pick-speaker" key={i}>
+            {speakerRow(s)}
           </span>
-          {CARET}
-        </button>
-      </h3>
-
-      {open && (
-        <div className="dlgfb-session-body" id={panelId} role="region" aria-labelledby={headId}>
-          {/* The full title inside an open session, switched off for now; the search still finds it.
-          {shortTitle !== session.title && <p className="dlgfb-session-full">{session.title}</p>}
-          */}
-          {locked ? (
-            <p className="dlgfb-session-limit" role="status">
-              You have reviewed {maxPerDay} sessions for this day, the most allowed.
-            </p>
-          ) : (
-            /* Star rating switched off for now, only the comment is taken. Put this back, and the rating > 0
-               check on the comment box below, to bring the stars back.
-            <div className="dlgfb-session-rate">
-              <div className="dlgfb-session-stars" role="radiogroup" aria-label={`Rate ${session.title}`}>
-                {ratingScale.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={rating === r.value}
-                    aria-label={`${r.value} of 5, ${r.label}`}
-                    title={r.label}
-                    className={`dlgfb-session-star${r.value <= rating ? " dlgfb-is-on" : ""}`}
-                    onClick={() => onChange({ ...review, rating: r.value })}
-                  >
-                    {STAR}
-                  </button>
-                ))}
-              </div>
-              <span className="dlgfb-session-rate-label">{ratingLabel || "Tap to rate"}</span>
-            </div>
-            */
-            <textarea
-              className="dlgfb-form-textarea dlgfb-session-comment"
-              rows={2}
-              maxLength={500}
-              placeholder="Any comments on this session?"
-              aria-label={`Comments on ${session.title}`}
-              value={comment}
-              onChange={(e) => onChange({ ...review, comment: e.target.value })}
-            />
-          )}
-          {/* Takes the review off, so on a day at its limit another session can be reviewed instead. */}
-          {hasReview(review) && (
-            <button type="button" className="dlgfb-session-clear" onClick={() => onChange(null)}>
-              Clear review
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+        ))}
+      </span>
+    </label>
   );
 }
 
-export default function SpeakerReviews({ number, sessions, reviews, maxPerDay = DEFAULT_MAX_PER_DAY, onChange }) {
-  // One day and one session open at a time, tapping a header again closes it. Every day starts closed.
-  const [openDay, setOpenDay] = useState(null);
-  const [openId, setOpenId] = useState(null);
+export default function SpeakerReviews({ sessions, reviews, maxReviews = DEFAULT_MAX_REVIEWS, onChange }) {
   const [query, setQuery] = useState("");
   const terms = normalize(query).split(/\s+/).filter(Boolean);
-  const setReview = (id, review) => onChange({ ...(reviews || {}), [id]: review });
+  const toggle = (id) => onChange({ ...(reviews || {}), [id]: hasReview(reviews?.[id]) ? null : { selected: true } });
+
+  // Counted over every day, not only the sessions the search shows. At the limit the other sessions are locked.
+  const picked = sessions.filter((s) => hasReview(reviews?.[s.id])).length;
+  const full = picked >= maxReviews;
 
   // Grouped by the agenda's days, in the agenda's order.
   const days = [];
@@ -205,10 +127,16 @@ export default function SpeakerReviews({ number, sessions, reviews, maxPerDay = 
   return (
     <section className="dlgfb-form-q dlgfb-sessions" id={`q-${REVIEWS_KEY}`}>
       <div className="dlgfb-form-q-head" id={`${REVIEWS_KEY}-label`}>
-        <span className="dlgfb-form-q-num">{String(number).padStart(2, "0")}</span>
-        <span className="dlgfb-form-q-text">How would you rate the sessions?</span>
+        <span className="dlgfb-form-q-text">Which presentations did you find most valuable?</span>
       </div>
       <div className="dlgfb-form-q-body">
+        <div className="dlgfb-sessions-hint-row">
+          <p className="dlgfb-form-q-hint">Select up to {maxReviews === 3 ? "three" : maxReviews}.</p>
+          <span className="dlgfb-sessions-count" role="status">
+            {picked} of {maxReviews} selected
+          </span>
+        </div>
+
         <div className="dlgfb-search-field dlgfb-sessions-search">
           <svg className="dlgfb-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <circle cx="11" cy="11" r="6.5" />
@@ -216,9 +144,9 @@ export default function SpeakerReviews({ number, sessions, reviews, maxPerDay = 
           </svg>
           <input
             type="search"
-            className="dlgfb-form-control dlgfb-form-control-lg"
-            placeholder="Search by title, speaker or organization"
-            aria-label="Search sessions by title, speaker or organization"
+            className="dlgfb-form-control"
+            placeholder="Search presentations"
+            aria-label="Search presentations by title, speaker or organization"
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
@@ -238,76 +166,22 @@ export default function SpeakerReviews({ number, sessions, reviews, maxPerDay = 
 
         {terms.length > 0 && !sessions.some((s) => matches(s, terms)) && (
           <p className="dlgfb-sessions-empty" role="status">
-            No sessions match "{query.trim()}".
+            No presentations match "{query.trim()}".
           </p>
         )}
 
         {days.map((d, index) => {
-          // Once a day has its most reviews, its other sessions cannot be rated. Counted over the whole day, not
-          // only the sessions the search shows.
-          const reviewed = d.sessions.filter((s) => hasReview(reviews?.[s.id])).length;
-          const full = reviewed >= maxPerDay;
           const shown = terms.length ? d.sessions.filter((s) => matches(s, terms)) : d.sessions;
           if (!shown.length) return null;
-          const list = (
-            <div className="dlgfb-sessions-list">
-              {shown.map((s) => (
-                <SessionItem
-                  key={s.id}
-                  session={s}
-                  review={reviews?.[s.id]}
-                  open={openId === s.id}
-                  locked={full && !hasReview(reviews?.[s.id])}
-                  maxPerDay={maxPerDay}
-                  onToggle={() => setOpenId((id) => (id === s.id ? null : s.id))}
-                  onChange={(r) => setReview(s.id, r)}
-                />
-              ))}
-            </div>
-          );
-          // A one day agenda needs no day accordion.
-          if (days.length === 1) return <div key={d.day || "day"}>{list}</div>;
-
-          const dayKey = d.day || `day-${index}`;
-          // A search opens every day with a match, so nothing found is hidden.
-          const open = terms.length > 0 || openDay === dayKey;
-          const panelId = `sessions-day-${index}-panel`;
-          const headId = `sessions-day-${index}-head`;
+          // "DAY 1", "DAY 2" in the agenda's order. The agenda's own day name ("Monday, November 9, 2026") is still
+          // saved with each pick, and is read out to screen readers.
           return (
-            <div className={`dlgfb-sessions-day${open ? " dlgfb-is-open" : ""}${reviewed ? " dlgfb-is-reviewed" : ""}`} key={dayKey}>
-              <h3 className="dlgfb-session-heading">
-                <button
-                  type="button"
-                  id={headId}
-                  className="dlgfb-session-toggle dlgfb-sessions-day-toggle"
-                  aria-expanded={open}
-                  aria-controls={panelId}
-                  onClick={() => setOpenDay((k) => (k === dayKey ? null : dayKey))}
-                >
-                  <span className="dlgfb-session-summary">
-                    <span className="dlgfb-sessions-day-title">{d.day || `Day ${index + 1}`}</span>
-                    <span className="dlgfb-sessions-day-meta">
-                      {terms.length ? `${shown.length} of ${d.sessions.length} sessions match` : `${d.sessions.length} sessions`}
-                      {reviewed > 0 && (
-                        <>
-                          <span className="dlgfb-session-sep" aria-hidden="true">
-                            |
-                          </span>
-                          <span className="dlgfb-sessions-day-count">
-                            {reviewed} of {maxPerDay} reviewed
-                          </span>
-                        </>
-                      )}
-                    </span>
-                  </span>
-                  {CARET}
-                </button>
-              </h3>
-              {open && (
-                <div className="dlgfb-sessions-day-body" id={panelId} role="region" aria-labelledby={headId}>
-                  {list}
-                </div>
-              )}
+            <div className="dlgfb-sessions-day" key={d.day || `day-${index}`} role="group" aria-label={d.day || `Day ${index + 1}`}>
+              <h3 className="dlgfb-sessions-day-label">Day {index + 1}</h3>
+              {shown.map((s) => {
+                const isPicked = hasReview(reviews?.[s.id]);
+                return <SessionPick key={s.id} session={s} picked={isPicked} locked={full && !isPicked} onToggle={() => toggle(s.id)} />;
+              })}
             </div>
           );
         })}

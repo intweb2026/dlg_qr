@@ -35,21 +35,16 @@ async function spin(req, res) {
   const ids = await m.eligibleIds();
   if (!ids.length) return res.status(400).json({ detail: "No eligible submissions in the pool." });
   const maxId = await m.maxSubmissionId();
-  // The draw has started, so the feedback form moves to the ended status. The admin can set another status on the Submissions page.
-  await m.loadSettings();
-  await query("UPDATE form_settings SET form_status = 'ended', updated_at = UTC_TIMESTAMP(6) WHERE id = 1");
   return res.json({ submission_id: ids[crypto.randomInt(ids.length)], pad_length: padLengthFor(maxId) });
 }
 
 /**
  * Posts the feedback responses to the CRM and returns what the CRM answered. The raffle page calls this right after a spin, so the call shows in the
- * browser's Network tab, but the request to the CRM is made here and the key never leaves the server. Only answers
- * once the form has ended, which a spin does, so it cannot be used to push responses from an open form.
+ * browser's Network tab, but the request to the CRM is made here and the key never leaves the server. The form stays
+ * open, so every spin sends the responses again, including any that came in after the last draw.
  */
 async function sendToCrm(req, res) {
   if (!config.sendFeedbackSubmissionToCrm || !config.crmWebhookUrl || !config.crmApiKey) return res.json({ sent: false, reason: "disabled" });
-  const cfg = await m.loadSettings();
-  if (cfg.form_status !== "ended") return res.status(409).json({ detail: "The feedback form has not ended yet." });
   const payload = await feedbackResponsesPayload(req.event);
   try {
     const crm = await postToCrm(payload);

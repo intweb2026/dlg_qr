@@ -22,6 +22,9 @@ const ADDED_COLUMNS = [
   ["feedback_submissions", "userComapnyAliesName", "varchar(255) NOT NULL DEFAULT ''", "userAliesName"],
   ["form_settings", "crm_synced_at", "datetime(6) DEFAULT NULL", "spin_duration_seconds"],
   ["form_settings", "crm_synced_count", "int unsigned DEFAULT NULL", "crm_synced_at"],
+  ["form_settings", "form_open_auto", "tinyint(1) NOT NULL DEFAULT 1", "crm_synced_count"],
+  ["form_settings", "report_sent_at", "datetime(6) DEFAULT NULL", "form_open_auto"],
+  ["form_settings", "report_sent_count", "int unsigned DEFAULT NULL", "report_sent_at"],
 ];
 
 // [table, column] no longer used, dropped from databases made before they were removed from db/schema.sql.

@@ -2,8 +2,6 @@
 // Gemini into one or two polished sentences; the attendee then uses it, edits it or keeps their original.
 // Without GEMINI_API_KEY the endpoint answers 503 and the form keeps the original text.
 
-const { closedJson, isActive, loadSettings } = require("../models");
-
 // GEMINI_MODEL in .env picks the first model to try. When Google answers that a model is overloaded or it cannot be
 // reached, the next one in the list is tried, so a busy model does not stop the suggestion. A one sentence rewrite
 // does not need a big model, the lite ones answer in about a second and are rarely busy. gemini-2.5-flash is retired.
@@ -118,9 +116,6 @@ function rateLimited(ip) {
 }
 
 async function suggestTestimonial(req, res) {
-  const cfg = await loadSettings();
-  if (!isActive(cfg)) return res.status(403).json(closedJson(cfg));
-
   const text = String(req.body?.text ?? "").replace(/\s+/g, " ").trim();
   if (text.split(" ").filter(Boolean).length < MIN_WORDS) {
     return res.status(400).json({ detail: `Write at least ${MIN_WORDS} words for a suggestion.`, code: "too_short" });

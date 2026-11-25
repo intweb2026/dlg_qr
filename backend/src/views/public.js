@@ -1,31 +1,45 @@
 const { syncOnFirstVisit } = require("../crmDelegates");
+const { openingFor } = require("../formOpening");
 const { query, transaction } = require("../db");
 const { menuItems } = require("../eventDetails");
 const { publicConfig, speakerReviewSettings } = require("../events");
-const { ALIAS_COMPANY, ALIAS_NAME, attendeeLookupJson, closedJson, getAttendee, isActive, loadSettings } = require("../models");
+const { ALIAS_COMPANY, ALIAS_NAME, attendeeLookupJson, getAttendee } = require("../models");
 const { collapseSpaces, deviceFingerprint, normalizeName } = require("../utils");
 const v = require("../validation");
 
 const ALREADY_SUBMITTED = { detail: "Feedback has already been submitted for this attendee.", code: "already_submitted" };
+
+/** The 403 body before the feedback form opens, with the opening time and the event's time zone for the message. */
+function notOpenJson(opening) {
+  return {
+    detail: "The feedback form opens when the event starts.",
+    code: "not_open",
+    opens_at: opening.opensAt.toISOString(),
+    time_zone: opening.timeZone,
+  };
+}
 
 /** The event's settings for the site, its name, media, links, Wi-Fi and the visible home page menu. */
 async function eventConfig(req, res) {
   // Every page loads the config, so the first visitor starts the one CRM sync. It runs in the background, the
   // attendee lists below wait for it.
   syncOnFirstVisit(req.event).catch((err) => console.error(`${req.event.code}: CRM delegates sync failed, ${err.message}`));
-  const menu = (await menuItems({ visibleOnly: true })).map(({ is_visible, ...item }) => item);
-  res.json({ ...publicConfig(req.event), menu });
-}
-
-async function formStatus(req, res) {
-  const cfg = await loadSettings();
-  res.json({ form_status: cfg.form_status, is_active: isActive(cfg) });
+  const [items, opening] = await Promise.all([menuItems({ visibleOnly: true }), openingFor(req.event)]);
+  const menu = items.map(({ is_visible, ...item }) => item);
+  // The feedback form opens at 12:00 AM of the event's first day where it is held, and then stays open for good.
+  res.json({
+    ...publicConfig(req.event),
+    menu,
+    feedback_open: opening ? opening.open : true,
+    feedback_opens_at: opening?.opensAt ? opening.opensAt.toISOString() : null,
+    time_zone: opening?.timeZone || null,
+  });
 }
 
 /** Full lookup list, loaded once with the feedback form. The browser filters it after 3 typed characters. */
 async function attendeeList(req, res) {
-  const cfg = await loadSettings();
-  if (!isActive(cfg)) return res.status(403).json(closedJson(cfg));
+  const opening = await openingFor(req.event);
+  if (opening && !opening.open) return res.status(403).json(notOpenJson(opening));
   await syncOnFirstVisit(req.event);
   // Hide people who already submitted.
   const rows = await query(
@@ -78,19 +92,14 @@ const NEW_ATTENDEE_FIELDS = {
 };
 
 /**
- * The speaker session reviews, when sent, are a list with no more than maxPerDay on any one day. The limit is the
- * event's own, "speakerReviews.maxPerDay" in events.json; the form reads the same value from the event config.
+ * The speaker session reviews, when sent, are a list of no more than maxReviews in all, whatever the day. The limit
+ * is the event's own, "speakerReviews.maxReviews" in events.json; the form reads the same value from the event config.
  */
-function checkSpeakerReviews(reviews, maxPerDay) {
+function checkSpeakerReviews(reviews, maxReviews) {
   if (reviews === undefined) return;
   if (!Array.isArray(reviews)) throw new v.ValidationError({ feedback_data: ["Speaker reviews must be a list."] });
-  const perDay = new Map();
-  for (const r of reviews) {
-    const day = String(r?.day ?? "");
-    perDay.set(day, (perDay.get(day) || 0) + 1);
-    if (perDay.get(day) > maxPerDay) {
-      throw new v.ValidationError({ feedback_data: [`You can review up to ${maxPerDay} sessions for each day.`] });
-    }
+  if (reviews.length > maxReviews) {
+    throw new v.ValidationError({ feedback_data: [`You can review up to ${maxReviews} sessions in all.`] });
   }
 }
 
@@ -119,11 +128,11 @@ const SUBMIT_FIELDS = {
 };
 
 async function feedbackSubmit(req, res) {
-  // 1. Status check
-  const cfg = await loadSettings();
-  if (!isActive(cfg)) return res.status(403).json(closedJson(cfg));
-
-  // 2. The one entry per device check is done by the form, with a cookie and localStorage on its own site.
+  // The form opens at 12:00 AM of the event's first day where it is held, and never closes after that, also not
+  // after the raffle draw.
+  const opening = await openingFor(req.event);
+  if (opening && !opening.open) return res.status(403).json(notOpenJson(opening));
+  // 1. The one entry per device check is done by the form, with a cookie and localStorage on its own site.
   // A cookie set here would live on the API domain, which clearing the form site's cookies does not remove.
 
   const data = req.body ?? {};
@@ -132,14 +141,14 @@ async function feedbackSubmit(req, res) {
   }
   const { values, errors } = await v.validate(data, SUBMIT_FIELDS);
   if (errors) throw new v.ValidationError(errors);
-  checkSpeakerReviews(values.feedback_data.speaker_reviews, speakerReviewSettings(req.event).maxPerDay);
+  checkSpeakerReviews(values.feedback_data.speaker_reviews, speakerReviewSettings(req.event).maxReviews);
   if (("attendee_id" in values) === ("new_attendee" in values)) {
     throw new v.ValidationError({ attendee_id: ["Select your name from the list, or add it as a new attendee."] });
   }
   let attendee = values.attendee_id;
   const newAttendee = values.new_attendee;
 
-  // 3. A new name and company pair must not already be on the list, compared without case, accents or extra
+  // 2. A new name and company pair must not already be on the list, compared without case, accents or extra
   //    spaces. The same name from another company is a different person and is allowed.
   if (newAttendee) {
     const wanted = `${normalizeName(newAttendee.full_name)}|${normalizeName(newAttendee.company_name)}`;
@@ -169,7 +178,7 @@ async function feedbackSubmit(req, res) {
     }
   }
 
-  // 4. Duplicate check + save
+  // 3. Duplicate check + save
   if (attendee && attendee.has_submitted) return res.status(400).json(ALREADY_SUBMITTED);
   // An older page that sends no alias keeps the name and company as they are on the list.
   const who = attendee || newAttendee;
@@ -201,4 +210,4 @@ async function feedbackSubmit(req, res) {
   return res.status(201).json({ id: submissionId, submission_status: true, detail: "Thank you, your feedback has been submitted." });
 }
 
-module.exports = { eventConfig, formStatus, attendeeList, registeredAttendees, feedbackSubmit };
+module.exports = { eventConfig, attendeeList, registeredAttendees, feedbackSubmit };

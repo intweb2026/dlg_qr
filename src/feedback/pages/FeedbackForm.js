@@ -3,51 +3,30 @@ import { Link } from "react-router-dom";
 import { useEvent, useEventPath } from "../../event/EventContext";
 import api, { errorMessage, eventKey, padId } from "../api";
 import AttendeeSearch from "../components/AttendeeSearch";
+// eslint-disable-next-line no-unused-vars -- used by the confirm popup, commented out for now
 import Modal from "../components/Modal";
 import SpeakerReviews, { REVIEWS_KEY, reviewsToSubmit } from "../components/SpeakerReviews";
 import TestimonialAssist, { AutoGrowTextarea, PolishButton, RollBackButton, testimonialHelper, testimonialOriginal } from "../components/TestimonialAssist";
 import feedbackQuestions, { SESSIONS_AFTER } from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
-import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryNumber, saveEntryNumber } from "../utils/device";
+import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryHolder, readEntryNumber, saveEntryHolder, saveEntryNumber } from "../utils/device";
 
 // eslint-disable-next-line no-unused-vars -- used by the commented-out chips under the intro
 const REQUIRED_TOTAL = feedbackQuestions.filter((q) => q.required).length + 1; // plus the name
 
 const checkedIcon = "/images/common/checked.png" 
 
-// The view for each status set in the admin, only "active" shows the form.
-const STATUS_VIEWS = { inactive: "inactive", upcoming: "upcoming", ended: "ended", closed: "closed" };
-const closedView = (status) => STATUS_VIEWS[status] || "inactive";
-
 const PANEL_ICONS = {
-  info: (
-    <>
-      <path d="M12 11v6" />
-      <path d="M12 7.3v.2" />
-    </>
-  ),
-  inactive: (
-    <>
-      <rect x="5" y="11" width="14" height="9" rx="2" />
-      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    </>
-  ),
   upcoming: (
     <>
       <circle cx="12" cy="12" r="8" />
       <path d="M12 8v4.5l3 1.8" />
     </>
   ),
-  ended: (
+  info: (
     <>
-      <path d="M6 20V5" />
-      <path d="M6 5h11l-2 3.5 2 3.5H6" />
-    </>
-  ),
-  closed: (
-    <>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M8.5 12h7" />
+      <path d="M12 11v6" />
+      <path d="M12 7.3v.2" />
     </>
   ),
   offline: (
@@ -100,6 +79,17 @@ function DrawTicket({ id }) {
   );
 }
 
+/** "Monday, November 9, 2026 at 12:00 AM", the opening time as it is where the event is held. */
+function openingText(opensAt, timeZone) {
+  if (!opensAt) return "";
+  const options = { dateStyle: "full", timeStyle: "short" };
+  try {
+    return new Date(opensAt).toLocaleString(undefined, timeZone ? { ...options, timeZone } : options);
+  } catch {
+    return new Date(opensAt).toLocaleString(undefined, options);
+  }
+}
+
 // Light check only, the backend validates the email properly.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -127,7 +117,8 @@ function eventQuestions(sources) {
       return {
         ...q,
         options: items.map((item) => item.name),
-        optionDetails: Object.fromEntries(items.map((item) => [item.name, [item.dates, item.location].filter(Boolean).join(" | ")])),
+        // The dates and the place, each on its own line under the name.
+        optionDetails: Object.fromEntries(items.map((item) => [item.name, [item.dates, item.location].filter(Boolean)])),
       };
     })
     .filter((q) => !q.optionsFrom || q.options.length > 0);
@@ -148,6 +139,7 @@ const SAVE_ICON = (
 
 // One row of the confirm popup. The edit button turns the value into a text box in the same place,
 // Enter or the tick saves it, Escape puts the old value back.
+// eslint-disable-next-line no-unused-vars -- used by the confirm popup, commented out for now
 function ConfirmRow({ label, value, editing, disabled, onEdit, onSave, onCancel }) {
   const [draft, setDraft] = useState(value);
   const [invalid, setInvalid] = useState(false);
@@ -211,7 +203,7 @@ function ConfirmRow({ label, value, editing, disabled, onEdit, onSave, onCancel 
   );
 }
 
-/** The question count, above the form. */
+/** The question count, above the form, with a bar under it. */
 function FormProgress({ count }) {
   return (
     <div className="dlgfb-form-progress">
@@ -219,28 +211,43 @@ function FormProgress({ count }) {
         <span>Your feedback</span>
         <span>{count} Questions</span>
       </div>
+      <div className="dlgfb-form-progress-bar" aria-hidden="true" />
     </div>
   );
 }
 
+/** A conference's dates and place under its name, one line each. */
+function OptionDetails({ lines }) {
+  if (!lines?.length) return null;
+  return lines.map((line) => (
+    <span className="dlgfb-form-check-detail" key={line}>
+      {line}
+    </span>
+  ));
+}
+
 /** The tick, the title and the raffle ticket number, after a submit and when this device has already submitted. */
-function SubmittedCard({ title, entryId, foot, homePath, noteIntro = "" }) {
+function SubmittedCard({ title, subtitle, entryId, holder, homePath }) {
+  const hasEntry = entryId !== null && entryId !== undefined;
   return (
     <div className="dlgfb-form-card dlgfb-form-success" role="status">
       <span className="dlgfb-form-success-icon" aria-hidden="true">
         <img src={checkedIcon} alt="Success" />
       </span>
       <h2>{title}</h2>
-      {entryId !== null && entryId !== undefined && (
-        <>
-          <p className="dlgfb-form-raffle-kicker">Your raffle ticket number is</p>
-          <p className="dlgfb-form-raffle-number">{padId(entryId, 3)}</p>
-          <p className="dlgfb-form-raffle-note">
-            {noteIntro && `${noteIntro} `}The winning number will be announced shortly; please stay in the room, as the prize can only be claimed by a winner who is present.
-          </p>
-        </>
+      <p className="dlgfb-form-success-sub">{subtitle}</p>
+      {hasEntry && (
+        <div className="dlgfb-form-raffle">
+          <p className="dlgfb-form-raffle-kicker">Your raffle ticket</p>
+          <p className="dlgfb-form-raffle-number">{entryId}</p>
+          {holder?.name && <p className="dlgfb-form-raffle-name">{holder.name}</p>}
+          {holder?.company && <p className="dlgfb-form-raffle-company">{holder.company}</p>}
+        </div>
       )}
-      <p className="dlgfb-form-raffle-foot">{foot}</p>
+      <p className="dlgfb-form-raffle-note">
+        The winner will be announced shortly. Please stay in the room to claim your prize if you win.
+      </p>
+      <p className="dlgfb-form-raffle-foot">Good luck!</p>
       {/* Takes the place of the header's back arrow, which is hidden once the feedback is in. */}
       <Link to={homePath} className="dlgfb-btn dlgfb-form-btn dlgfb-form-btn-home">
         Back to home page
@@ -280,8 +287,8 @@ export default function FeedbackForm() {
   const eventPath = useEventPath();
   const eventConfig = useEvent().config;
   const { logo, background } = eventConfig.media || {};
-  // This event's limit on session reviews per day, "speakerReviews.maxPerDay" in backend/events.json.
-  const reviewsPerDay = eventConfig.speakerReviews?.maxPerDay;
+  // This event's limit on session reviews in all, "speakerReviews.maxReviews" in backend/events.json.
+  const maxReviews = eventConfig.speakerReviews?.maxReviews;
   // The last question's options, the conferences listed on the event's website.
   const [upcomingConferences, setUpcomingConferences] = useState([]);
   // The agenda's speaker sessions, each one can be reviewed after the questions.
@@ -289,7 +296,7 @@ export default function FeedbackForm() {
   const [draft] = useState(readDraft);
   // Every question is on one screen, under the name.
   const questions = useMemo(() => eventQuestions({ upcomingConferences }), [upcomingConferences]);
-  // loading | already | inactive | upcoming | ended | closed | form | success | offline
+  // loading | already | upcoming | form | success | offline
   const [view, setView] = useState("loading");
   const [attendees, setAttendees] = useState(null);
   const [attendeesError, setAttendeesError] = useState(false);
@@ -298,14 +305,28 @@ export default function FeedbackForm() {
   const [errors, setErrors] = useState({});
   const [confirming, setConfirming] = useState(false);
   // A refusal shown inside the confirm card, in place of a toast.
+  // eslint-disable-next-line no-unused-vars -- kept for the confirm popup, commented out for now
   const [confirmError, setConfirmError] = useState(null);
   // The confirm popup field being edited, "full_name" or "company_name", or null.
+  // eslint-disable-next-line no-unused-vars -- kept for the confirm popup, commented out for now
   const [editingField, setEditingField] = useState(null);
   // Name and company as shown on the confirm popup, saved as the alias. Kept apart from the attendee,
   // so a new attendee's typed name is saved as their real name even when the popup changes it.
   const [alias, setAlias] = useState({ full_name: "", company_name: "" });
   const [submitting, setSubmitting] = useState(false);
   const [entryId, setEntryId] = useState(() => readEntryNumber());
+  const [entryHolder, setEntryHolder] = useState(() => readEntryHolder());
+  // When the form opens, at 12:00 AM of the event's first day where it is held. Comes with the event config, and with
+  // the server's refusal when a page loaded before the opening is used.
+  const [opening, setOpening] = useState({ opensAt: eventConfig.feedback_opens_at, timeZone: eventConfig.time_zone });
+
+  /** Shows the not open yet card when the server says the form has not opened. */
+  const notOpenYet = (err) => {
+    if (err?.response?.status !== 403 || err.response.data?.code !== "not_open") return false;
+    setOpening({ opensAt: err.response.data.opens_at, timeZone: err.response.data.time_zone });
+    setView("upcoming");
+    return true;
+  };
 
   const loadAttendees = useCallback(() => {
     setAttendeesError(false);
@@ -314,8 +335,10 @@ export default function FeedbackForm() {
       .get("/attendees/")
       .then(({ data }) => setAttendees(Array.isArray(data) ? data : []))
       .catch((err) => {
-        if (err?.response?.status === 403) setView(closedView(err.response.data?.form_status));
-        else setAttendeesError(true);
+        if (err?.response?.status === 403 && err.response.data?.code === "not_open") {
+          setOpening({ opensAt: err.response.data.opens_at, timeZone: err.response.data.time_zone });
+          setView("upcoming");
+        } else setAttendeesError(true);
       });
   }, []);
 
@@ -326,33 +349,30 @@ export default function FeedbackForm() {
       setView("already");
       return;
     }
-    // The form status is checked first. The attendee list and the conferences are only requested when the form is active.
+    // Before 12:00 AM of the event's first day where it is held, the form says when it opens. After that it is open
+    // for good, also after the raffle draw.
+    if (eventConfig.feedback_open === false) {
+      setView("upcoming");
+      return undefined;
+    }
     let cancelled = false;
+    setView("form");
+    loadAttendees();
+    // Without the list the last question is left out, so a failure needs no message.
     api
-      .get("/form-status/")
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (!data.is_active) {
-          setView(closedView(data.form_status));
-          return;
-        }
-        setView("form");
-        loadAttendees();
-        // Without the list the last question is left out, so a failure needs no message.
-        api
-          .get("/upcoming-conferences/")
-          .then(({ data: list }) => !cancelled && setUpcomingConferences(Array.isArray(list) ? list : []))
-          .catch(() => {});
-        // Without the sessions the reviews are left out, so a failure needs no message.
-        api
-          .get("/speaker-sessions/")
-          .then(({ data: list }) => !cancelled && setSpeakerSessions(Array.isArray(list) ? list : []))
-          .catch(() => {});
-      })
-      .catch(() => !cancelled && setView("offline"));
+      .get("/upcoming-conferences/")
+      .then(({ data: list }) => !cancelled && setUpcomingConferences(Array.isArray(list) ? list : []))
+      .catch(() => {});
+    // Without the sessions the reviews are left out, so a failure needs no message.
+    api
+      .get("/speaker-sessions/")
+      .then(({ data: list }) => !cancelled && setSpeakerSessions(Array.isArray(list) ? list : []))
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
+    // Only on page load, a later config reload must not reset a form in progress.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadAttendees]);
 
   // Saves the form in progress after every change.
@@ -403,15 +423,19 @@ export default function FeedbackForm() {
     return next;
   };
 
-  // Submit Feedback opens the confirm popup once every required answer is in.
+  // Submit Feedback submits straight away once every required answer is in, the name and company on the form are
+  // saved as the display name. The "Your Display Name" confirm popup is commented out below.
   const handleContinue = (e) => {
     e.preventDefault();
+    if (submitting) return;
     const missing = Object.keys(validate());
     if (missing.length === 0) {
       setConfirmError(null);
       setEditingField(null);
-      setAlias({ full_name: attendee.full_name.trim(), company_name: attendee.company_name.trim() });
-      setConfirming(true);
+      const confirmed = { full_name: attendee.full_name.trim(), company_name: attendee.company_name.trim() };
+      setAlias(confirmed);
+      // setConfirming(true);
+      handleSubmit(confirmed);
       return;
     }
     notify(
@@ -423,7 +447,8 @@ export default function FeedbackForm() {
     if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const handleSubmit = async () => {
+  /** Sends the feedback. alias is the display name and company, from the form, or from the popup when it is used. */
+  const handleSubmit = async (confirmed = alias) => {
     setSubmitting(true);
     const feedback_data = {};
     questions.forEach((q) => {
@@ -457,11 +482,15 @@ export default function FeedbackForm() {
           }
         : { attendee_id: attendee.attendee_id };
       // The popup's name and company are always saved as the alias, edited or not.
-      const aliasFields = { alias_name: alias.full_name, company_alias_name: alias.company_name };
+      const aliasFields = { alias_name: confirmed.full_name, company_alias_name: confirmed.company_name };
       const { data } = await api.post("/feedback/submit/", { ...who, ...aliasFields, feedback_data });
       const id = Number.isInteger(data?.id) ? data.id : null;
       if (id !== null) saveEntryNumber(id);
       setEntryId(id);
+      // The ticket shows the name and company as confirmed on the popup, the same the raffle draw shows.
+      const holder = { name: confirmed.full_name.trim(), company: confirmed.company_name.trim() };
+      saveEntryHolder(holder);
+      setEntryHolder(holder);
       markSubmittedOnDevice();
       clearDraft();
       setConfirming(false);
@@ -469,25 +498,23 @@ export default function FeedbackForm() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       const code = err?.response?.data?.code;
-      if (attendee.is_new && (code === "already_submitted" || code === "email_exists")) {
+      // With the confirm popup this refusal was shown inside it. Without it, it shows as a toast below.
+      if (confirming && attendee.is_new && (code === "already_submitted" || code === "email_exists")) {
         // Same name and company already submitted, or the email belongs to someone listed, keep the card open and say so there.
         setConfirmError(errorMessage(err));
         return;
       }
       setConfirming(false);
-      if (err?.response?.status === 403) {
-        setView(closedView(err.response.data?.form_status));
-      } else {
-        if (code === "already_submitted" && !attendee.is_new) {
-          setAttendees((list) => (list || []).filter((a) => a.attendee_id !== attendee.attendee_id));
-          setAttendee(null);
-        } else if (code === "attendee_exists") {
-          // The name was added to the list after this page loaded, reload it so it can be picked.
-          setAttendee(null);
-          loadAttendees();
-        }
-        notify(errorMessage(err), "danger", { title: "Not submitted" });
+      if (notOpenYet(err)) return;
+      if (code === "already_submitted" && !attendee.is_new) {
+        setAttendees((list) => (list || []).filter((a) => a.attendee_id !== attendee.attendee_id));
+        setAttendee(null);
+      } else if (code === "attendee_exists") {
+        // The name was added to the list after this page loaded, reload it so it can be picked.
+        setAttendee(null);
+        loadAttendees();
       }
+      notify(errorMessage(err), "danger", { title: "Not submitted" });
     } finally {
       setSubmitting(false);
     }
@@ -495,14 +522,13 @@ export default function FeedbackForm() {
 
   const showIntro = view === "form" || view === "loading";
 
-  // "How would you rate the sessions?", question SESSIONS_AFTER + 1 when the agenda has speaker sessions.
+  // "Which presentations did you find most valuable?", after question SESSIONS_AFTER when the agenda has speaker sessions.
   const hasSessions = speakerSessions.length > 0;
   const sessionsQuestion = hasSessions && (
     <SpeakerReviews
-      number={Math.min(SESSIONS_AFTER, questions.length) + 1}
       sessions={speakerSessions}
       reviews={answers[REVIEWS_KEY]}
-      maxPerDay={reviewsPerDay}
+      maxReviews={maxReviews}
       onChange={(next) => setAnswer(REVIEWS_KEY, next)}
     />
   );
@@ -533,7 +559,10 @@ export default function FeedbackForm() {
           {logo && <img src={logo} alt="" className="dlgfb-form-logo" />}
           {showIntro && (
             <>
-              <p className="dlgfb-form-intro">Please submit your completed online feedback form for your chance to win one of the latest Amazon devices in our raffle draw.</p>
+              <p className="dlgfb-form-intro">
+                Your feedback helps shape our future conferences. Complete this short survey for a chance to win a prize in our
+                closing raffle draw.
+              </p>
               {/* <ul className="dlgfb-form-chips">
                 
                 <li>{REQUIRED_TOTAL} Answers Required</li>
@@ -559,34 +588,18 @@ export default function FeedbackForm() {
           {view === "already" && (
             <SubmittedCard
               title="You’re Already In!"
+              subtitle="We’ve already got your feedback. It’s one entry per attendee."
               entryId={entryId}
-              noteIntro="We’ve already got your feedback. It’s one entry per attendee."
-              foot="You’re entered in the draw. Good luck!"
+              holder={entryHolder}
               homePath={eventPath()}
             />
           )}
 
-          {view === "inactive" && (
-            <StatusPanel tone="inactive" title="The feedback form is not open yet">
-              The organisers have not enabled the feedback form yet. Please check back later.
-            </StatusPanel>
-          )}
-
           {view === "upcoming" && (
-            <StatusPanel tone="upcoming" title="The event has not started yet">
-              The feedback form opens once the event begins. Please check back later.
-            </StatusPanel>
-          )}
-
-          {view === "ended" && (
-            <StatusPanel tone="ended" title="This event has ended">
-              Thank you for attending. The feedback form is no longer available.
-            </StatusPanel>
-          )}
-
-          {view === "closed" && (
-            <StatusPanel tone="closed" title="This event is closed">
-              The feedback form is closed and no longer takes responses.
+            <StatusPanel tone="upcoming" title="The feedback form is not open yet">
+              {opening.opensAt
+                ? `It opens when the event starts, on ${openingText(opening.opensAt, opening.timeZone)} at the venue. Please come back then.`
+                : "It opens when the event starts. Please come back then."}
             </StatusPanel>
           )}
 
@@ -604,7 +617,15 @@ export default function FeedbackForm() {
             </StatusPanel>
           )}
 
-          {view === "success" && <SubmittedCard title="You’re all set!" entryId={entryId} foot="You’re entered in the draw. Good luck!" homePath={eventPath()} />}
+          {view === "success" && (
+            <SubmittedCard
+              title="You’re all set!"
+              subtitle="Thank you for your feedback."
+              entryId={entryId}
+              holder={entryHolder}
+              homePath={eventPath()}
+            />
+          )}
 
           {view === "form" && (
             <form className="dlgfb-form-panel" onSubmit={handleContinue} noValidate>
@@ -630,8 +651,6 @@ export default function FeedbackForm() {
               </section>
 
               {questions.map((q, index) => {
-                // The speaker sessions take number SESSIONS_AFTER + 1, the questions after them move down one.
-                const number = index + 1 + (hasSessions && index >= SESSIONS_AFTER ? 1 : 0);
                 const invalid = !!errors[q.key];
                 const labelId = `${q.key}-label`;
                 const labelled = q.type === "select" || q.type === "textarea";
@@ -643,7 +662,6 @@ export default function FeedbackForm() {
                   {hasSessions && index === SESSIONS_AFTER && sessionsQuestion}
                   <section className={`dlgfb-form-q${invalid ? " dlgfb-has-error" : ""}`} id={`q-${q.key}`}>
                     <LabelTag className="dlgfb-form-q-head" id={labelId} htmlFor={labelled ? q.key : undefined}>
-                      <span className="dlgfb-form-q-num">{String(number).padStart(2, "0")}</span>
                       <span className="dlgfb-form-q-text">{q.label}</span>
                     </LabelTag>
 
@@ -666,7 +684,7 @@ export default function FeedbackForm() {
                               {q.optionDetails ? (
                                 <span className="dlgfb-form-check-label">
                                   <span className="dlgfb-form-check-title">{opt}</span>
-                                  {q.optionDetails[opt] && <span className="dlgfb-form-check-detail">{q.optionDetails[opt]}</span>}
+                                  <OptionDetails lines={q.optionDetails[opt]} />
                                 </span>
                               ) : (
                                 <span>{opt}</span>
@@ -738,7 +756,7 @@ export default function FeedbackForm() {
                               {q.optionDetails ? (
                                 <span className="dlgfb-form-check-label">
                                   <span className="dlgfb-form-check-title">{opt}</span>
-                                  {q.optionDetails[opt] && <span className="dlgfb-form-check-detail">{q.optionDetails[opt]}</span>}
+                                  <OptionDetails lines={q.optionDetails[opt]} />
                                 </span>
                               ) : (
                                 <span>{opt}</span>
@@ -773,19 +791,31 @@ export default function FeedbackForm() {
                       {assistHelper && <TestimonialAssist q={q} helper={assistHelper} />}
 
                       {q.type === "list" && (
-                        <div className="dlgfb-form-list" role="group" aria-labelledby={labelId}>
-                          {q.fields.map((f, i) => (
-                            <input
-                              key={f.placeholder}
-                              type="text"
-                              className={`dlgfb-form-input${invalid && f.required && !(answers[q.key]?.[i] || "").trim() ? " dlgfb-is-invalid" : ""}`}
-                              placeholder={f.placeholder}
-                              aria-label={f.placeholder}
-                              maxLength={200}
-                              value={answers[q.key]?.[i] || ""}
-                              onChange={(e) => setListAnswer(q, i, e.target.value)}
-                            />
-                          ))}
+                        <div className={`dlgfb-form-list${q.numbered ? " dlgfb-is-numbered" : ""}`} role="group" aria-labelledby={labelId}>
+                          {q.fields.map((f, i) => {
+                            const input = (
+                              <input
+                                type="text"
+                                className={`dlgfb-form-input${invalid && f.required && !(answers[q.key]?.[i] || "").trim() ? " dlgfb-is-invalid" : ""}`}
+                                placeholder={f.placeholder}
+                                aria-label={q.numbered ? `${f.placeholder} ${i + 1}` : f.placeholder}
+                                maxLength={200}
+                                value={answers[q.key]?.[i] || ""}
+                                onChange={(e) => setListAnswer(q, i, e.target.value)}
+                              />
+                            );
+                            // "1." beside the box for a numbered list, the placeholders repeat there.
+                            return q.numbered ? (
+                              <div className="dlgfb-form-list-row" key={i}>
+                                <span className="dlgfb-form-list-num" aria-hidden="true">
+                                  {i + 1}.
+                                </span>
+                                {input}
+                              </div>
+                            ) : (
+                              <Fragment key={i}>{input}</Fragment>
+                            );
+                          })}
                         </div>
                       )}
 
@@ -803,14 +833,20 @@ export default function FeedbackForm() {
               {/* Fewer questions than SESSIONS_AFTER, the sessions go last. */}
               {hasSessions && questions.length <= SESSIONS_AFTER && sessionsQuestion}
 
-              <button type="submit" className="dlgfb-form-submit">
-                Submit Feedback
+              <p className="dlgfb-form-submit-note">
+                If you win, your name and company will be announced and displayed on the conference screen.
+              </p>
+              <button type="submit" className="dlgfb-form-submit" disabled={submitting}>
+                {submitting && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-mr-2" aria-hidden="true" />}
+                {submitting ? "Submitting" : "Submit Feedback"}
               </button>
             </form>
           )}
         </main>
       </div>
 
+      {/* "Your Display Name" confirm popup, not used for now: Submit Feedback submits straight away and the success
+          card opens. To bring it back, uncomment this block and setConfirming(true) in handleContinue.
       {confirming && attendee && (
         <Modal
           title="Your Display Name"
@@ -869,7 +905,7 @@ export default function FeedbackForm() {
             )}
           </div>
         </Modal>
-      )}
+      )} */}
     </div>
   );
 }

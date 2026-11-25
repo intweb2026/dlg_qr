@@ -7,7 +7,7 @@
       "successIcon": "/images/common/checked.png"
     },
     "speakerReviews": {
-      "maxPerDay": 3,
+      "maxReviews": 3,
       "titleMaxWords": 7
     }
   },
@@ -19,7 +19,7 @@
       "successIcon": "/images/common/checked.png"
     },
     "speakerReviews": {
-      "maxPerDay": 3,
+      "maxReviews": 3,
       "titleMaxWords": 7
     }
   }

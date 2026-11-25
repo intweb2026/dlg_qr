@@ -128,6 +128,13 @@ export function AutoGrowTextarea({ value, ...props }) {
   return <textarea ref={ref} value={value} {...props} />;
 }
 
+const SPARKLE = (
+  <svg className="dlgfb-polish-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M10 3l1.6 4.4L16 9l-4.4 1.6L10 15l-1.6-4.4L4 9l4.4-1.6z" />
+    <path d="M18 13l.9 2.1L21 16l-2.1.9L18 19l-.9-2.1L15 16l2.1-.9z" />
+  </svg>
+);
+
 /** Polish, at the bottom right of the text box. It is the only thing that sends text to the AI, from 3 words. */
 export function PolishButton({ text, helper }) {
   const { assist, requestSuggestion } = helper;
@@ -143,6 +150,7 @@ export function PolishButton({ text, helper }) {
       onClick={() => requestSuggestion(text)}
       title={tooShort ? `Write at least ${MIN_WORDS} words to polish` : unchanged ? "Change the text to polish it again" : "Rewrite your words with AI"}
     >
+      {!loading && SPARKLE}
       {loading ? "Polishing..." : "Polish"}
     </button>
   );
@@ -151,6 +159,8 @@ export function PolishButton({ text, helper }) {
 /** Roll back, beside Polish. Puts back the text from before the last Polish. */
 export function RollBackButton({ helper }) {
   const { canRollBack, rollBack } = helper;
+  // Shown only once there is a Polish to undo, so the box shows Polish alone at first.
+  if (!canRollBack) return null;
   return (
     <button
       type="button"

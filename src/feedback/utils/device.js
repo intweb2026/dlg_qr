@@ -4,6 +4,7 @@ import { eventKey, getEventCode } from "../api";
 const submittedKey = () => eventKey("submission_status");
 const cookieName = () => `submission_status_${getEventCode()}`;
 const entryKey = () => eventKey("draw_entry_number");
+const holderKey = () => eventKey("draw_entry_holder");
 
 export function hasSubmittedOnDevice() {
   try {
@@ -27,6 +28,24 @@ export function readEntryNumber() {
   try {
     const value = localStorage.getItem(entryKey());
     return value && /^\d+$/.test(value) ? Number(value) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// The name and company on the ticket, the alias confirmed on the form, kept beside the number for the same reason.
+export function saveEntryHolder(holder) {
+  try {
+    localStorage.setItem(holderKey(), JSON.stringify({ name: holder.name || "", company: holder.company || "" }));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+export function readEntryHolder() {
+  try {
+    const holder = JSON.parse(localStorage.getItem(holderKey()) || "null");
+    return holder && typeof holder === "object" ? { name: String(holder.name || ""), company: String(holder.company || "") } : null;
   } catch (e) {
     return null;
   }

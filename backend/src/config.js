@@ -35,4 +35,13 @@ module.exports = {
   // Images and videos uploaded on the admin Event Details page, one folder per event, served at /api/uploads/.
   // Keep it on a disk that survives a redeploy.
   uploadsDir: path.resolve(process.env.UPLOADS_DIR || path.join(__dirname, "..", "uploads")),
+  // The feedback submissions PDF, emailed the day after each event ends. Without SMTP_HOST it is not emailed, an
+  // admin can still download it. FEEDBACK_REPORT_TO takes a comma separated list.
+  feedbackReportTo: envList("FEEDBACK_REPORT_TO", "int.web@iq-hub.com"),
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpPort: Number(process.env.SMTP_PORT || "587"),
+  smtpSecure: (process.env.SMTP_SECURE || "false").toLowerCase() === "true",
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
+  mailFrom: process.env.MAIL_FROM || "",
 };

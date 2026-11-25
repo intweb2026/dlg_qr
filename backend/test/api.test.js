@@ -134,9 +134,9 @@ describe("feedback flow", () => {
     assert.deepEqual(data.map((a) => a.full_name), ["James Smith"]);
   });
 
-  test("attendee list is closed with the form", async () => {
+  test("attendee list stays open whatever the old status column says", async () => {
     await query("UPDATE form_settings SET form_status = 'ended'");
-    assert.equal((await api("GET", "/attendees/")).status, 403);
+    assert.equal((await api("GET", "/attendees/")).status, 200);
   });
 
   test("submit and duplicate", async () => {
@@ -190,7 +190,7 @@ describe("feedback flow", () => {
   test("device check is left to the form", async () => {
     // Clearing the form site's cookies must open the form again, so the API keeps no device flag of its own.
     await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } });
-    assert.ok(!("submission_status" in (await api("GET", "/form-status/")).data));
+    assert.ok(!("submission_status" in (await api("GET", "/")).data));
     const r = await api("POST", "/feedback/submit/", { body: { attendee_id: a2, feedback_data: { x: 1 } } });
     assert.equal(r.status, 201);
   });
@@ -285,29 +285,23 @@ describe("feedback flow", () => {
     assert.equal(r.status, 400);
   });
 
-  test("closed event form", async () => {
-    await query("UPDATE form_settings SET form_status = 'ended'");
-    const r = await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } });
-    assert.equal(r.status, 403);
+  test("speaker reviews are limited to 3 in all, whatever the day", async () => {
+    const review = (id, day) => ({ session_id: id, day, comment: "Good" });
+    const four = [review(1, "Day 1"), review(2, "Day 2"), review(3, "Day 2"), review(4, "Day 3")];
+    let r = await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { speaker_reviews: four } } });
+    assert.deepEqual([r.status, r.data], [400, { feedback_data: ["You can review up to 3 sessions in all."] }]);
+    r = await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { speaker_reviews: four.slice(1) } } });
+    assert.equal(r.status, 201);
   });
 
-  test("only open for responses takes feedback, each closed status says why", async () => {
-    const messages = {
-      inactive: "The feedback form has not been enabled yet.",
-      upcoming: "The event has not started yet.",
-      ended: "This event has ended.",
-      closed: "This event is closed.",
-    };
-    for (const [status, detail] of Object.entries(messages)) {
+  test("the form never closes, every old status still takes feedback", async () => {
+    const people = [a1, a2];
+    for (const status of ["inactive", "ended"]) {
       await query("UPDATE form_settings SET form_status = ?", [status]);
-      assert.deepEqual((await api("GET", "/form-status/")).data, { form_status: status, is_active: false });
-      const list = await api("GET", "/attendees/");
-      assert.deepEqual([list.status, list.data], [403, { detail, form_status: status }]);
-      const r = await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } });
-      assert.deepEqual([r.status, r.data], [403, { detail, form_status: status }]);
+      assert.equal((await api("GET", "/attendees/")).status, 200, status);
+      const r = await api("POST", "/feedback/submit/", { body: { attendee_id: people.shift(), feedback_data: { x: 1 } } });
+      assert.equal(r.status, 201, status);
     }
-    await query("UPDATE form_settings SET form_status = 'active'");
-    assert.equal((await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } })).status, 201);
   });
 });
 
@@ -380,10 +374,12 @@ describe("admin auth", () => {
   });
 
   test("wrong method and unknown path", async () => {
-    const r = await api("PUT", "/form-status/");
+    const r = await api("PUT", "/");
     assert.equal(r.status, 405);
     assert.equal(r.data.detail, 'Method "PUT" not allowed.');
     assert.equal((await api("GET", "/nope/")).status, 404);
+    // The form status route is gone, the form is always open.
+    assert.equal((await api("GET", "/form-status/")).status, 404);
   });
 });
 
@@ -394,28 +390,18 @@ describe("admin panel", () => {
   });
 
   test("settings validation", async () => {
-    let r = await api("PATCH", "/admin/settings/", { token, body: { form_status: "paused", max_spin_attempts: -1 } });
+    let r = await api("PATCH", "/admin/settings/", { token, body: { max_spin_attempts: -1 } });
     assert.equal(r.status, 400);
-    assert.deepEqual(r.data, {
-      form_status: ['"paused" is not a valid choice.'],
-      max_spin_attempts: ["Ensure this value is greater than or equal to 0."],
-    });
+    assert.deepEqual(r.data, { max_spin_attempts: ["Ensure this value is greater than or equal to 0."] });
+    // The admin cannot close the form, a form_status sent is left out.
     r = await api("PATCH", "/admin/settings/", { token, body: { form_status: "ended", max_spin_attempts: "3" } });
     assert.equal(r.status, 200);
-    assert.equal(r.data.form_status, "ended");
+    assert.ok(!("form_status" in r.data));
     assert.equal(r.data.max_spin_attempts, 3);
     assert.match(r.data.updated_at, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d{6})?Z$/);
-    assert.equal((await api("GET", "/form-status/")).data.is_active, false);
-    for (const status of ["inactive", "upcoming", "ended", "closed", "active"]) {
-      r = await api("PATCH", "/admin/settings/", { token, body: { form_status: status } });
-      assert.deepEqual([r.status, r.data.form_status], [200, status]);
-    }
-  });
-
-  test("migrate keeps the form not enabled status", async () => {
-    await query("UPDATE form_settings SET form_status = 'inactive'");
-    await migrate(EVENT_A);
-    assert.equal((await api("GET", "/form-status/")).data.form_status, "inactive");
+    const [row] = await query("SELECT form_status FROM form_settings WHERE id = 1");
+    assert.equal(row.form_status, "active");
+    assert.equal((await api("GET", "/attendees/")).status, 200);
   });
 
   test("submissions list, filters and suspend", async () => {
@@ -546,13 +532,12 @@ describe("lucky draw", () => {
     }
   });
 
-  test("a spin moves the feedback form to ended, an empty pool does not", async () => {
-    assert.equal((await api("POST", "/lucky-draw/spin/")).status, 400);
-    assert.equal((await api("GET", "/form-status/")).data.form_status, "active");
+  test("the feedback form stays open after a spin", async () => {
     await createSubmission(a1);
     assert.equal((await api("POST", "/lucky-draw/spin/")).status, 200);
-    assert.deepEqual((await api("GET", "/form-status/")).data, { form_status: "ended", is_active: false });
-    assert.equal((await api("GET", "/attendees/")).status, 403);
+    assert.equal((await api("GET", "/attendees/")).status, 200);
+    const r = await api("POST", "/feedback/submit/", { body: { attendee_id: a2, feedback_data: { x: 1 } } });
+    assert.equal(r.status, 201);
   });
 
   test("spin hides the name until reveal", async () => {
@@ -668,16 +653,16 @@ describe("events", () => {
   });
 
   test("codes are matched without case", async () => {
-    assert.equal((await api("GET", "/form-status/", { event: "TESTA" })).status, 200);
+    assert.equal((await api("GET", "/", { event: "TESTA" })).status, 200);
   });
 
   test("unknown and switched off events are not found", async () => {
     for (const event of ["nope", "off"]) {
-      const r = await api("GET", "/form-status/", { event });
+      const r = await api("GET", "/attendees/", { event });
       assert.equal(r.status, 404, event);
       assert.equal(r.data.detail, "Event not found.");
     }
-    const r = await fetch(`${root.replace(/\/events$/, "")}/form-status/`);
+    const r = await fetch(`${root.replace(/\/events$/, "")}/attendees/`);
     assert.equal(r.status, 404);
   });
 
@@ -710,8 +695,6 @@ describe("events", () => {
     await queryB(
       "INSERT INTO attendees (full_name, email, company_name, is_walk_in, created_at) VALUES ('James Smith', NULL, 'BP', 0, UTC_TIMESTAMP(6))"
     );
-    // Still shown while the feedback form is closed.
-    await query("UPDATE form_settings SET form_status = 'ended'");
     const r = await api("GET", "/registered-attendees/");
     assert.equal(r.status, 200);
     assert.deepEqual(r.data, [{ name: "Priya Sharma", company: "Shell" }]);
@@ -734,9 +717,9 @@ describe("events", () => {
 
   test("settings belong to one event", async () => {
     const token = await login("benny");
-    await api("PATCH", "/admin/settings/", { token, body: { form_status: "ended" } });
-    assert.equal((await api("GET", "/form-status/")).data.is_active, false);
-    assert.equal((await api("GET", "/form-status/", { event: "testb" })).data.is_active, true);
+    await api("PATCH", "/admin/settings/", { token, body: { max_spin_attempts: 7 } });
+    assert.equal((await api("GET", "/lucky-draw/pool/")).data.max_spin_attempts, 7);
+    assert.equal((await api("GET", "/lucky-draw/pool/", { event: "testb" })).data.max_spin_attempts, 0);
   });
 
   test("an admin token only works for the event it was issued for", async () => {
@@ -890,6 +873,166 @@ describe("event details", () => {
   });
 });
 
+describe("feedback submissions report", () => {
+  const report = require("../src/feedbackReport");
+  const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+  let sent;
+
+  before(() => {
+    // Nothing is emailed, sendMail only records the message.
+    sent = [];
+    report.setMailer({ sendMail: async (message) => sent.push(message) });
+    config.smtpHost = "smtp.test";
+  });
+
+  after(() => {
+    config.smtpHost = "";
+    report.setMailer(null);
+    delete EVENT_A.eventEndDate;
+    delete EVENT_A.timeZone;
+  });
+
+  beforeEach(async () => {
+    sent = [];
+    await query("UPDATE form_settings SET report_sent_at = NULL, report_sent_count = NULL WHERE id = 1");
+  });
+
+  const sendIfDue = () => db.withDatabase(EVENT_A.database, () => report.sendIfDue(EVENT_A));
+
+  test("an admin downloads every submission in one PDF", async () => {
+    const token = await login("benny");
+    const a = await createAttendee("Priya Sharma", "priya@example.com", "Shell");
+    await createSubmission(a);
+    const res = await fetch(`${root}/testa/admin/feedback-report/pdf/`, { headers: { Authorization: `Token ${token}` } });
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("content-type"), "application/pdf");
+    assert.match(res.headers.get("content-disposition"), /testa-feedback-submissions-\d{4}-\d{2}-\d{2}\.pdf/);
+    assert.equal(Buffer.from(await res.arrayBuffer()).subarray(0, 5).toString(), "%PDF-");
+    assert.equal((await fetch(`${root}/testa/admin/feedback-report/pdf/`)).status, 401);
+  });
+
+  test("the day after the event ends it is emailed once, with the PDF", async () => {
+    const a = await createAttendee("James Smith", "james@example.com", "BP");
+    await createSubmission(a);
+    EVENT_A.timeZone = "America/Los_Angeles";
+    EVENT_A.eventEndDate = day(2); // not over yet
+    assert.equal(await sendIfDue(), false);
+    EVENT_A.eventEndDate = day(-2); // over, within the week
+    assert.equal(await sendIfDue(), true);
+    assert.equal(sent.length, 1);
+    assert.deepEqual(sent[0].to, config.feedbackReportTo.join(", "));
+    assert.equal(sent[0].attachments[0].contentType, "application/pdf");
+    assert.equal(sent[0].attachments[0].content.subarray(0, 5).toString(), "%PDF-");
+    const [row] = await query("SELECT report_sent_at, report_sent_count FROM form_settings WHERE id = 1");
+    assert.ok(row.report_sent_at);
+    assert.equal(row.report_sent_count, await count("feedback_submissions"));
+    // Sent once only.
+    assert.equal(await sendIfDue(), false);
+    assert.equal(sent.length, 1);
+  });
+
+  test("an event that ended over a week ago is not emailed by itself, Send now sends it", async () => {
+    const token = await login("benny");
+    EVENT_A.timeZone = "America/Los_Angeles";
+    EVENT_A.eventEndDate = day(-10);
+    assert.equal(await sendIfDue(), false);
+    let status = (await api("GET", "/admin/feedback-report/", { token })).data;
+    assert.deepEqual([status.auto, status.sent_at, status.mail_ready], [false, null, true]);
+    const r = await api("POST", "/admin/feedback-report/send/", { token });
+    assert.equal(r.status, 200);
+    assert.equal(sent.length, 1);
+    assert.ok(r.data.sent_at);
+  });
+
+  test("a failed send is let go, so the next check tries again", async () => {
+    EVENT_A.timeZone = "America/Los_Angeles";
+    EVENT_A.eventEndDate = day(-2);
+    report.setMailer({ sendMail: async () => { throw new Error("mail server down"); } });
+    assert.equal(await sendIfDue(), false);
+    const [row] = await query("SELECT report_sent_at FROM form_settings WHERE id = 1");
+    assert.equal(row.report_sent_at, null);
+    report.setMailer({ sendMail: async (message) => sent.push(message) });
+    assert.equal(await sendIfDue(), true);
+  });
+
+  test("without SMTP set up nothing is emailed", async () => {
+    config.smtpHost = "";
+    try {
+      EVENT_A.timeZone = "America/Los_Angeles";
+      EVENT_A.eventEndDate = day(-2);
+      assert.equal(await sendIfDue(), false);
+      const token = await login("benny");
+      assert.equal((await api("POST", "/admin/feedback-report/send/", { token })).status, 502);
+    } finally {
+      config.smtpHost = "smtp.test";
+    }
+  });
+});
+
+describe("feedback form opening", () => {
+  const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+
+  after(() => {
+    delete EVENT_A.eventStartDate;
+    delete EVENT_A.timeZone;
+  });
+
+  test("before the first day the form is not open, from 12:00 AM there it is", async () => {
+    const a1 = await createAttendee("Priya Sharma", "priya@example.com", "Shell");
+    EVENT_A.timeZone = "America/Los_Angeles";
+    EVENT_A.eventStartDate = day(3);
+    let config = (await api("GET", "/")).data;
+    assert.equal(config.feedback_open, false);
+    assert.equal(config.time_zone, "America/Los_Angeles");
+    // 12:00 AM in Anaheim is 07:00 or 08:00 UTC, by daylight saving.
+    assert.match(config.feedback_opens_at, new RegExp(`^${day(3)}T0[78]:00:00.000Z$`));
+    const list = await api("GET", "/attendees/");
+    assert.deepEqual([list.status, list.data.code, list.data.opens_at], [403, "not_open", config.feedback_opens_at]);
+    const r = await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } });
+    assert.deepEqual([r.status, r.data.code], [403, "not_open"]);
+
+    // On the first day, and every day after, it is open.
+    EVENT_A.eventStartDate = day(-1);
+    config = (await api("GET", "/")).data;
+    assert.equal(config.feedback_open, true);
+    assert.equal((await api("GET", "/attendees/")).status, 200);
+    assert.equal((await api("POST", "/feedback/submit/", { body: { attendee_id: a1, feedback_data: { x: 1 } } })).status, 201);
+  });
+
+  test("with automatic opening off in the admin the form is open before the first day", async () => {
+    const token = await login("benny");
+    EVENT_A.timeZone = "America/Los_Angeles";
+    EVENT_A.eventStartDate = day(3);
+    let s = (await api("GET", "/admin/settings/", { token })).data;
+    assert.deepEqual([s.form_open_auto, s.feedback_open], [true, false]);
+    assert.equal((await api("PATCH", "/admin/settings/", { token, body: { form_open_auto: "maybe" } })).status, 400);
+
+    s = (await api("PATCH", "/admin/settings/", { token, body: { form_open_auto: false } })).data;
+    assert.deepEqual([s.form_open_auto, s.feedback_open, s.feedback_opens_at], [false, true, null]);
+    const config = (await api("GET", "/")).data;
+    assert.deepEqual([config.feedback_open, config.feedback_opens_at], [true, null]);
+    assert.equal((await api("GET", "/attendees/")).status, 200);
+
+    // Back on, the form waits for the first day again.
+    s = (await api("PATCH", "/admin/settings/", { token, body: { form_open_auto: true } })).data;
+    assert.deepEqual([s.form_open_auto, s.feedback_open], [true, false]);
+    assert.equal((await api("GET", "/attendees/")).status, 403);
+  });
+
+  test("with no first day known the form is open", async () => {
+    delete EVENT_A.eventStartDate;
+    const config = (await api("GET", "/")).data;
+    assert.deepEqual([config.feedback_open, config.feedback_opens_at], [true, null]);
+  });
+
+  test("12:00 AM of a day is told in the zone where the event is held", () => {
+    const { startOfDayIn } = require("../src/timeZones");
+    const day9 = new Date(Date.UTC(2026, 10, 9));
+    assert.equal(startOfDayIn(day9, "America/Los_Angeles").toISOString(), "2026-11-09T08:00:00.000Z");
+    assert.equal(startOfDayIn(day9, "Asia/Kolkata").toISOString(), "2026-11-08T18:30:00.000Z");
+  });
+});
+
 describe("CRM registered delegates", () => {
   let crmServer;
   let reply;
@@ -910,6 +1053,8 @@ describe("CRM registered delegates", () => {
     crmServer.close();
     config.crmDataApiKey = "";
     delete EVENT_A.event_code;
+    delete EVENT_A.eventEndDate;
+    delete EVENT_A.timeZone;
     crm.resetSyncState();
   });
 
@@ -1001,6 +1146,88 @@ describe("CRM registered delegates", () => {
     // Sync now still fetches it again.
     await api("POST", "/admin/attendees/sync/", { token });
     assert.equal(requests.length, 2);
+  });
+
+  test("after the first sync, a visit syncs again every 24 hours until the event's last day", async () => {
+    const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+    const waitForRequests = async (n) => {
+      for (let i = 0; i < 50 && requests.length < n; i++) await new Promise((r) => setTimeout(r, 20));
+    };
+    EVENT_A.eventEndDate = day(1);
+    reply = [200, [{ full_name: "James Smith", company_name: "BP", email: "james@example.com" }]];
+    await api("GET", "/registered-attendees/");
+    assert.equal(requests.length, 1);
+
+    // Less than 24 hours since the last sync, nothing is fetched.
+    crm.resetSyncState();
+    await api("GET", "/");
+    await waitForRequests(2);
+    assert.equal(requests.length, 1);
+
+    // 25 hours later the visit starts the daily sync in the background, and a late registration is added.
+    await query("UPDATE form_settings SET crm_synced_at = UTC_TIMESTAMP(6) - INTERVAL 25 HOUR");
+    reply = [200, [{ full_name: "James Smith", company_name: "BP", email: "james@example.com" }, { full_name: "Late Comer", company_name: "Acme" }]];
+    crm.resetSyncState();
+    await api("GET", "/");
+    await waitForRequests(2);
+    assert.equal(requests.length, 2);
+    for (let i = 0; i < 50 && (await query("SELECT COUNT(*) AS n FROM attendees"))[0].n < 2; i++) await new Promise((r) => setTimeout(r, 20));
+    assert.deepEqual((await api("GET", "/registered-attendees/")).data.map((a) => a.name), ["Late Comer", "James Smith"]);
+    const status = (await api("GET", "/admin/attendees/sync/", { token })).data;
+    assert.equal(status.refresh_active, true);
+    assert.equal(status.refresh_until.slice(0, 10), day(2));
+
+    // Once the last day is over, it stops.
+    EVENT_A.eventEndDate = day(-3);
+    await query("UPDATE form_settings SET crm_synced_at = UTC_TIMESTAMP(6) - INTERVAL 25 HOUR");
+    crm.resetSyncState();
+    await api("GET", "/");
+    await waitForRequests(3);
+    assert.equal(requests.length, 2);
+    assert.equal((await api("GET", "/admin/attendees/sync/", { token })).data.refresh_active, false);
+  });
+
+  test("the event's last day is read from the agenda's day headings", () => {
+    const { dateFromHeading, endDateFromAgenda } = require("../src/eventDates");
+    assert.equal(dateFromHeading("MONDAY, NOVEMBER 9, 2026").toISOString(), "2026-11-09T00:00:00.000Z");
+    assert.equal(dateFromHeading("<p>Tuesday 10th Nov 2026</p>").toISOString(), "2026-11-10T00:00:00.000Z");
+    assert.equal(dateFromHeading("Day one"), null);
+    assert.equal(dateFromHeading("February 31, 2026"), null);
+    const agenda = [
+      { status: "day", heading: "MONDAY, NOVEMBER 9, 2026" },
+      { status: "speaker", heading: "December 25, 2026 keynote" },
+      { status: "day", heading: "TUESDAY, NOVEMBER 10, 2026" },
+    ];
+    assert.equal(endDateFromAgenda(agenda).toISOString(), "2026-11-10T00:00:00.000Z");
+    assert.equal(endDateFromAgenda([]), null);
+  });
+
+  test("the daily sync stops at 11:59 PM of the last day where the event is held", async () => {
+    EVENT_A.eventEndDate = "2026-11-25";
+    EVENT_A.timeZone = "America/Los_Angeles";
+    const status = (await api("GET", "/admin/attendees/sync/", { token })).data;
+    assert.equal(status.time_zone, "America/Los_Angeles");
+    // 25 November 23:59:59 in Anaheim is 26 November 07:59:59 UTC, India's 25 November ends 13.5 hours earlier.
+    assert.equal(status.refresh_until, "2026-11-26T07:59:59.999Z");
+    EVENT_A.timeZone = "Asia/Kolkata";
+    assert.equal((await api("GET", "/admin/attendees/sync/", { token })).data.refresh_until, "2026-11-25T18:29:59.999Z");
+  });
+
+  test("the time zone comes from the event location", () => {
+    const { timeZoneForLocation, endOfDayIn } = require("../src/timeZones");
+    const { locationFromData } = require("../src/eventDates");
+    const location = locationFromData({ eventDetails: [{ option: "event_Location", value: "Anaheim, California, USA" }] });
+    assert.equal(location, "Anaheim, California, USA");
+    assert.equal(timeZoneForLocation(location), "America/Los_Angeles");
+    assert.equal(timeZoneForLocation("Anaheim, CA"), "America/Los_Angeles");
+    assert.equal(timeZoneForLocation("Seattle, WA, USA"), "America/Los_Angeles");
+    assert.equal(timeZoneForLocation("Perth, WA, Australia"), "Australia/Perth");
+    assert.equal(timeZoneForLocation("Frankfurt, Germany"), "Europe/Berlin");
+    assert.equal(timeZoneForLocation("Mumbai, India"), "Asia/Kolkata");
+    assert.equal(timeZoneForLocation("Somewhere, Nowhere"), null);
+    // A clock change on the day itself, 1 November 2026 in Anaheim.
+    const end = endOfDayIn(new Date(Date.UTC(2026, 10, 1)), "America/Los_Angeles");
+    assert.equal(end.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }), "11/1/2026, 11:59:59 PM");
   });
 
   test("an empty CRM list is tried again later", async () => {

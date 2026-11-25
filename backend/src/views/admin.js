@@ -2,7 +2,9 @@ const { parse } = require("csv-parse/sync");
 
 const config = require("../config");
 const crm = require("../crmDelegates");
+const report = require("../feedbackReport");
 const { query } = require("../db");
+const { openingFor } = require("../formOpening");
 const { feedbackList } = require("../feedbackQuestions");
 const m = require("../models");
 const { escapeLike, padLengthFor, truthy } = require("../utils");
@@ -12,15 +14,35 @@ const v = require("../validation");
 // Settings and submissions
 // ==================================================================
 const SETTINGS_FIELDS = {
-  form_status: { clean: (value) => v.choice(value, m.FORM_STATUSES) },
   // 0 means unlimited spins
   max_spin_attempts: { clean: (value) => v.integer(value, { min: 0, max: 4294967295 }) },
   // How long the lucky draw reels spin before stopping on the winning number
   spin_duration_seconds: { clean: (value) => v.integer(value, { min: 1, max: 60 }) },
+  // On: the feedback form opens by itself when the event starts. Off: the form is open now, with no condition.
+  form_open_auto: {
+    clean: (value) => {
+      if (typeof value === "boolean") return value ? 1 : 0;
+      if ([1, "1", "true"].includes(value)) return 1;
+      if ([0, "0", "false"].includes(value)) return 0;
+      throw new v.FieldError("Must be a valid boolean.");
+    },
+  },
 };
 
+/** The settings, with when the feedback form opens and whether it is open now, for the admin page. */
+async function settingsWithOpening(event) {
+  const settings = m.settingsJson(await m.loadSettings());
+  const opening = await openingFor(event, settings);
+  return {
+    ...settings,
+    feedback_open: opening ? opening.open : true,
+    feedback_opens_at: opening?.opensAt ? opening.opensAt.toISOString() : null,
+    time_zone: opening?.timeZone || null,
+  };
+}
+
 async function getSettings(req, res) {
-  res.json(m.settingsJson(await m.loadSettings()));
+  res.json(await settingsWithOpening(req.event));
 }
 
 async function patchSettings(req, res) {
@@ -32,7 +54,7 @@ async function patchSettings(req, res) {
     `UPDATE form_settings SET ${columns.map((c) => `${c} = ?, `).join("")}updated_at = UTC_TIMESTAMP(6) WHERE id = 1`,
     columns.map((c) => values[c])
   );
-  res.json(m.settingsJson(await m.loadSettings()));
+  res.json(await settingsWithOpening(req.event));
 }
 
 async function submissionList(req, res) {
@@ -240,6 +262,35 @@ async function attendeeSyncStatus(req, res) {
   res.json(await crm.syncStatus(req.event));
 }
 
+// ==================================================================
+// Feedback submissions report, the PDF emailed the day after the event ends
+// ==================================================================
+async function feedbackReportStatus(req, res) {
+  res.json(await report.reportStatus(req.event));
+}
+
+/** The PDF itself, so an admin can check it or keep a copy. */
+async function feedbackReportPdf(req, res) {
+  const { pdf } = await report.buildReportPdf(req.event);
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="${report.reportFileName(req.event)}"`,
+    "Content-Length": pdf.length,
+  });
+  res.end(pdf);
+}
+
+/** Send now, the backup when the automatic email did not go out, or to send it again. */
+async function feedbackReportSend(req, res) {
+  try {
+    const count = await report.emailReport(req.event);
+    return res.json({ ...(await report.reportStatus(req.event)), sent: count });
+  } catch (err) {
+    console.error(`${req.event.code}: feedback report not sent, ${err.message}`);
+    return res.status(502).json({ ...(await report.reportStatus(req.event)), detail: `The report was not sent, ${err.message}` });
+  }
+}
+
 /** Fetches the registered delegates from the CRM now, the admin page's Sync now button. */
 async function attendeeSync(req, res) {
   try {
@@ -340,4 +391,7 @@ module.exports = {
   attendeeImport,
   attendeeSync,
   attendeeSyncStatus,
+  feedbackReportStatus,
+  feedbackReportPdf,
+  feedbackReportSend,
 };

@@ -163,7 +163,17 @@ export default function AdminAttendees() {
                       CRM event code <strong>{sync.event_code}</strong>.{" "}
                       {sync.synced_at
                         ? `${sync.synced_count} delegates copied on ${new Date(sync.synced_at).toLocaleString()}. Press Sync now to fetch the list again.`
-                        : "Not copied yet. The first visitor to the site fetches the list, or press Sync now."}
+                        : "Not copied yet. The first visitor to the site fetches the list, or press Sync now."}{" "}
+                      {/* The daily sync, from the second day on, until the event's last day is over. */}
+                      {sync.refresh_active
+                        ? `The list is fetched again every 24 hours until ${new Date(sync.refresh_until).toLocaleString()}${
+                            sync.time_zone
+                              ? `, 11:59 PM of the last day in ${sync.location || sync.time_zone} (${new Date(sync.refresh_until).toLocaleString(undefined, { timeZone: sync.time_zone, dateStyle: "medium", timeStyle: "short" })} there)`
+                              : ""
+                          }.`
+                        : sync.refresh_until
+                          ? "The event is over, the daily sync has stopped."
+                          : "The event's last day could not be read from the agenda, so there is no daily sync."}
                     </>}
             </p>
             {sync?.error && <p className="dlgfb-small dlgfb-text-danger dlgfb-mb-0 dlgfb-mt-2">Last try failed, {sync.error}</p>}

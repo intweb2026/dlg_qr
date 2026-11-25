@@ -37,7 +37,6 @@ router.param("pk", (req, res, next, pk) => (/^\d+$/.test(pk) ? next() : res.stat
 // Every path below sits under /api/events/<code>, see app.js.
 // Public
 route("/", { get: pub.eventConfig });
-route("/form-status/", { get: pub.formStatus });
 route("/attendees/", { get: pub.attendeeList });
 route("/registered-attendees/", { get: pub.registeredAttendees });
 route("/upcoming-conferences/", { get: upcomingConferences });
@@ -52,6 +51,10 @@ route("/auth/logout/", { post: [requireAdmin, auth.logout] });
 route("/admin/settings/", { get: [requireAdmin, admin.getSettings], patch: [requireAdmin, admin.patchSettings] });
 route("/admin/submissions/", { get: [requireAdmin, admin.submissionList] });
 route("/admin/submissions/:pk/suspend/", { patch: [requireAdmin, admin.submissionSuspend] });
+// The feedback submissions PDF, emailed by itself the day after the event ends, see feedbackReport.js.
+route("/admin/feedback-report/", { get: [requireAdmin, admin.feedbackReportStatus] });
+route("/admin/feedback-report/pdf/", { get: [requireAdmin, admin.feedbackReportPdf] });
+route("/admin/feedback-report/send/", { post: [requireAdmin, admin.feedbackReportSend] });
 // CRM export, opened by the one EXPORT_ACCESS_TOKEN bearer token, not by an admin login.
 route("/admin/interested-attendees/", { get: [requireAccessToken, admin.interestedAttendees] });
 route("/admin/feedback-responses/", { get: [requireAccessToken, admin.feedbackResponses] });

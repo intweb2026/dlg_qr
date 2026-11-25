@@ -1098,7 +1098,14 @@ body.dlgfb-body-active {
   color: var(--fb-muted);
 }
 
-/* A session on a day that already has its most reviews, dimmed, with a note in place of the stars. */
+/* How many sessions can be reviewed in all, and how many are, above the days. */
+.dlgfb-app .dlgfb-sessions-total {
+  margin: 0;
+  font-size: 14px;
+  color: var(--fb-muted);
+}
+
+/* A session once the most reviews are given, dimmed, with a note in place of the comment box. */
 .dlgfb-app .dlgfb-session.dlgfb-is-locked .dlgfb-session-summary {
   opacity: 0.55;
 }
@@ -4044,6 +4051,28 @@ body.dlgfb-body-active {
   width: 100%;
 }
 
+/* RAFFLE DRAW heading above the event name, in place of the event logo. */
+.dlgfb-app .dlgfb-draw-intro-kicker {
+  margin: 0;
+  font-family: inherit;
+  font-weight: 800;
+  /* Sized to stay on one line inside the 44rem card and on a phone. */
+  font-size: clamp(1.6rem, 7.5vw, 4.5rem);
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.06em;
+  /* Same extra room as between the event name and the button. */
+  margin-bottom: clamp(1.5rem, 5vh, 3rem);
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 24px rgba(var(--theme-secondary-rgb), 0.6);
+}
+
+/* Extra room between the event name and the button. */
+.dlgfb-app .dlgfb-draw-intro-card .dlgfb-draw-intro-btn {
+  margin-top: clamp(1.5rem, 5vh, 3rem);
+}
+
 .dlgfb-app .dlgfb-draw-intro-logo {
   display: block;
   max-width: min(22rem, 72vw);
@@ -5732,4 +5761,710 @@ body.dlgfb-body-active {
 .dlgfb-crm-sync > div {
   flex: 1 1 18rem;
   min-width: 0;
+}
+
+/* Raffle draw, no shadows or glows anywhere on the welcome screen or the draw screen.
+   Kept last and marked important so it beats every theme, focus and hover rule above. */
+.dlgfb-app .dlgfb-draw-intro,
+.dlgfb-app .dlgfb-draw-intro *,
+.dlgfb-app .dlgfb-draw-intro *::before,
+.dlgfb-app .dlgfb-draw-intro *::after,
+.dlgfb-app .dlgfb-draw-stage,
+.dlgfb-app .dlgfb-draw-stage *,
+.dlgfb-app .dlgfb-draw-stage *::before,
+.dlgfb-app .dlgfb-draw-stage *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* The event name used drop-shadow filters for its glow. */
+.dlgfb-app .dlgfb-draw-intro .dlgfb-draw-intro-title {
+  filter: none !important;
+}
+
+/* Raffle draw, a plain black screen from the welcome screen through to the draw, with no grey centre glow,
+   and no white page showing while the browser switches to full screen. */
+.dlgfb-app .dlgfb-draw-intro.dlgfb-theme-black,
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black,
+.dlgfb-app .dlgfb-draw-stage.dlgfb-theme-black:fullscreen,
+.dlgfb-app .dlgfb-draw-standalone {
+  background: #000;
+}
+
+html:has(.dlgfb-draw-intro),
+html:has(.dlgfb-draw-standalone),
+html:has(.dlgfb-draw-intro) body,
+html:has(.dlgfb-draw-standalone) body {
+  background: #000;
+}
+
+/* ------------------------------------------------------------------ thank you card
+   You're all set, the raffle ticket with the number in the event colour, the name and company on it,
+   dividers above and below the ticket, and the event colour Back to home page button.
+   Kept last and with the card class, so it wins over the older success card rules and their screen size steps. */
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success {
+  padding-top: 24px;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-success-icon {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 10px;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: #141a2e;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-success-sub {
+  margin-top: 14px;
+  font-size: 16px;
+  color: #6b7080;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-raffle {
+  margin-top: 22px;
+  padding: 22px 0;
+  border-top: 1px solid #e3e5ea;
+  border-bottom: 1px solid #e3e5ea;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-raffle-kicker {
+  margin: 0;
+  font-family: var(--fb-title);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4a4f5c;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-raffle-number {
+  margin: 12px auto 22px;
+  font-family: var(--fb-title);
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--theme-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-raffle-name {
+  margin: 0;
+  font-family: var(--fb-title);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #141a2e;
+  overflow-wrap: anywhere;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-raffle-company {
+  margin-top: 12px;
+  font-size: 17px;
+  color: #2b2f3a;
+  overflow-wrap: anywhere;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-raffle-note {
+  max-width: 22rem;
+  margin: 22px auto 0;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #2b2f3a;
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-raffle-foot {
+  margin-top: 18px;
+  font-family: var(--fb-title);
+  font-size: 18px;
+  font-weight: 700;
+  color: #141a2e;
+}
+
+/* The event colour, lighter to the right, rounded, as on the design. */
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-btn-home {
+  margin-top: 22px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--theme-secondary), color-mix(in srgb, var(--theme-secondary) 80%, #fff));
+}
+
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-btn-home:hover,
+.dlgfb-app .dlgfb-form-card.dlgfb-form-success .dlgfb-form-btn-home:active {
+  background: var(--theme-secondary-dark);
+}
+
+/* ================================================================== feedback form, 2026 design
+   Light grey question cards with a bold heading and an italic hint, no question numbers, soft grey fields,
+   bordered option rows, a presentation checklist for question 6 and the event colour Submit button.
+   Kept last, and scoped to .dlgfb-form-panel, so it wins over the older form rules at every screen size. */
+.dlgfb-app .dlgfb-form-page .dlgfb-form-panel {
+  --fbx-card: #f7f7f7;
+  --fbx-line: #e1e1e1;
+  --fbx-field: #f7f7f7;
+  --fbx-field-line: #dcdcdc;
+  --fbx-ink: #141a2e;
+  --fbx-hint: #9a9ca3;
+  padding: 22px 20px 24px;
+  border-radius: 18px;
+  background: #fff;
+}
+
+/* YOUR FEEDBACK and the question count, a grey bar under them. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-progress {
+  margin-bottom: 22px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-progress-head {
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #e8e8e8;
+}
+
+/* Your name, Company name and Your email ID, plain labels over soft fields with a light blue edge. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-name {
+  margin-bottom: 22px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-name-label {
+  margin: 0 0 10px;
+  font-family: var(--fb-title);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-new-attendee-label {
+  margin-top: 22px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-name .dlgfb-form-control {
+  height: 48px;
+  padding-left: 12px;
+  border: 1px solid #c9d6ea;
+  border-radius: 6px;
+  background: #f7f8fa;
+  font-size: 16px;
+  box-shadow: none;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-name .dlgfb-search-icon {
+  display: none;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-name .dlgfb-form-control::placeholder {
+  font-size: 13px;
+  color: #6b7080;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-name .dlgfb-is-invalid .dlgfb-form-control,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-name .dlgfb-form-control.dlgfb-is-invalid {
+  border-color: var(--fb-error);
+}
+
+/* Question cards, light grey with a thin border, the heading in bold dark text. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q {
+  margin-bottom: 20px;
+  padding: 20px 16px;
+  overflow: visible;
+  border: 1px solid var(--fbx-line);
+  border-radius: 14px;
+  background: var(--fbx-card);
+  box-shadow: none;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q.dlgfb-has-error {
+  border-color: var(--fb-error);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-head {
+  display: block;
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: var(--fbx-ink);
+  font-family: var(--fb-title);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body {
+  padding: 0;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-hint {
+  margin: 10px 0 14px;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--fbx-hint);
+}
+
+/* Text boxes and text areas inside a card. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-input,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-textarea,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-control {
+  border: 1px solid var(--fbx-field-line);
+  border-radius: 8px;
+  background: var(--fbx-field);
+  font-size: 16px;
+  color: var(--fbx-ink);
+  box-shadow: none;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-input {
+  height: 48px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-textarea {
+  min-height: 100px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-input::placeholder,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-textarea::placeholder,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-control::placeholder {
+  font-size: 15px;
+  color: #8a8d96;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-input:focus,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-textarea:focus,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-control:focus {
+  border-color: #9aa0ab;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-input.dlgfb-is-invalid,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q .dlgfb-form-textarea.dlgfb-is-invalid {
+  border-color: var(--fb-error);
+}
+
+/* "1." beside each box of a numbered list. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-list-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-list-num {
+  flex: 0 0 auto;
+  width: 10px;
+  font-size: 13px;
+  color: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-list-row .dlgfb-form-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Polish, a soft grey chip with a sparkle, inside the bottom right of the text box. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-polish-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: #ececec;
+  color: var(--fbx-ink);
+  font-family: var(--fb-body);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-polish-btn:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-polish-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* The marketing question under the testimonial, plain text with small Yes and No radios side by side. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-testimonial-consent {
+  margin-top: 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-testimonial-consent-q {
+  margin: 0 0 12px;
+  font-family: var(--fb-title);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-testimonial-consent-options {
+  gap: 20px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-form-radio.dlgfb-testimonial-consent-opt {
+  gap: 6px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--fb-title);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-testimonial-consent-opt .dlgfb-form-radio-mark {
+  width: 14px;
+  height: 14px;
+  border-width: 1.5px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-testimonial-consent-opt .dlgfb-form-radio-mark::after {
+  width: 7px;
+  height: 7px;
+}
+
+/* Single answer and tick box options, one bordered row each. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-form-options,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-form-checks {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-form-radio,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-form-check {
+  align-items: center;
+  gap: 14px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--fbx-field-line);
+  border-radius: 8px;
+  background: var(--fbx-field);
+  font-family: var(--fb-title);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-form-radio.dlgfb-is-selected,
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-form-check.dlgfb-is-selected {
+  border-color: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-form-radio-mark {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid #333;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-q-body .dlgfb-form-check-mark {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #222;
+  border-radius: 4px;
+}
+
+/* An upcoming conference, its name in bold, then the dates and the place on their own lines. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-check-label {
+  gap: 4px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-check-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-check-detail {
+  font-size: 12px;
+  color: #2b2f3a;
+}
+
+/* Question 6, the presentation checklist. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-sessions-hint-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 14px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-sessions-hint-row .dlgfb-form-q-hint {
+  margin: 0;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-sessions-count {
+  flex: 0 0 auto;
+  font-family: var(--fb-title);
+  font-size: 12px;
+  font-weight: 500;
+  color: #2b2f3a;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-sessions-search {
+  margin-bottom: 16px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-sessions-search .dlgfb-form-control {
+  height: 42px;
+  padding-left: 36px;
+  font-size: 14px;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-sessions-search .dlgfb-form-control::placeholder {
+  font-size: 13px;
+  color: #4a4f5c;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-sessions-day {
+  margin: 0 0 6px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-sessions-day-label {
+  margin: 0 0 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #ececec;
+  font-family: var(--fb-title);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 0 12px;
+  border-bottom: 1px solid var(--fbx-line);
+  cursor: pointer;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-sessions-day .dlgfb-session-pick:last-child {
+  border-bottom: 0;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick .dlgfb-form-check-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 2px solid #222;
+  border-radius: 4px;
+  background: #fff;
+  color: #fff;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick .dlgfb-form-check-mark svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick input:checked + .dlgfb-form-check-mark {
+  border-color: var(--fbx-ink);
+  background: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick input:checked + .dlgfb-form-check-mark svg {
+  opacity: 1;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick input:focus-visible + .dlgfb-form-check-mark {
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
+}
+
+/* At the limit, the sessions not picked are dimmed and cannot be ticked. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick.dlgfb-is-locked {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick-time {
+  font-family: var(--fb-title);
+  font-size: 12px;
+  color: #2b2f3a;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick-title {
+  font-family: var(--fb-title);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--fbx-ink);
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-session-pick-speaker {
+  font-family: var(--fb-title);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #4a4f5c;
+}
+
+/* The note above Submit, and Submit in the event colour, lighter to the right. */
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-submit-note {
+  margin: 4px 0 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #4a4f5c;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-submit {
+  height: 46px;
+  margin-top: 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--theme-secondary), color-mix(in srgb, var(--theme-secondary) 80%, #fff));
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: none;
+}
+
+.dlgfb-app .dlgfb-form-panel .dlgfb-form-submit:hover {
+  background: var(--theme-secondary-dark);
+}
+
+/* The intro under the logo, a little smaller and in plain white. */
+.dlgfb-app .dlgfb-form-page .dlgfb-form-intro {
+  max-width: 24rem;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+  color: #fff;
+  text-wrap: balance;
+}
+
+/* From 768px the intro uses the form's full width, so it reads in two even lines, in a larger size. */
+@media (min-width: 768px) {
+  .dlgfb-app .dlgfb-form-page .dlgfb-form-intro {
+    max-width: none;
+    font-size: 17px;
+    line-height: 1.55;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dlgfb-app .dlgfb-form-page .dlgfb-form-intro {
+    font-size: 19px;
+  }
+}
+
+/* Admin, feedback form opening panel */
+.dlgfb-app .dlgfb-form-opening {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dlgfb-app .dlgfb-form-opening-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.15rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.dlgfb-app .dlgfb-form-opening-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: #16a34a;
+  flex: none;
+}
+
+.dlgfb-app .dlgfb-form-opening-status.is-waiting .dlgfb-form-opening-dot {
+  background: #d97706;
+}
+
+.dlgfb-app .dlgfb-form-opening-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+}
+
+.dlgfb-app .dlgfb-form-opening-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dlgfb-app .dlgfb-form-opening-switch input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  flex: none;
+  cursor: pointer;
+}
+
+/* Admin, feedback submissions report panel */
+.dlgfb-app .dlgfb-report-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.dlgfb-app .dlgfb-report-status {
+  margin-top: 0.3rem;
+  font-size: 0.88rem;
+}
+
+.dlgfb-app .dlgfb-report-warn {
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+  color: #b45309;
+}
+
+.dlgfb-app .dlgfb-report-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex: none;
+}
+
+@media (max-width: 575px) {
+  .dlgfb-app .dlgfb-report-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dlgfb-app .dlgfb-report-actions .dlgfb-btn {
+    flex: 1;
+  }
 }

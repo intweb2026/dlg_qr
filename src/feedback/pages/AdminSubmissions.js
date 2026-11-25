@@ -8,38 +8,6 @@ import { useToast } from "../context/ToastContext";
 const MIN_SPIN_SECONDS = 1;
 const MAX_SPIN_SECONDS = 60;
 
-// The event's status, in the order an event goes through them. Only "active" takes responses.
-const FORM_STATUSES = {
-  inactive: {
-    label: "Form not enabled",
-    help: "Responses are stopped, attendees see that the form is not enabled yet.",
-    title: "Form not enabled",
-    toast: "The feedback form is off until you enable it.",
-    tone: "warning",
-  },
-  upcoming: {
-    label: "Event not started",
-    help: "Attendees see that the event has not started yet.",
-    title: "Event not started",
-    toast: "The feedback form stays closed until you open it.",
-    tone: "warning",
-  },
-  active: {
-    label: "Open for responses",
-    help: "Attendees can find their name and submit.",
-    title: "Feedback form is open",
-    toast: "Attendees can submit their feedback now.",
-    tone: "success",
-  },
-  ended: {
-    label: "Event ended",
-    help: "Responses are stopped, attendees see that the event has ended.",
-    title: "Event ended",
-    toast: "The feedback form no longer takes responses.",
-    tone: "warning",
-  }
-};
-
 function formatDate(iso) {
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
@@ -70,12 +38,150 @@ function SpeakerReviewList({ reviews }) {
   );
 }
 
+/** "Mon, Nov 9, 2026, 12:00 AM", the opening time as it is where the event is held. */
+function venueTime(iso, timeZone) {
+  const options = { dateStyle: "medium", timeStyle: "short" };
+  try {
+    return new Date(iso).toLocaleString(undefined, timeZone ? { ...options, timeZone } : options);
+  } catch {
+    return new Date(iso).toLocaleString(undefined, options);
+  }
+}
+
+/** Whether the feedback form opens by itself when the event starts, or is open with no condition. */
+function FormOpeningPanel({ cfg, onSaved }) {
+  const notify = useToast();
+  const [saving, setSaving] = useState(false);
+
+  const toggle = async () => {
+    const auto = !cfg.form_open_auto;
+    setSaving(true);
+    try {
+      const { data } = await api.patch("/admin/settings/", { form_open_auto: auto });
+      onSaved(data);
+      notify(
+        auto ? "The form opens by itself when the event starts." : "The form is open now for everyone.",
+        "success",
+        { title: auto ? "Automatic opening on" : "Automatic opening off" }
+      );
+    } catch (err) {
+      notify(errorMessage(err), "danger", { title: "Setting not saved" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  let status;
+  if (!cfg.form_open_auto) status = "Open now, with no condition.";
+  else if (cfg.feedback_open && cfg.feedback_opens_at) status = `Open since ${venueTime(cfg.feedback_opens_at, cfg.time_zone)} at the venue.`;
+  else if (cfg.feedback_open) status = "Open now. The event's first day could not be read, so the form opened by default.";
+  else status = `Opens ${venueTime(cfg.feedback_opens_at, cfg.time_zone)} at the venue${cfg.time_zone ? ` (${cfg.time_zone})` : ""}.`;
+
+  return (
+    <div className="dlgfb-panel dlgfb-form-opening">
+      <span className="dlgfb-panel-label">Feedback form</span>
+      <p className={`dlgfb-form-opening-status ${cfg.feedback_open ? "is-open" : "is-waiting"}`}>
+        <span className="dlgfb-form-opening-dot" aria-hidden="true" />
+        {cfg.feedback_open ? "Open" : "Not open yet"}
+      </p>
+      <p className="dlgfb-text-muted dlgfb-form-opening-note">{status}</p>
+      <label className="dlgfb-form-opening-switch">
+        <input type="checkbox" checked={cfg.form_open_auto} disabled={saving} onChange={toggle} />
+        <span>Open automatically when the event starts</span>
+      </label>
+      <small className="dlgfb-form-text dlgfb-text-muted">
+        Turn off to open the form right away, for example if the automatic opening fails.
+      </small>
+    </div>
+  );
+}
+
+/**
+ * The feedback submissions PDF, emailed by the server the day after the event ends. Download it to check it, or
+ * send it now when the automatic email did not go out.
+ */
+function ReportPanel() {
+  const notify = useToast();
+  const [status, setStatus] = useState(null);
+  const [busy, setBusy] = useState(""); // "", "download" or "send"
+
+  useEffect(() => {
+    api.get("/admin/feedback-report/").then(({ data }) => setStatus(data)).catch(() => {});
+  }, []);
+
+  const download = async () => {
+    setBusy("download");
+    try {
+      const res = await api.get("/admin/feedback-report/pdf/", { responseType: "blob" });
+      const name = /filename="([^"]+)"/.exec(res.headers["content-disposition"] || "")?.[1] || "feedback-submissions.pdf";
+      const url = URL.createObjectURL(res.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      notify(errorMessage(err), "danger", { title: "PDF not downloaded" });
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const send = async () => {
+    setBusy("send");
+    try {
+      const { data } = await api.post("/admin/feedback-report/send/");
+      setStatus(data);
+      notify(`${data.sent} submission${data.sent === 1 ? "" : "s"} sent to ${data.recipients.join(", ")}.`, "success", { title: "Report emailed" });
+    } catch (err) {
+      if (err?.response?.data?.recipients) setStatus(err.response.data);
+      notify(errorMessage(err), "danger", { title: "Report not sent" });
+    } finally {
+      setBusy("");
+    }
+  };
+
+  if (!status) return null;
+  const when = (iso) => venueTime(iso, status.time_zone);
+  let text;
+  if (status.sent_at) text = `Sent ${when(status.sent_at)} at the venue, with ${status.sent_count ?? 0} submissions.`;
+  else if (!status.sends_at) text = "The event's last day could not be read, so it will not be sent by itself. Use Send now.";
+  else if (new Date(status.sends_at) > new Date()) text = `Sends by itself on ${when(status.sends_at)} at the venue, the day after the event ends.`;
+  else if (status.auto) text = "Due now, it goes out within the hour.";
+  else text = "Not sent, the event ended more than a week ago. Use Send now.";
+
+  return (
+    <div className="dlgfb-panel dlgfb-report-panel">
+      <div>
+        <span className="dlgfb-panel-label">Submissions report (PDF)</span>
+        <p className="dlgfb-mb-0">
+          Every submission with the attendee's details and answers, emailed to <strong>{status.recipients.join(", ")}</strong>.
+        </p>
+        <p className="dlgfb-text-muted dlgfb-mb-0 dlgfb-report-status">{text}</p>
+        {!status.mail_ready && (
+          <p className="dlgfb-report-warn dlgfb-mb-0">Email is not set up on the server (SMTP_HOST), so it can only be downloaded.</p>
+        )}
+        {status.last_error && !status.sent_at && (
+          <p className="dlgfb-report-warn dlgfb-mb-0">Last try failed: {status.last_error.message}</p>
+        )}
+      </div>
+      <div className="dlgfb-report-actions">
+        <button className="dlgfb-btn dlgfb-btn-outline-primary dlgfb-btn-sm" onClick={download} disabled={!!busy}>
+          {busy === "download" ? "Preparing" : "Download PDF"}
+        </button>
+        <button className="dlgfb-btn dlgfb-btn-primary dlgfb-btn-sm" onClick={send} disabled={!!busy || !status.mail_ready}>
+          {busy === "send" ? "Sending" : status.sent_at ? "Send again" : "Send now"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPanel() {
   const notify = useToast();
   const [cfg, setCfg] = useState(null);
   const [spins, setSpins] = useState("0");
   const [seconds, setSeconds] = useState("5");
-  const [savingStatus, setSavingStatus] = useState(false);
   const [savingDraw, setSavingDraw] = useState(false);
 
   const apply = (data) => {
@@ -87,21 +193,6 @@ function SettingsPanel() {
   useEffect(() => {
     api.get("/admin/settings/").then(({ data }) => apply(data)).catch((err) => notify(errorMessage(err), "danger"));
   }, [notify]);
-
-  const setStatus = async (status) => {
-    if (status === cfg.form_status) return;
-    setSavingStatus(true);
-    try {
-      const { data } = await api.patch("/admin/settings/", { form_status: status });
-      setCfg((c) => ({ ...c, ...data }));
-      const { toast, title, tone } = FORM_STATUSES[status];
-      notify(toast, tone, { title });
-    } catch (err) {
-      notify(errorMessage(err), "danger", { title: "Status not changed" });
-    } finally {
-      setSavingStatus(false);
-    }
-  };
 
   const saveDraw = async (e) => {
     e.preventDefault();
@@ -136,54 +227,11 @@ function SettingsPanel() {
     );
   }
 
-  const active = cfg.form_status === "active";
-  const status = FORM_STATUSES[cfg.form_status] || FORM_STATUSES.inactive;
   const dirty = spins !== String(cfg.max_spin_attempts) || seconds !== String(cfg.spin_duration_seconds);
 
   return (
     <div className="dlgfb-settings-grid">
-      <div className={`dlgfb-panel dlgfb-status-card${active ? " dlgfb-is-open" : " dlgfb-is-closed"}`}>
-        <div className="dlgfb-status-card-top">
-          <div className="dlgfb-status-card-text">
-            <span className="dlgfb-panel-label">Feedback form</span>
-            <span className="dlgfb-status-pill">
-              <span className="dlgfb-status-dot" aria-hidden="true" />
-              {status.label}
-            </span>
-            <p className="dlgfb-panel-help dlgfb-mb-0">{status.help}</p>
-          </div>
-          {/* Quick open and close, off is Form not enabled. All five statuses are below. */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={active}
-            aria-label="Feedback form open"
-            className={`dlgfb-big-switch${active ? " dlgfb-on" : ""}`}
-            disabled={savingStatus}
-            onClick={() => setStatus(active ? "inactive" : "active")}
-          >
-            <span className="dlgfb-big-switch-knob">
-              {savingStatus && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm" aria-hidden="true" />}
-            </span>
-          </button>
-        </div>
-        <div className="dlgfb-status-steps" role="radiogroup" aria-label="Event status">
-          {Object.entries(FORM_STATUSES).map(([key, s]) => (
-            <button
-              key={key}
-              type="button"
-              role="radio"
-              aria-checked={cfg.form_status === key}
-              className={`dlgfb-status-step${cfg.form_status === key ? " dlgfb-is-current" : ""}`}
-              disabled={savingStatus}
-              onClick={() => setStatus(key)}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
+      <FormOpeningPanel cfg={cfg} onSaved={setCfg} />
       <form className="dlgfb-panel dlgfb-draw-settings" onSubmit={saveDraw}>
         <span className="dlgfb-panel-label">Raffle draw</span>
         <div className="dlgfb-draw-settings-fields">
@@ -266,7 +314,7 @@ export default function AdminSubmissions() {
       <div className="dlgfb-page-head">
         <div>
           <h1>Feedback submissions</h1>
-          <p className="dlgfb-text-muted dlgfb-mb-0">Open or close the form, set up the draw and manage entries.</p>
+          <p className="dlgfb-text-muted dlgfb-mb-0">Choose when the form opens, set up the draw and manage entries.</p>
         </div>
       </div>
 
@@ -277,6 +325,7 @@ export default function AdminSubmissions() {
       </div>
 
       <SettingsPanel />
+      <ReportPanel />
 
       <div className="dlgfb-filter-row">
         <input type="search" className="dlgfb-form-control" placeholder="Search by ID, name, display name, email or company"

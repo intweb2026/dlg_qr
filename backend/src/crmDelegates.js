@@ -3,11 +3,14 @@
 // the lucky draw all point at an attendee row. The CRM decides who is on the list; walk-ins added on the feedback form
 // and anyone who has submitted are never removed by a sync.
 //
-// The CRM publishes the list once, so it is fetched once. The first visitor to the site after the event's code and key
-// are set starts the sync, and form_settings.crm_synced_at records that it was done, so a restart does not fetch it
-// again. After that the list changes only when an admin presses Sync now on the Attendees page.
+// The first visitor to the site after the event's code and key are set starts the sync, and form_settings.crm_synced_at
+// records when it was done, so a restart does not fetch it again. After that the list is fetched again every 24 hours
+// until 11:59 PM of the event's last day where the event is held, started by a visit once the last sync is 24 hours
+// old, so late registrations reach the form. The last day comes from the website's agenda and the time zone from its
+// location, see eventDates.js. An admin can still press Sync now on the Attendees page at any time, also after.
 const config = require("./config");
 const { query, transaction } = require("./db");
+const { eventSchedule } = require("./eventDates");
 const { loadSettings } = require("./models");
 const { collapseSpaces, isoDate } = require("./utils");
 
@@ -17,6 +20,12 @@ const MAX_PAGES = 50;
 // While the first sync has not worked, because the CRM failed or has not published the list yet, visitors try again
 // at most this often.
 const RETRY_MS = 60 * 1000;
+// After the first sync, the list is fetched again once the last sync is this old.
+const REFRESH_MS = 24 * 60 * 60 * 1000;
+// A daily sync that failed is tried again after this long.
+const REFRESH_RETRY_MS = 60 * 60 * 1000;
+// Visits check whether a daily sync is due at most this often, so most visits make no database call.
+const CHECK_MS = 5 * 60 * 1000;
 
 // Per event code, { at, ok, error, result } of the last finished attempt, the sync running now, if any, and done once
 // the first sync is known to be saved.
@@ -25,7 +34,9 @@ const state = new Map();
 class CrmSyncError extends Error {}
 
 function eventState(code) {
-  if (!state.has(code)) state.set(code, { at: null, ok: null, error: null, result: null, running: null, done: false });
+  if (!state.has(code)) {
+    state.set(code, { at: null, ok: null, error: null, result: null, running: null, done: false, checkedAt: 0 });
+  }
   return state.get(code);
 }
 
@@ -221,19 +232,46 @@ function syncDelegates(event) {
   return s.running;
 }
 
+/** When the daily sync stops, 11:59 PM of the event's last day where it is held, or null when the last day is not known. */
+async function refreshUntil(event) {
+  return (await eventSchedule(event)).until;
+}
+
 /**
- * Runs the first sync for the event, for the public pages. Once the list is saved this does nothing, so the CRM is
- * called once in the event's life, not on every visit. Calls made while it runs wait for the same sync. A failure, or
- * a CRM with no delegates yet, is tried again by a visit at least a minute later; the page carries on with the saved list.
+ * The daily sync, in the background. Runs when the last saved sync is 24 hours old and the event's last day is not
+ * over yet; a failed one waits an hour. The page never waits for it, it carries on with the saved list.
+ */
+async function refreshIfDue(event, s) {
+  if (s.running || Date.now() - s.checkedAt < CHECK_MS) return;
+  s.checkedAt = Date.now();
+  if (s.ok === false && s.at && Date.now() - s.at.getTime() < REFRESH_RETRY_MS) return;
+  const [row] = await query("SELECT crm_synced_at FROM form_settings WHERE id = 1");
+  const syncedAt = row?.crm_synced_at ? new Date(isoDate(row.crm_synced_at)) : null;
+  if (!syncedAt || Date.now() - syncedAt.getTime() < REFRESH_MS) return;
+  const until = await refreshUntil(event);
+  if (!until || Date.now() > until.getTime()) return;
+  syncDelegates(event)
+    .then((r) => console.log(`${event.code}: daily CRM delegates sync, ${r.fetched} fetched, ${r.created} added, ${r.removed} removed`))
+    .catch((err) => console.error(`${event.code}: daily CRM delegates sync failed, ${err.message}`));
+}
+
+/**
+ * Runs the first sync for the event, for the public pages, then the daily one. Until the list is first saved, calls
+ * wait for the sync, and a failure, or a CRM with no delegates yet, is tried again by a visit at least a minute later.
+ * Once it is saved, a visit only starts the daily sync when it is due, in the background, see refreshIfDue.
  */
 async function syncOnFirstVisit(event) {
   if (syncDisabledReason(event)) return;
   const s = eventState(event.code);
-  if (s.done) return;
+  if (s.done) {
+    await refreshIfDue(event, s).catch((err) => console.error(`${event.code}: daily CRM sync check failed, ${err.message}`));
+    return;
+  }
   if (!s.running) {
     const [row] = await query("SELECT crm_synced_at FROM form_settings WHERE id = 1");
     if (row?.crm_synced_at) {
       s.done = true;
+      await refreshIfDue(event, s).catch((err) => console.error(`${event.code}: daily CRM sync check failed, ${err.message}`));
       return;
     }
     if (s.at && Date.now() - s.at.getTime() < RETRY_MS) return;
@@ -247,6 +285,8 @@ async function syncOnFirstVisit(event) {
 async function syncStatus(event) {
   const s = eventState(event.code);
   const settings = await loadSettings();
+  const schedule = syncDisabledReason(event) ? null : await eventSchedule(event);
+  const until = schedule?.until || null;
   return {
     enabled: !syncDisabledReason(event),
     reason: syncDisabledReason(event),
@@ -254,6 +294,12 @@ async function syncStatus(event) {
     running: Boolean(s.running),
     synced_at: isoDate(settings.crm_synced_at), // stored in UTC
     synced_count: settings.crm_synced_count ?? null,
+    // The daily sync runs until this time, null when the event's last day is not known.
+    refresh_until: until ? until.toISOString() : null,
+    refresh_active: Boolean(until && Date.now() <= until.getTime()),
+    // Where the event is held and its time zone, which set the time the daily sync stops.
+    location: schedule?.location || null,
+    time_zone: schedule?.timeZone || null,
     last_attempt_at: s.at ? s.at.toISOString() : null,
     ok: s.ok,
     error: s.error,

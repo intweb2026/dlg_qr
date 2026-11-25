@@ -1,15 +1,15 @@
 // Question text for the saved feedback_data keys, in the order of the form. Keep in step with
 // src/feedback/config/feedbackQuestions.js on the frontend.
 const QUESTIONS = [
-  ["conference_thoughts", "What did you think of the conference?"],
-  ["industry_challenges", "What are the three biggest challenges currently facing your industry?"],
+  ["conference_thoughts", "Could you share a brief testimonial?"],
+  ["industry_challenges", "What are the biggest challenges facing your industry?"],
   ["heard_about", "How did you first hear about this conference?"],
-  ["suggested_companies", "Which companies or industry groups would you like to see at our next conference?"],
-  ["specialist_topics", "Are there any specialist topics you feel deserve a dedicated conference?"],
+  ["suggested_companies", "Who would you like to see at our next conference?"],
+  ["specialist_topics", "What specialist topics deserve a dedicated conference?"],
   // Question 6 on the form, between the fifth and sixth questions.
-  ["speaker_reviews", "Speaker session reviews"],
+  ["speaker_reviews", "Which presentations did you find most valuable?"],
   ["associations", "Which industry associations are you a member of?"],
-  ["publications", "Which industry publications or newsletters do you regularly read?"],
+  ["publications", "Which industry publications or newsletters do you read?"],
   ["upcoming_interest", "Which of our upcoming conferences interest you?"],
 ];
 
@@ -17,7 +17,7 @@ const QUESTIONS = [
 const LEGACY_LABELS = {
   conference_thoughts_original: "Original words, before Polish",
   conference_thoughts_version: "Polished with AI or own words",
-  conference_thoughts_consent: "May we use your comments to market future events?",
+  conference_thoughts_consent: "May we use your testimonial to market future events?",
   overall_rating: "How would you rate the overall event?",
   session_format: "Which session format was most valuable to you?",
   valued_aspects: "Which aspects did you value most?",

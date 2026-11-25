@@ -5,7 +5,6 @@ export const UNAUTHORIZED_EVENT = "admin:unauthorized";
 // Public endpoints never carry the admin token, so a stale token cannot break the attendee form or the lucky draw.
 const PUBLIC_PATHS = [
   "/",
-  "/form-status/",
   "/attendees/",
   "/registered-attendees/",
   "/feedback/submit/",
@@ -47,7 +46,7 @@ function readToken() {
   }
 }
 
-// Paths are written without the event, for example "/form-status/", and sent to /events/<code>/form-status/.
+// Paths are written without the event, for example "/attendees/", and sent to /events/<code>/attendees/.
 api.interceptors.request.use((config) => {
   config.path = config.url;
   config.url = `/events/${encodeURIComponent(eventCode)}${config.url}`;

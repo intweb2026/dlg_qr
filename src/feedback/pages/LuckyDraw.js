@@ -15,28 +15,8 @@ const SUSPENSE_MS = 3000; // suspense between the reels stopping and the name sh
 
 const EMPTY_DRAW = { attempts: 0, phase: "idle", entryId: null, padLength: 3, winner: null };
 
-// White is the one a fresh screen opens with, the theme button then goes to grey and black.
-export const THEMES = ["white", "grey", "black"];
-const themeKey = () => eventKey("luckyDrawTheme");
-
-// Also read by the standalone /raffle-draw welcome screen, so it opens in the same theme as the draw.
-export function readTheme() {
-  try {
-    const saved = sessionStorage.getItem(themeKey());
-    if (THEMES.includes(saved)) return saved;
-  } catch (e) {
-    /* ignore */
-  }
-  return "white";
-}
-
-export function saveTheme(theme) {
-  try {
-    sessionStorage.setItem(themeKey(), theme);
-  } catch (e) {
-    /* ignore */
-  }
-}
+// Every raffle screen is black, there is no theme switch. Also used by the standalone /raffle-draw welcome screen.
+export const DRAW_THEME = "black";
 
 function readDraw() {
   try {
@@ -115,7 +95,6 @@ function WinnerName({ name }) {
 export default function LuckyDraw({ autoFullscreen = false }) {
   const notify = useToast();
   const [initial] = useState(readDraw);
-  const [theme, setTheme] = useState(readTheme);
   const [pool, setPool] = useState(null);
   const [attempts, setAttempts] = useState(initial.attempts);
   // idle | spinning | landed | revealing | revealed
@@ -395,12 +374,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
     }
   };
 
-  const cycleTheme = () => {
-    const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
-    setTheme(next);
-    saveTheme(next);
-  };
-
   const toggleFullscreen = () => {
     const el = stageRef.current;
     if (!el) return;
@@ -423,7 +396,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
   return (
     <div className="dlgfb-draw-page">
       <section
-        className={`dlgfb-draw-stage dlgfb-theme-${theme} dlgfb-phase-${phase}${fullscreen || autoFullscreen ? " dlgfb-is-fullscreen" : ""}${autoFullscreen ? " dlgfb-is-window" : ""}`}
+        className={`dlgfb-draw-stage dlgfb-theme-${DRAW_THEME} dlgfb-phase-${phase}${fullscreen || autoFullscreen ? " dlgfb-is-fullscreen" : ""}${autoFullscreen ? " dlgfb-is-window" : ""}`}
         ref={stageRef}
       >
         {/* Inside the stage so the confetti still shows in full screen */}
@@ -445,29 +418,21 @@ export default function LuckyDraw({ autoFullscreen = false }) {
           <div className="dlgfb-draw-actions">
             <button
               type="button"
-              className="dlgfb-btn-fullscreen dlgfb-btn-theme"
-              onClick={cycleTheme}
-              aria-label={`Change theme, current theme ${theme}`}
-              title={`Theme: ${theme}`}
+              className={`dlgfb-btn-fullscreen${fullscreen ? " dlgfb-is-on" : ""}`}
+              onClick={toggleFullscreen}
+              aria-pressed={fullscreen}
+              aria-label={fullscreen ? "Exit full screen" : "Full screen"}
+              title={fullscreen ? "Exit full screen" : "Full screen"}
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 3a9 9 0 000 18z" fill="currentColor" />
-              </svg>
-              <span>Theme</span>
-            </button>
-            <button type="button" className={`dlgfb-btn-fullscreen${fullscreen ? " dlgfb-is-on" : ""}`} onClick={toggleFullscreen} aria-pressed={fullscreen}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 {fullscreen ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" /> : <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />}
               </svg>
-              <span>{fullscreen ? "Exit full screen" : "Full screen"}</span>
             </button>
           </div>
         </div>
 
-        <h1 className="dlgfb-draw-title">
-          {phase === "revealed" && winner ? "Congratulations!" : "Raffle Draw"}
-        </h1>
+        {/* No heading while drawing, the welcome screen already says RAFFLE DRAW. Only the winner gets one. */}
+        {phase === "revealed" && winner && <h1 className="dlgfb-draw-title">Congratulations!</h1>}
 
         <SlotMachine reels={reels} state={phase === "revealing" ? "suspense" : phase} label={srLabel} />
 
@@ -483,7 +448,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
             <p className="dlgfb-draw-hint">
               {poolEmpty && pool
                 ? "No eligible entries. Entries appear once attendees submit feedback, and past winners are left out."
-                : "The last spin was interrupted and no spins are left. Press Spin below to start the next draw."}
+                : "The last spin was interrupted and no spins are left. Press Spin Again below to start the next draw."}
               {/* : `Press Spin to start. The reels stop after ${spinSeconds} seconds and the winner's name is shown.` */}
             </p>
           )}
@@ -513,11 +478,12 @@ export default function LuckyDraw({ autoFullscreen = false }) {
           )}
         </div>
 
-        {/* The same big Spin button for every draw. After a reveal it asks first, so a winner is not replaced by a mis-click. */}
+        {/* The same big Spin button for every draw, "Spin Again" once it has spun. After a reveal it asks first, so a
+            winner is not replaced by a mis-click. */}
         <div className="dlgfb-draw-controls">
           {canStartNew && (
             <button className="dlgfb-btn dlgfb-btn-draw dlgfb-btn-lg" onClick={() => setConfirmSpin(true)} disabled={poolEmpty}>
-              Spin
+              Spin Again
             </button>
           )}
           {(phase === "idle" || phase === "spinning") && !canStartNew && (
@@ -527,6 +493,8 @@ export default function LuckyDraw({ autoFullscreen = false }) {
                   <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-mr-2" aria-hidden="true" />
                   Spinning
                 </>
+              ) : attempts > 0 ? (
+                "Spin Again"
               ) : (
                 "Spin"
               )}
@@ -544,7 +512,7 @@ export default function LuckyDraw({ autoFullscreen = false }) {
         {confirmSpin && (
           <ConfirmDialog
             title="Spin again"
-            confirmLabel="Spin"
+            confirmLabel="Spin Again"
             tone="primary"
             onConfirm={() => {
               setConfirmSpin(false);
