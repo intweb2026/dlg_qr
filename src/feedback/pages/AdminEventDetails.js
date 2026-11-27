@@ -21,7 +21,7 @@ const SECTIONS = [
   },
   {
     title: "Images and videos",
-    help: "Upload a file, or enter a site path such as /images/dle26/logo.png or a full URL.",
+    help: "Upload a file, or enter a site path such as /events/aiu26/images/logo.png or a full URL.",
     media: true,
     fields: [
       { key: "logo", label: "Logo", accept: "image", help: "Home page and admin sign in." },
@@ -186,7 +186,7 @@ function MediaField({ id, field, value, error, onChange, dark = false }) {
       <div className="dlgfb-ed-media-body">
         <label className="dlgfb-ed-label" htmlFor={id}>{field.label}</label>
         <input id={id} className={`dlgfb-form-control${error ? " dlgfb-is-invalid" : ""}`} value={value} maxLength={500}
-          placeholder="Upload, or /images/... or https://..." onChange={(e) => onChange(e.target.value)} />
+          placeholder="Upload, or /events/... or https://..." onChange={(e) => onChange(e.target.value)} />
         {error && <div className="dlgfb-invalid-feedback">{error}</div>}
         {field.help && <small className="dlgfb-form-text dlgfb-text-muted">{field.help}</small>}
         <div className="dlgfb-ed-media-actions">

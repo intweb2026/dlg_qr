@@ -1,5 +1,5 @@
 // Create sample attendees for local testing (and the default form settings row).
-// Usage: npm run seed:attendees -- --event dle26 --count 50
+// Usage: npm run seed:attendees -- --event aiu26 --count 50
 const { query } = require("../src/db");
 const { loadSettings } = require("../src/models");
 const { choice, inEvent, intArg, parseArgs, run } = require("./cli");

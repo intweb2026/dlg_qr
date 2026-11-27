@@ -1,6 +1,10 @@
 // Everything the feedback form and admin need, loaded as one separate bundle the first time one of
 // their routes is opened (see src/index.js). Visitors who only use the event pages never download it.
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
+import { useEventPath } from "../event/EventContext";
+import { useAuth } from "./context/AuthContext";
+import { homePage } from "./utils/roles";
 import RequireAdmin from "./components/RequireAdmin";
 import AdminLayout from "./components/AdminLayout";
 import LuckyDraw, { DRAW_THEME } from "./pages/LuckyDraw";
@@ -12,7 +16,16 @@ export { default as AdminSubmissions } from "./pages/AdminSubmissions";
 export { LuckyDraw };
 export { default as AdminAttendees } from "./pages/AdminAttendees";
 export { default as AdminEventDetails } from "./pages/AdminEventDetails";
+export { default as AdminUsers } from "./pages/AdminUsers";
+export { default as AdminWifi } from "./pages/AdminWifi";
 export { default as NotFound } from "./pages/NotFound";
+
+// /admin on its own opens the account's own first screen, Submissions for an admin and Wi-Fi for a support user.
+export function AdminHome() {
+  const { user } = useAuth();
+  const eventPath = useEventPath();
+  return <Navigate to={eventPath(homePage(user?.role))} replace />;
+}
 
 export function AdminArea() {
   return (
@@ -26,7 +39,6 @@ export function AdminArea() {
 // The draw API is public, so no sign in is needed here.
 // It opens on a black welcome screen with a RAFFLE DRAW heading, the event name and a start button. Browsers only
 // allow full screen after a click, so the button click switches to full screen and then shows the draw.
-// The admin Raffle draw link already opens the page in full screen, so it skips the welcome screen.
 // How long the banner's exit runs after Are We Ready?, kept the same as dlgfbIntroOut in styles.css.
 const INTRO_EXIT_MS = 650;
 

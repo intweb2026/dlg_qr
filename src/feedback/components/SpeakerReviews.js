@@ -9,9 +9,8 @@ import { ratingScale } from "../config/feedbackQuestions";
 export const REVIEWS_KEY = "speaker_reviews";
 
 // How many presentations an attendee can pick in all, whatever the day, is set per event, "speakerReviews.maxReviews"
-// in backend/events.json, and comes in the event config. This is the default for a config without it; the backend
-// checks the same limit on submit.
-const DEFAULT_MAX_REVIEWS = 3;
+// in backend/events.json with its default in backend/src/events.js, and comes in the event config. The backend checks
+// the same limit on submit.
 
 const MODERATOR_RE = /\s*\|\s*moderator\s*$/i;
 
@@ -107,7 +106,7 @@ function SessionPick({ session, picked, locked, onToggle }) {
   );
 }
 
-export default function SpeakerReviews({ sessions, reviews, maxReviews = DEFAULT_MAX_REVIEWS, onChange }) {
+export default function SpeakerReviews({ sessions, reviews, maxReviews, onChange }) {
   const [query, setQuery] = useState("");
   const terms = normalize(query).split(/\s+/).filter(Boolean);
   const toggle = (id) => onChange({ ...(reviews || {}), [id]: hasReview(reviews?.[id]) ? null : { selected: true } });

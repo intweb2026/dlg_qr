@@ -1,6 +1,3 @@
-const { parse } = require("csv-parse/sync");
-
-const config = require("../config");
 const crm = require("../crmDelegates");
 const report = require("../feedbackReport");
 const { query } = require("../db");
@@ -299,76 +296,6 @@ async function attendeeSync(req, res) {
   }
 }
 
-/**
- * CSV upload. Switched off, the list now comes from the CRM, see crmDelegates.js. Its route is commented out in
- * routes.js. Header row: full_name, company_name, email (email optional). */
-async function attendeeImport(req, res) {
-  const upload = (req.files || []).find((f) => f.fieldname === "file");
-  if (!upload) return res.status(400).json({ detail: "Choose a CSV file to import." });
-  let text;
-  try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(upload.buffer); // also drops a UTF-8 BOM
-  } catch (err) {
-    return res.status(400).json({ detail: "The file must be UTF-8 encoded CSV." });
-  }
-  let records;
-  try {
-    records = parse(text, { relax_column_count: true, relax_quotes: true, skip_empty_lines: true });
-  } catch (err) {
-    return res.status(400).json({ detail: `The CSV file could not be read, ${err.message}` });
-  }
-
-  const headers = (records.shift() || []).map((h) => h.trim().toLowerCase());
-  const nameKey = ["full_name", "attendee_name", "name"].find((k) => headers.includes(k));
-  if (!nameKey) {
-    return res.status(400).json({ detail: "CSV needs a full_name column (also accepted, attendee_name or name)." });
-  }
-
-  if (!records.length) return res.status(400).json({ detail: "The CSV file has no attendee rows." });
-
-  // A new list replaces the old one, so the previous winners, submissions and attendees are cleared first and the
-  // submission numbers start again from FEEDBACK_START_NUMBER. Nothing is cleared when the file itself was rejected above.
-  const startNumber = Number.isInteger(config.feedbackStartNumber) && config.feedbackStartNumber >= 1 ? config.feedbackStartNumber : 1;
-  await query("DELETE FROM lucky_draw_winners");
-  await query("DELETE FROM feedback_submissions");
-  await query("DELETE FROM attendees");
-  await query("ALTER TABLE lucky_draw_winners AUTO_INCREMENT = 1");
-  await query(`ALTER TABLE feedback_submissions AUTO_INCREMENT = ${startNumber}`);
-  await query("ALTER TABLE attendees AUTO_INCREMENT = 1");
-
-  let created = 0;
-  let skipped = 0;
-  const errors = [];
-  for (const [index, cells] of records.entries()) {
-    const row = {};
-    headers.forEach((h, i) => {
-      row[h] = (cells[i] || "").trim();
-    });
-    const name = row[nameKey] || "";
-    if (!name) {
-      skipped += 1;
-      continue;
-    }
-    const email = (row.email || "").toLowerCase() || null;
-    const company = row.company_name || row.company || "";
-    if (email && (await m.emailTaken(email))) {
-      skipped += 1;
-      continue;
-    }
-    try {
-      await query(
-        "INSERT INTO attendees (full_name, email, company_name, is_walk_in, created_at) VALUES (?, ?, ?, 0, UTC_TIMESTAMP(6))",
-        [name, email, company]
-      );
-      created += 1;
-    } catch (err) {
-      if (!err.sqlMessage) throw err;
-      errors.push(`Line ${index + 2}, ${err.sqlMessage}`);
-    }
-  }
-  res.json({ created, skipped, errors: errors.slice(0, 20) });
-}
-
 function bodyObject(req) {
   return v.isPlainObject(req.body) ? req.body : {};
 }
@@ -385,7 +312,6 @@ module.exports = {
   attendeeCreate,
   attendeePatch,
   attendeeDelete,
-  attendeeImport,
   attendeeSync,
   attendeeSyncStatus,
   feedbackReportStatus,

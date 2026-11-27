@@ -1,5 +1,5 @@
 // Add demo attendees and feedback submissions for testing the form, admin panel and lucky draw.
-// Usage: npm run seed:demo -- --event dle26 --attendees 100 --feedback 50
+// Usage: npm run seed:demo -- --event aiu26 --attendees 100 --feedback 50
 const crypto = require("crypto");
 
 const { transaction } = require("../src/db");

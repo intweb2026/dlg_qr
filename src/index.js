@@ -1,6 +1,6 @@
 import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
 import EventLayout from "./event/EventContext";
 import EventMobileMenu from "./EventMobileMenu";
@@ -17,8 +17,10 @@ const FeedbackForm = feedbackPage("FeedbackForm");
 const AdminLogin = feedbackPage("AdminLogin");
 const AdminArea = feedbackPage("AdminArea");
 const AdminSubmissions = feedbackPage("AdminSubmissions");
-const LuckyDraw = feedbackPage("LuckyDraw");
 const LuckyDrawStandalone = feedbackPage("LuckyDrawStandalone");
+const AdminHome = feedbackPage("AdminHome");
+const AdminWifi = feedbackPage("AdminWifi");
+const AdminUsers = feedbackPage("AdminUsers");
 const AdminAttendees = feedbackPage("AdminAttendees");
 const AdminEventDetails = feedbackPage("AdminEventDetails");
 const NotFound = feedbackPage("NotFound");
@@ -30,7 +32,7 @@ const load = (Page) => (
   </Suspense>
 );
 
-// Every page sits under the event code, /dle26 is the event home and /dle26/feedback-form its feedback form.
+// Every page sits under the event code, /aiu26 is the event home and /aiu26/feedback-form its feedback form.
 // The event's content comes from backend/events.json. The bare home page / shows a 500 error page.
 function App() {
   return (
@@ -47,9 +49,10 @@ function App() {
           <Route path="raffle-draw" element={load(LuckyDrawStandalone)} />
           <Route path="admin/login" element={load(AdminLogin)} />
           <Route path="admin" element={load(AdminArea)}>
-            <Route index element={<Navigate to="feedback-submission" replace />} />
+            <Route index element={load(AdminHome)} />
+            <Route path="wifi" element={load(AdminWifi)} />
+            <Route path="users" element={load(AdminUsers)} />
             <Route path="feedback-submission" element={load(AdminSubmissions)} />
-            <Route path="raffle-draw" element={load(LuckyDraw)} />
             <Route path="attendees" element={load(AdminAttendees)} />
             <Route path="event-details" element={load(AdminEventDetails)} />
             <Route path="*" element={load(NotFound)} />

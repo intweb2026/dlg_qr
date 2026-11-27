@@ -2,7 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const MIN_CHARS = 3;
 const MAX_RESULTS = 8;
-const MAX_NAME = 255;
+// The longest value the form accepts when someone types a new attendee. The database columns hold 255, the form keeps
+// them shorter so entries are realistic and fit on the raffle screen and in lists.
+// Name, the longest a person's name needs to be shown whole.
+const MAX_NAME = 28;
+// Company, long enough for a full legal company name.
+const MAX_COMPANY = 100;
+// Email, 254 is the longest a valid address can be (RFC 5321).
+const MAX_EMAIL = 254;
 
 // Lowercase and strip accents, so "jose" finds "José".
 function normalize(text) {
@@ -170,7 +177,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               placeholder="Type here..."
               aria-required="true"
               aria-invalid={!!companyInvalid}
-              maxLength={MAX_NAME}
+              maxLength={MAX_COMPANY}
               value={value.company_name}
               onChange={(e) => onChange({ ...value, company_name: e.target.value })}
             />
@@ -187,7 +194,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
               placeholder="Enter your email address"
               aria-required="true"
               aria-invalid={!!emailInvalid}
-              maxLength={MAX_NAME}
+              maxLength={MAX_EMAIL}
               value={value.email}
               onChange={(e) => onChange({ ...value, email: e.target.value })}
             />
@@ -222,6 +229,7 @@ export default function AttendeeSearch({ attendees, loadError, onRetry, value, o
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
+          maxLength={MAX_NAME}
           value={query}
           disabled={loading || !!loadError}
           role="combobox"

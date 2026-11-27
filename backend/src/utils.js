@@ -1,9 +1,9 @@
 const crypto = require("crypto");
 
 function clientIp(req) {
-  const forwarded = req.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return req.get("x-real-ip") || (req.socket.remoteAddress || "").replace(/^::ffff:/, "");
+  // req.ip is the visitor's address. Express reads X-Forwarded-For only for the proxies set in TRUST_PROXY, so the
+  // header cannot be made up by a visitor.
+  return (req.ip || req.socket.remoteAddress || "").replace(/^::ffff:/, "");
 }
 
 /** SHA-256 hash derived from client IP and User-Agent. */

@@ -1,23 +1,18 @@
 const fs = require("fs");
 const path = require("path");
 
+const config = require("./config");
 const { query, serverConnection, withDatabase } = require("./db");
-const { loadDetailsRow, moveLinksIntoMenu } = require("./eventDetails");
+const { loadDetailsRow, moveLinksIntoMenu, movePublicMedia } = require("./eventDetails");
 const { loadSettings } = require("./models");
 const { makePassword } = require("./passwords");
+const roles = require("./roles");
 
 const SCHEMA = path.join(__dirname, "..", "db", "schema.sql");
 
-// Created in every new event database, the same accounts the Django migration added. Change the passwords before the event.
-const DEFAULT_ADMINS = [
-  ["benny", "Benny_iqHub", "Benny"],
-  ["maxwell", "Maxwell_iqHub", "Maxwell"],
-  ["parker", "Parker_iqHub", "Parker"],
-  ["ramon", "Ramon_iqHub", "Ramon"],
-];
-
 // [table, column, definition, after], kept the same as db/schema.sql.
 const ADDED_COLUMNS = [
+  ["admin_users", "role", "varchar(20) NOT NULL DEFAULT 'admin'", "is_active"],
   ["feedback_submissions", "userAliesName", "varchar(255) NOT NULL DEFAULT ''", "feedback_data"],
   ["feedback_submissions", "userComapnyAliesName", "varchar(255) NOT NULL DEFAULT ''", "userAliesName"],
   ["form_settings", "crm_synced_at", "datetime(6) DEFAULT NULL", "spin_duration_seconds"],
@@ -80,8 +75,12 @@ async function migrate(event, { log = () => {} } = {}) {
     await loadSettings();
     // The Event Details row and the default menu, copied from events.json the first time.
     await moveLinksIntoMenu({ log: (message) => log(`${event.code}: ${message}`) });
+    await movePublicMedia({ log: (message) => log(`${event.code}: ${message}`) });
     await loadDetailsRow(event);
-    for (const [username, password, fullName] of DEFAULT_ADMINS) {
+    // The support role was first called "technician". Accounts saved with that word take the new one, they stay signed in.
+    const renamed = await query("UPDATE admin_users SET role = ? WHERE role = ?", [roles.SUPPORT, "technician"]);
+    if (renamed.affectedRows) log(`${event.code}: changed ${renamed.affectedRows} account(s) from the technician role to ${roles.SUPPORT}.`);
+    for (const [username, password, fullName] of config.defaultAdmins) {
       const exists = await query("SELECT 1 FROM admin_users WHERE username = ?", [username]);
       if (exists.length) continue;
       await query(
@@ -93,4 +92,4 @@ async function migrate(event, { log = () => {} } = {}) {
   });
 }
 
-module.exports = { migrate, DEFAULT_ADMINS };
+module.exports = { migrate };

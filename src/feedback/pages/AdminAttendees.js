@@ -12,17 +12,13 @@ export default function AdminAttendees() {
   const [q, setQ] = useState("");
   const [walkIn, setWalkIn] = useState("");
   const [form, setForm] = useState(EMPTY);
-  // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
+  // eslint-disable-next-line no-unused-vars -- used by the Add an attendee panel, commented out in the JSX below
   const [saving, setSaving] = useState(false);
-  // The CSV import is switched off, the list comes from the CRM.
-  // const [importing, setImporting] = useState(false);
-  // const [pendingFile, setPendingFile] = useState(null);
   const [sync, setSync] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
-  // const fileRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -74,7 +70,7 @@ export default function AdminAttendees() {
     setPage((p) => Math.min(p, pageCount(list.length)));
   }, [list.length]);
 
-  // eslint-disable-next-line no-unused-vars -- used by the add and import panels, commented out in the JSX below
+  // eslint-disable-next-line no-unused-vars -- used by the Add an attendee panel, commented out in the JSX below
   const add = async (e) => {
     e.preventDefault();
     if (!form.full_name.trim()) return notify("Enter the attendee's name to add them.", "warning", { title: "Name is required" });
@@ -107,33 +103,6 @@ export default function AdminAttendees() {
   };
 
   const submitted = list.filter((a) => a.has_submitted).length;
-
-  // // Choosing a file only stages it, the import clears the old list, so it waits for a confirmation.
-  // const chooseCsv = (e) => setPendingFile(e.target.files?.[0] || null);
-  // const cancelImport = () => {
-  //   setPendingFile(null);
-  //   if (fileRef.current) fileRef.current.value = "";
-  // };
-  //
-  // const importCsv = async () => {
-  //   if (!pendingFile) return;
-  //   setImporting(true);
-  //   const body = new FormData();
-  //   body.append("file", pendingFile);
-  //   try {
-  //     const { data } = await api.post("/admin/attendees/import/", body);
-  //     notify(`${data.created} added, ${data.skipped} skipped as duplicates or blank rows.`, data.created ? "success" : "info", {
-  //       title: "CSV imported",
-  //     });
-  //     if (data.errors?.length) notify(data.errors[0], "danger", { title: `${data.errors.length} row${data.errors.length > 1 ? "s" : ""} failed` });
-  //     load();
-  //   } catch (err) {
-  //     notify(errorMessage(err), "danger", { title: "Import failed" });
-  //   } finally {
-  //     setImporting(false);
-  //     cancelImport();
-  //   }
-  // };
 
   return (
     <>
@@ -187,19 +156,6 @@ export default function AdminAttendees() {
         </div>
       </div>
 
-      {/* The CSV import is switched off, the list comes from the CRM.
-      <div className="dlgfb-panel dlgfb-mb-3">
-        <h2 className="dlgfb-h6 dlgfb-mb-2">Import attendees from CSV</h2>
-        <p className="dlgfb-small dlgfb-text-muted">
-          Columns full_name, company_name, email. Importing replaces the whole list, the current attendees, feedback submissions and
-          lucky draw winners are cleared first.
-        </p>
-        <div className="dlgfb-custom-file">
-          <input ref={fileRef} type="file" accept=".csv" className="dlgfb-custom-file-input" id="csv-file" onChange={chooseCsv} disabled={importing} />
-          <label className="dlgfb-custom-file-label" htmlFor="csv-file">{importing ? "Importing" : pendingFile ? pendingFile.name : "Choose CSV file"}</label>
-        </div>
-      </div> */}
-
       {/* <div className="dlgfb-row">
         <div className="dlgfb-col-lg-8 dlgfb-mb-3">
           <form className="dlgfb-panel" onSubmit={add}>
@@ -220,16 +176,6 @@ export default function AdminAttendees() {
             </div>
             <button className="dlgfb-btn dlgfb-btn-primary dlgfb-btn-sm" disabled={saving}>{saving ? "Adding" : "Add attendee"}</button>
           </form>
-        </div>
-        <div className="dlgfb-col-lg-4 dlgfb-mb-3">
-          <div className="dlgfb-panel dlgfb-h-100">
-            <h2 className="dlgfb-h6 dlgfb-mb-2">Import from CSV</h2>
-            <p className="dlgfb-small dlgfb-text-muted">Columns full_name, company_name, email. Rows with an existing email are skipped.</p>
-            <div className="dlgfb-custom-file">
-              <input ref={fileRef} type="file" accept=".csv" className="dlgfb-custom-file-input" id="csv-file" onChange={importCsv} disabled={importing} />
-              <label className="dlgfb-custom-file-label" htmlFor="csv-file">{importing ? "Importing" : "Choose CSV file"}</label>
-            </div>
-          </div>
         </div>
       </div> */}
 
@@ -298,18 +244,6 @@ export default function AdminAttendees() {
           Delete <strong>{deleting.full_name}</strong>{deleting.company_name ? ` from ${deleting.company_name}` : ""}. They will no longer appear in the feedback form.
         </ConfirmDialog>
       )}
-      {/* {pendingFile && (
-        <ConfirmDialog
-          title="Replace the attendee list"
-          confirmLabel="Clear and import"
-          busy={importing}
-          onConfirm={importCsv}
-          onCancel={cancelImport}
-        >
-          Importing <strong>{pendingFile.name}</strong> deletes every current attendee, feedback submission and lucky draw winner,
-          then adds the attendees from the file. This cannot be undone.
-        </ConfirmDialog>
-      )} */}
     </>
   );
 }

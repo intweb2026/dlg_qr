@@ -96,9 +96,4 @@ async function winnerList(req, res) {
   res.json(rows.map(m.winnerJson));
 }
 
-async function winnerClear(req, res) {
-  await query("DELETE FROM lucky_draw_winners");
-  res.status(204).end();
-}
-
-module.exports = { pool, spin, sendToCrm, reveal, winnerList, winnerClear };
+module.exports = { pool, spin, sendToCrm, reveal, winnerList };

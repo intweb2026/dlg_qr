@@ -108,8 +108,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
   // The winners value is only read by the commented out winner history table, the setter is still used.
   // Restore with the table: const [winners, setWinners] = useState([]);
   const [, setWinners] = useState([]);
-  const [confirmClear, setConfirmClear] = useState(false);
-  const [clearing, setClearing] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   // Set when the automatic reveal fails on the network, so it is not retried in a loop.
   const [revealFailed, setRevealFailed] = useState(false);
@@ -359,21 +357,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
     }
   }, [phase, attempts]);
 
-  const clearHistory = async () => {
-    setClearing(true);
-    try {
-      await api.delete("/lucky-draw/winners/");
-      setWinners([]);
-      setConfirmClear(false);
-      notify("Past winners were removed from the list and can be drawn again.", "success", { title: "History cleared" });
-      loadPool();
-    } catch (err) {
-      notify(errorMessage(err), "danger");
-    } finally {
-      setClearing(false);
-    }
-  };
-
   const toggleFullscreen = () => {
     const el = stageRef.current;
     if (!el) return;
@@ -530,9 +513,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
       {/* <section className="dlgfb-mt-4">
         <div className="dlgfb-section-head">
           <h2 className="dlgfb-h5 dlgfb-mb-0">Winner history</h2>
-          {winners.length > 0 && (
-            <button className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-outline-secondary" onClick={() => setConfirmClear(true)}>Clear history</button>
-          )}
         </div>
         <div className="dlgfb-table-card">
           <table className="dlgfb-table dlgfb-table-stack dlgfb-mb-0">
@@ -565,17 +545,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
         </div>
       </section> */}
 
-      {confirmClear && (
-        <ConfirmDialog
-          title="Clear winner history"
-          confirmLabel="Clear history"
-          busy={clearing}
-          onConfirm={clearHistory}
-          onCancel={() => setConfirmClear(false)}
-        >
-          This removes every revealed winner from the list, and those entries can be drawn again. Submissions are not affected.
-        </ConfirmDialog>
-      )}
     </div>
   );
 }

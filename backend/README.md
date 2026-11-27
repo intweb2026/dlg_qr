@@ -4,7 +4,7 @@ Node.js (Express) API for the event site, the feedback form, the admin panel and
 
 ## Events
 
-Every event is one entry in `events.json`, keyed by its code. The code is the first part of every address, `/dle26/feedback-form` on the site and `/api/events/dle26/...` on the API.
+Every event is one entry in `events.json`, keyed by its code. The code is the first part of every address, `/aiu26/feedback-form` on the site and `/api/events/aiu26/...` on the API.
 
 - The key is the event code, lower case letters, digits and dashes.
 - `database` is the event's own MySQL database. Every event needs a different one. Its login is in `databases.json`, see below.
@@ -19,12 +19,12 @@ Every event is one entry in `events.json`, keyed by its code. The code is the fi
 
 ```json
 {
-  "dle26": { "database": "feedback_db", "active": true, "media": { "successIcon": "/images/common/checked.png" } },
-  "afs26": { "database": "feedback_afs26", "media": { "successIcon": "/images/common/checked.png" } }
+  "aiu26": { "database": "feedback_aiu26", "active": true, "media": { "successIcon": "/common/images/checked.png" } },
+  "afs26": { "database": "feedback_afs26", "media": { "successIcon": "/common/images/checked.png" } }
 }
 ```
 
-Copy the `dle26` entry as a starting point.
+Copy the `aiu26` entry as a starting point.
 
 ## Event Details in the admin panel
 
@@ -53,7 +53,7 @@ The attendee list is no longer imported from a CSV; it comes from the CRM. The d
 
 ```json
 {
-  "feedback_db": { "host": "127.0.0.1", "port": 3306, "user": "root", "password": "..." },
+  "feedback_aiu26": { "host": "127.0.0.1", "port": 3306, "user": "root", "password": "..." },
   "feedback_afs26": { "host": "db2.your-domain.com", "port": 3306, "user": "afs26_user", "password": "..." }
 }
 ```
@@ -91,11 +91,28 @@ Every command except `migrate` needs `--event <code>`.
 | `npm run seed:attendees -- --event <code> --count 50` | Adds sample attendees |
 | `npm run seed:demo -- --event <code> --attendees 100 --feedback 50` | Adds demo attendees and feedback |
 | `npm run admin-user -- --event <code> list` | Lists the event's admin accounts |
-| `npm run admin-user -- --event <code> set <username> --password <pw> [--name <name>]` | Creates an account or changes its password or name |
+| `npm run admin-user -- --event <code> set <username> --password <pw> [--name <name>] [--role admin\|support]` | Creates an account or changes its password, name or role. A new role signs the account out |
 | `npm run admin-user -- --event <code> disable <username>` | Blocks sign in and signs the account out everywhere, `enable` undoes it |
 | `npm test` | Runs the API tests on temporary databases for the test events in `test/events.json`, with the login of the first entry in `databases.json` |
 
-Admin accounts belong to one event, because each event has its own database. A new event database gets four admin accounts, benny, maxwell, nolan and ramon, with the password `<username>123`. Change them with `admin-user set` before the event.
+Admin accounts belong to one event, because each event has its own database. A new event database gets the admin accounts listed in `DEFAULT_ADMINS`, one list in `src/config.js` that `npm run migrate` reads, set it in the environment to use your own. Change the passwords with `admin-user set` before the event.
+
+## Users and roles
+
+Every admin account has one role, kept in `admin_users.role` (run `npm run migrate` to add the column, existing accounts become `admin`). Admins manage accounts on the admin **Users** page, `/<code>/admin/users`.
+
+| Role | Can do |
+| --- | --- |
+| `admin` | Every admin screen, including Users |
+| `support` | For the person on the floor. Only reads and changes the Wi-Fi network and password, on `/<code>/admin/wifi` |
+
+The roles are enforced by the API, not only hidden in the menu. An admin route answers 403 to a support user unless it is the Wi-Fi route (`GET` and `PATCH /admin/wifi/`, which only reads the `network` and `password` keys). A new route is closed to the support user unless it uses `requireStaff` in `src/routes.js`. The roles are listed in `src/roles.js`.
+
+- When the support user (or an admin on that screen) changes the Wi-Fi network or password, the server makes the Wi-Fi QR code again and saves it in `UPLOADS_DIR/<code>/wifi-qr-<hash>.png`. It is a WPA code, or an open network code when the password is blank. A hidden or WEP network needs the QR code made by hand on the Event Details page, which stays until the next change. The earlier code made by the server is deleted, files an admin uploaded are never touched. Keep `UPLOADS_DIR` on a persistent volume or the picture is lost on redeploy.
+- Changing a user's role or password, or disabling them, signs them out at once. Deleting a user does too.
+- An admin cannot change their own role, disable or delete themselves, so the panel always has an admin.
+- Passwords are at least 8 characters. Usernames are letters, digits, dots, dashes and underscores, 3 to 150 characters.
+- The raffle draw page at `/<code>/raffle-draw` needs no sign in and is not part of the admin panel.
 
 ## Production
 

@@ -2,8 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const { isTimeZone } = require("./timeZones");
 
-// Every event is one entry in backend/events.json, keyed by the event code, { "dle26": { ... }, "afs26": { ... } }.
-// The code is the first part of every address, /dle26/feedback-form on the site and /api/events/dle26/... on the API.
+// Every event is one entry in backend/events.json, keyed by the event code, { "aiu26": { ... }, "afs26": { ... } }.
+// The code is the first part of every address, /aiu26/feedback-form on the site and /api/events/aiu26/... on the API.
 // "database" is the event's own MySQL database. Everything else in the entry is sent to the site as the event config.
 // The name, tagline, colour, media, links and Wi-Fi only fill the event's Event Details the first time, after that the
 // admin page's values are used, see eventDetails.js.
@@ -13,9 +13,21 @@ const DATABASE = /^[A-Za-z0-9_]{1,64}$/;
 // "theme": { "secondary": "#278dff" } is optional, the site uses #278dff without it.
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
-// "speakerReviews" is optional; each key left out takes its default. maxReviews is how many sessions an attendee can
-// review in all, across every day of the agenda, titleMaxWords the most words in a session's AI shortened title.
+// Speaker session reviews, the feedback form question where an attendee picks the presentations they found most
+// valuable. "speakerReviews" in an event's entry in events.json is optional, and so is each key inside it. A key left
+// out takes its default below, so an event only needs to list the settings it wants to change, for example
+// "speakerReviews": { "maxReviews": 5 }.
+//
+//   maxReviews     the most sessions one attendee can review in total, across every day of the agenda. The form stops
+//                  the attendee at this number, and the server refuses a submission with more (views/public.js).
+//   titleMaxWords  the most words in the short title Gemini writes for each session, shown on the review list
+//                  (views/speakerSessions.js). Longer agenda titles are shortened to fit.
+//
+// SPEAKER_REVIEW_DEFAULTS is the value used when an event does not set the key, the single place these defaults live.
 const SPEAKER_REVIEW_DEFAULTS = { maxReviews: 3, titleMaxWords: 7 };
+// SPEAKER_REVIEW_RANGES is [lowest, highest] allowed for each key, a whole number. It is only a check when events.json
+// is read at start up. A value outside it, a decimal, or a key that is not listed here (a typo such as "maxReview")
+// stops the server with a message that names the event and the setting, so a mistake is found before it goes live.
 const SPEAKER_REVIEW_RANGES = { maxReviews: [1, 50], titleMaxWords: [3, 20] };
 
 /** The event's speaker review settings with the defaults filled in. */

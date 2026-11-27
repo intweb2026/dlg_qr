@@ -5,6 +5,8 @@ const path = require("path");
 const config = require("../config");
 const { query } = require("../db");
 const details = require("../eventDetails");
+const v = require("../validation");
+const wifiQr = require("../wifiQr");
 
 // Admin Event Details page: the event's name, tagline, colour, media, links and Wi-Fi, and the home page menu.
 
@@ -16,6 +18,43 @@ async function getDetails(req, res) {
 async function patchDetails(req, res) {
   const row = await details.saveDetails(req.event, req.body || {});
   res.json(details.detailsJson(row));
+}
+
+// The Wi-Fi network and password on their own, for the support user on the floor who may change nothing else. Only these
+// two keys are read from the request, so the rest of the event details cannot be changed through this route.
+// Changing the network or the password also makes the Wi-Fi QR code again, see wifiQr.js, so it never shows old details.
+function wifiJson(row) {
+  const { network, password, wifiQr: qr, updated_at } = details.detailsJson(row);
+  return { network, password, qr, updated_at };
+}
+
+async function getWifi(req, res) {
+  res.json(wifiJson(await details.loadDetailsRow(req.event)));
+}
+
+async function patchWifi(req, res) {
+  const body = req.body || {};
+  const data = {};
+  for (const key of ["network", "password"]) if (body[key] !== undefined) data[key] = body[key];
+  if (!Object.keys(data).length) throw new v.ValidationError({ detail: ["Send the network name or the password."] });
+  const before = await details.loadDetailsRow(req.event);
+  let row = await details.saveDetails(req.event, data);
+  const changed = row.wifi_network !== before.wifi_network || row.wifi_password !== before.wifi_password;
+  let qrUpdated = null;
+  if (changed) {
+    try {
+      // No network name leaves nothing to scan, so the QR code is removed.
+      const qr = row.wifi_network ? await wifiQr.writeWifiQr(req.event.code, { network: row.wifi_network, password: row.wifi_password }) : "";
+      row = await details.saveDetails(req.event, { wifiQr: qr });
+      if (before.wifi_qr !== qr) await wifiQr.removeWifiQr(req.event.code, before.wifi_qr);
+      qrUpdated = true;
+    } catch (err) {
+      // The new network and password are saved, only the picture could not be made. An admin can make it by hand.
+      console.error(`${req.event.code}: Wi-Fi QR code not made, ${err.message}`);
+      qrUpdated = false;
+    }
+  }
+  res.json({ ...wifiJson(row), qr_updated: qrUpdated });
 }
 
 async function menuList(req, res) {
@@ -89,4 +128,4 @@ async function upload(req, res) {
   return res.status(201).json({ url: `/uploads/${req.event.code}/${name}`, kind });
 }
 
-module.exports = { getDetails, patchDetails, menuList, menuCreate, menuPatch, menuDelete, upload, MAX_UPLOAD_BYTES };
+module.exports = { getDetails, patchDetails, getWifi, patchWifi, menuList, menuCreate, menuPatch, menuDelete, upload, MAX_UPLOAD_BYTES };

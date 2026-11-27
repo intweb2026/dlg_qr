@@ -18,6 +18,8 @@ fs.writeFileSync(
 process.env.DATABASES_FILE = LOGINS_FILE;
 const EXPORT_TOKEN = "test-export-token-0123456789abcdef0123456789";
 process.env.EXPORT_ACCESS_TOKEN = EXPORT_TOKEN;
+process.env.FEEDBACK_REPORT_TO = "reports@example.com";
+process.env.ALLOWED_HOSTS = "localhost,127.0.0.1";
 const UPLOADS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "feedback-test-uploads-"));
 process.env.UPLOADS_DIR = UPLOADS_DIR;
 
@@ -25,9 +27,12 @@ const http = require("node:http");
 
 const { createApp } = require("../src/app");
 const config = require("../src/config");
+// The default admins are the ones npm run migrate makes, read from config.js so the test never holds its own copy.
+const adminPassword = (username) => config.defaultAdmins.find(([name]) => name === username)[1];
 const crm = require("../src/crmDelegates");
 const db = require("../src/db");
 const { allEvents } = require("../src/events");
+const loginGuard = require("../src/loginGuard");
 const { migrate } = require("../src/migrate");
 
 const EVENT_A = allEvents().find((e) => e.code === "testa");
@@ -111,7 +116,7 @@ async function count(table, where = "1", params = []) {
 }
 
 async function login(username, event = "testa") {
-  return (await api("POST", "/auth/login/", { body: { username, password: `${username}123` }, event })).data.token;
+  return (await api("POST", "/auth/login/", { body: { username, password: adminPassword(username) }, event })).data.token;
 }
 
 describe("feedback flow", () => {
@@ -305,11 +310,27 @@ describe("feedback flow", () => {
   });
 });
 
+describe("health check", () => {
+  test("answers without an event or a sign in", async () => {
+    const res = await fetch(root.replace("/events", "/health"));
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { status: "ok" });
+  });
+});
+
 describe("admin auth", () => {
-  test("default admins exist and can sign in", async () => {
-    for (const username of ["benny", "maxwell", "nolan", "ramon"]) {
-      const r = await api("POST", "/auth/login/", { body: { username, password: `${username}123` } });
+  // The sign in lockout counts failures in memory, every test here starts with a clean count.
+  beforeEach(() => loginGuard.reset());
+  after(() => loginGuard.reset());
+
+  // The passwords come from config.js, the same list npm run migrate made the accounts from.
+  test("every default admin signs in with the password from the configuration", async () => {
+    for (const [username, password, fullName] of config.defaultAdmins) {
+      const r = await api("POST", "/auth/login/", { body: { username, password } });
       assert.equal(r.status, 200, username);
+      assert.match(r.data.token, /^[0-9a-f]{64}$/, username);
+      assert.equal(r.data.username, username);
+      assert.equal(r.data.full_name, fullName);
       assert.equal(
         await count("admin_tokens t JOIN admin_users u ON u.id = t.user_id", "t.`key` = ? AND u.username = ?", [r.data.token, username]),
         1
@@ -317,13 +338,20 @@ describe("admin auth", () => {
     }
   });
 
+  test("the token from a sign in opens the admin pages", async () => {
+    const [username, password] = config.defaultAdmins[0];
+    const { data } = await api("POST", "/auth/login/", { body: { username, password } });
+    assert.equal((await api("GET", "/auth/me/", { token: data.token })).data.username, username);
+    assert.equal((await api("GET", "/admin/settings/", { token: data.token })).status, 200);
+  });
+
   test("username is matched without case", async () => {
-    assert.equal((await api("POST", "/auth/login/", { body: { username: " Benny ", password: "benny123" } })).status, 200);
+    assert.equal((await api("POST", "/auth/login/", { body: { username: " Benny ", password: adminPassword("benny") } })).status, 200);
   });
 
   test("passwords are hashed in the Django format", async () => {
     const [user] = await query("SELECT password FROM admin_users WHERE username = 'benny'");
-    assert.notEqual(user.password, "benny123");
+    assert.notEqual(user.password, adminPassword("benny"));
     assert.match(user.password, /^pbkdf2_sha256\$600000\$\w+\$[\w+/=]+$/);
   });
 
@@ -340,17 +368,65 @@ describe("admin auth", () => {
     await query("DELETE FROM admin_users WHERE username = 'legacy'");
   });
 
-  test("wrong password and unknown user", async () => {
-    let r = await api("POST", "/auth/login/", { body: { username: "benny", password: "nope" } });
-    assert.equal(r.status, 400);
-    assert.equal(r.data.detail, "Incorrect username or password.");
-    r = await api("POST", "/auth/login/", { body: { username: "ghost", password: "ghost123" } });
-    assert.equal(r.status, 400);
+  test("every wrong sign in gets the same refusal and no session", async () => {
+    const [[first, firstPassword], [second, secondPassword]] = config.defaultAdmins;
+    // The count of each name stays under the lockout limit, which has its own test below.
+    const cases = [
+      ["wrong password", first, "not-the-password"],
+      ["right password in the wrong case", first, firstPassword.toUpperCase()],
+      ["another admin's password", first, secondPassword],
+      ["the old name plus 123 password", second, `${second}123`],
+      ["empty password", second, ""],
+      ["empty name", "", firstPassword],
+      ["name of spaces", "   ", firstPassword],
+      ["unknown name", "ghost", "ghost-password"],
+      ["SQL in the name", "' OR '1'='1", "x"],
+      ["SQL in the password", first, "' OR '1'='1"],
+    ];
+    const before = await count("admin_tokens");
+    for (const [label, username, password] of cases) {
+      const r = await api("POST", "/auth/login/", { body: { username, password } });
+      assert.equal(r.status, 400, label);
+      assert.equal(r.data.detail, "Incorrect username or password.", label);
+      assert.equal(r.data.token, undefined, label);
+    }
+    assert.equal(await count("admin_tokens"), before, "a refused sign in must not make a session");
+  });
+
+  test("a sign in with a missing name or password is refused", async () => {
+    const [username, password] = config.defaultAdmins[0];
+    for (const body of [{}, { username }, { password }, { username: null, password: null }]) {
+      const r = await api("POST", "/auth/login/", { body });
+      assert.equal(r.status, 400, JSON.stringify(body));
+      assert.equal(r.data.token, undefined);
+    }
   });
 
   test("inactive admin is rejected", async () => {
-    await query("UPDATE admin_users SET is_active = 0 WHERE username = 'nolan'");
-    assert.equal((await api("POST", "/auth/login/", { body: { username: "nolan", password: "nolan123" } })).status, 400);
+    await query("UPDATE admin_users SET is_active = 0 WHERE username = 'ramon'");
+    assert.equal((await api("POST", "/auth/login/", { body: { username: "ramon", password: adminPassword("ramon") } })).status, 400);
+  });
+
+  test("sign in is locked after repeated wrong passwords", async () => {
+    loginGuard.reset();
+    for (let i = 0; i < config.security.loginMaxFailures; i++) {
+      assert.equal((await api("POST", "/auth/login/", { body: { username: "benny", password: "wrong" } })).status, 400);
+    }
+    // Even the right password waits while the lockout lasts.
+    const locked = await api("POST", "/auth/login/", { body: { username: "benny", password: adminPassword("benny") } });
+    assert.equal(locked.status, 429);
+    assert.ok(Number(locked.headers.get("retry-after")) > 0);
+    // Another name from the same address is not locked by it.
+    assert.equal((await api("POST", "/auth/login/", { body: { username: "maxwell", password: adminPassword("maxwell") } })).status, 200);
+    loginGuard.reset();
+    assert.equal((await api("POST", "/auth/login/", { body: { username: "benny", password: adminPassword("benny") } })).status, 200);
+  });
+
+  test("an expired admin session is rejected", async () => {
+    const token = await login("benny");
+    assert.equal((await api("GET", "/auth/me/", { token })).status, 200);
+    await query("UPDATE admin_tokens SET created_at = DATE_SUB(UTC_TIMESTAMP(6), INTERVAL 13 HOUR) WHERE `key` = ?", [token]);
+    assert.equal((await api("GET", "/auth/me/", { token })).status, 401);
   });
 
   test("admin endpoints need a token", async () => {
@@ -380,6 +456,297 @@ describe("admin auth", () => {
     assert.equal((await api("GET", "/nope/")).status, 404);
     // The form status route is gone, the form is always open.
     assert.equal((await api("GET", "/form-status/")).status, 404);
+  });
+});
+
+describe("user roles", () => {
+  const PASSWORD = "Floor-pass-1";
+  let adminToken;
+  beforeEach(async () => {
+    loginGuard.reset();
+    await query("DELETE FROM admin_users WHERE username LIKE 'floor%'");
+    adminToken = await login("benny");
+  });
+  after(async () => {
+    await query("DELETE FROM admin_users WHERE username LIKE 'floor%'");
+    loginGuard.reset();
+  });
+
+  async function addUser(body) {
+    return api("POST", "/admin/users/", { token: adminToken, body: { password: PASSWORD, ...body } });
+  }
+  async function signIn(username, password = PASSWORD) {
+    return api("POST", "/auth/login/", { body: { username, password } });
+  }
+  async function supportToken() {
+    assert.equal((await addUser({ username: "floor1", full_name: "Floor One", role: "support" })).status, 201);
+    return (await signIn("floor1")).data.token;
+  }
+
+  test("migrate changes accounts saved with the old technician role to support", async () => {
+    await addUser({ username: "floor1", role: "support" });
+    await query("UPDATE admin_users SET role = 'technician' WHERE username = 'floor1'");
+    const token = (await signIn("floor1")).data.token;
+    await migrate(EVENT_A);
+    const [row] = await query("SELECT role FROM admin_users WHERE username = 'floor1'");
+    assert.equal(row.role, "support");
+    // The session stays and the account now opens the Wi-Fi screen.
+    assert.equal((await api("GET", "/auth/me/", { token })).data.role, "support");
+    assert.equal((await api("GET", "/admin/wifi/", { token })).status, 200);
+    assert.equal(await count("admin_users", "role = 'technician'"), 0);
+  });
+
+  test("every default admin has the admin role", async () => {
+    for (const [username] of config.defaultAdmins) {
+      const r = await api("POST", "/auth/login/", { body: { username, password: adminPassword(username) } });
+      assert.equal(r.data.role, "admin");
+      assert.equal((await api("GET", "/auth/me/", { token: r.data.token })).data.role, "admin");
+    }
+  });
+
+  test("an admin adds a support user, who signs in with the role", async () => {
+    const r = await addUser({ username: "floor1", full_name: "Floor One", role: "support" });
+    assert.equal(r.status, 201);
+    assert.equal(r.data.role, "support");
+    assert.equal(r.data.is_active, true);
+    assert.ok(!("password" in r.data));
+    const s = await signIn("floor1");
+    assert.equal(s.status, 200);
+    assert.equal(s.data.role, "support");
+    const me = await api("GET", "/auth/me/", { token: s.data.token });
+    assert.deepEqual(me.data, { username: "floor1", full_name: "Floor One", role: "support" });
+    assert.equal((await api("POST", "/auth/logout/", { token: s.data.token })).status, 204);
+  });
+
+  test("the support user reads and changes the Wi-Fi network and password", async () => {
+    const token = await supportToken();
+    let r = await api("PATCH", "/admin/wifi/", { token, body: { network: "FloorNet", password: "new-secret-9" } });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.network, "FloorNet");
+    assert.equal(r.data.password, "new-secret-9");
+    r = await api("GET", "/admin/wifi/", { token });
+    assert.deepEqual([r.data.network, r.data.password], ["FloorNet", "new-secret-9"]);
+    // The Wi-Fi page the attendees open shows it at once.
+    const pub = (await api("GET", "/wifi/")).data;
+    assert.deepEqual([pub.network, pub.password], ["FloorNet", "new-secret-9"]);
+    // An admin can use the same screen.
+    assert.equal((await api("GET", "/admin/wifi/", { token: adminToken })).status, 200);
+  });
+
+  test("the Wi-Fi route changes nothing but the network and password", async () => {
+    const token = await supportToken();
+    const before = (await api("GET", "/admin/event-details/", { token: adminToken })).data;
+    const r = await api("PATCH", "/admin/wifi/", { token, body: { password: "only-this-1", name: "Hacked", logo: "/x.png", website: "https://evil.example" } });
+    assert.equal(r.status, 200);
+    const after = (await api("GET", "/admin/event-details/", { token: adminToken })).data;
+    assert.equal(after.name, before.name);
+    assert.equal(after.logo, before.logo);
+    assert.equal(after.website, before.website);
+    assert.equal(after.password, "only-this-1");
+    assert.equal((await api("PATCH", "/admin/wifi/", { token, body: { name: "Hacked" } })).status, 400);
+    assert.equal((await api("PATCH", "/admin/wifi/", { token, body: { password: "x".repeat(300) } })).status, 400);
+    assert.equal((await api("GET", "/admin/wifi/")).status, 401);
+  });
+
+  test("the Wi-Fi QR code is made again when the support user changes the network or password", async () => {
+    const wifiQr = require("../src/wifiQr");
+    const token = await supportToken();
+    const file = (sitePath) => path.join(UPLOADS_DIR, sitePath.replace(/^\/uploads\//, ""));
+    const pattern = /^\/uploads\/testa\/wifi-qr-[0-9a-f]{12}\.png$/;
+
+    // The standard Wi-Fi text, with \ ; , : and " escaped. No password means an open network.
+    assert.equal(wifiQr.payload({ network: "My;Net", password: 'p:"w' }), 'WIFI:T:WPA;S:My\\;Net;P:p\\:\\"w;;');
+    assert.equal(wifiQr.payload({ network: "Open", password: "" }), "WIFI:T:nopass;S:Open;;");
+
+    let r = await api("PATCH", "/admin/wifi/", { token, body: { network: "FloorNet", password: "first-pass-1" } });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.qr_updated, true);
+    assert.match(r.data.qr, pattern);
+    const first = r.data.qr;
+    assert.deepEqual([...fs.readFileSync(file(first)).subarray(0, 4)], [0x89, 0x50, 0x4e, 0x47]);
+    assert.equal((await api("GET", "/wifi/")).data.qr, first);
+    const served = await fetch(`${root.replace(/\/events$/, "")}${first}`);
+    assert.equal(served.status, 200);
+    assert.equal(served.headers.get("content-type"), "image/png");
+
+    // The same details again change nothing, the file stays.
+    r = await api("PATCH", "/admin/wifi/", { token, body: { network: "FloorNet", password: "first-pass-1" } });
+    assert.equal(r.data.qr_updated, null);
+    assert.equal(r.data.qr, first);
+    assert.ok(fs.existsSync(file(first)));
+
+    // A new password gives a new code and the earlier one made by the server is removed.
+    r = await api("PATCH", "/admin/wifi/", { token, body: { password: "second-pass-2" } });
+    assert.equal(r.data.qr_updated, true);
+    assert.match(r.data.qr, pattern);
+    assert.notEqual(r.data.qr, first);
+    assert.ok(fs.existsSync(file(r.data.qr)));
+    assert.ok(!fs.existsSync(file(first)));
+    assert.equal((await api("GET", "/admin/wifi/", { token })).data.qr, r.data.qr);
+
+    // A picture an admin uploaded is replaced in the settings but the file itself is never deleted.
+    const custom = "/uploads/testa/abc123-0123456789ab.png";
+    fs.writeFileSync(file(custom), "custom");
+    await query("UPDATE event_details SET wifi_qr = ?", [custom]);
+    r = await api("PATCH", "/admin/wifi/", { token, body: { password: "third-pass-3" } });
+    assert.match(r.data.qr, pattern);
+    assert.ok(fs.existsSync(file(custom)));
+
+    // No network name leaves nothing to scan.
+    const last = r.data.qr;
+    r = await api("PATCH", "/admin/wifi/", { token, body: { network: "" } });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.qr, "");
+    assert.ok(!fs.existsSync(file(last)));
+
+    // A rejected change does not touch the code.
+    await api("PATCH", "/admin/wifi/", { token, body: { network: "Again", password: "pw-again-4" } });
+    const kept = (await api("GET", "/admin/wifi/", { token })).data;
+    assert.equal((await api("PATCH", "/admin/wifi/", { token, body: { password: "x".repeat(300) } })).status, 400);
+    assert.equal((await api("GET", "/admin/wifi/", { token })).data.qr, kept.qr);
+  });
+
+  test("the support user cannot read or change any other screen", async () => {
+    const token = await supportToken();
+    const closed = [
+      ["GET", "/admin/settings/"],
+      ["PATCH", "/admin/settings/", {}],
+      ["GET", "/admin/submissions/"],
+      ["PATCH", "/admin/submissions/1/suspend/", {}],
+      ["GET", "/admin/feedback-report/"],
+      ["GET", "/admin/feedback-report/pdf/"],
+      ["POST", "/admin/feedback-report/send/", {}],
+      ["GET", "/admin/attendees/"],
+      ["POST", "/admin/attendees/", { full_name: "X" }],
+      ["GET", "/admin/attendees/sync/"],
+      ["POST", "/admin/attendees/sync/", {}],
+      ["PATCH", "/admin/attendees/1/", {}],
+      ["DELETE", "/admin/attendees/1/"],
+      ["GET", "/admin/event-details/"],
+      ["PATCH", "/admin/event-details/", { name: "Hacked" }],
+      ["GET", "/admin/menu-items/"],
+      ["POST", "/admin/menu-items/", { label: "x", target: "/x" }],
+      ["PATCH", "/admin/menu-items/1/", {}],
+      ["DELETE", "/admin/menu-items/1/"],
+      ["POST", "/admin/uploads/", {}],
+      ["GET", "/admin/users/"],
+      ["POST", "/admin/users/", { username: "floor9", password: PASSWORD, role: "admin" }],
+      ["PATCH", "/admin/users/1/", { role: "support" }],
+      ["DELETE", "/admin/users/1/"],
+    ];
+    for (const [method, path, body] of closed) {
+      const r = await api(method, path, { token, body });
+      assert.equal(r.status, 403, `${method} ${path} gave ${r.status}`);
+      assert.deepEqual(r.data, { detail: "Your role does not allow this." });
+    }
+    assert.equal(await count("admin_users", "username = 'floor9'"), 0);
+    assert.equal((await api("GET", "/auth/me/", { token })).status, 200);
+  });
+
+  test("the user list shows every account and never a password", async () => {
+    await addUser({ username: "floor1", role: "support" });
+    const r = await api("GET", "/admin/users/", { token: adminToken });
+    assert.equal(r.status, 200);
+    const names = r.data.map((u) => u.username);
+    for (const [username] of config.defaultAdmins) assert.ok(names.includes(username));
+    const floor = r.data.find((u) => u.username === "floor1");
+    assert.equal(floor.full_name, "floor1");
+    assert.equal(floor.role, "support");
+    assert.ok(r.data.every((u) => !("password" in u)));
+    assert.equal((await api("GET", "/admin/users/")).status, 401);
+  });
+
+  test("a new user is checked", async () => {
+    let r = await addUser({ username: "ab", role: "admin" });
+    assert.equal(r.status, 400);
+    assert.deepEqual(r.data.username, ["Use at least 3 characters."]);
+    r = await addUser({ username: "floor 1", role: "admin" });
+    assert.deepEqual(r.data.username, ["Use letters, digits, dots, dashes and underscores only."]);
+    r = await addUser({ username: "floor1", role: "root" });
+    assert.deepEqual(r.data.role, ['"root" is not a valid choice.']);
+    r = await addUser({ username: "floor1" });
+    assert.deepEqual(r.data.role, ["Choose a role."]);
+    r = await addUser({ username: "floor1", role: "admin", password: "short" });
+    assert.deepEqual(r.data.password, ["Use at least 8 characters."]);
+    assert.equal((await addUser({ username: "floor1", role: "admin" })).status, 201);
+    r = await addUser({ username: "FLOOR1", role: "admin" });
+    assert.equal(r.status, 400);
+    assert.deepEqual(r.data.username, ["A user with this username already exists."]);
+  });
+
+  test("changing the role, the password or disabling signs the user out", async () => {
+    const { data: created } = await addUser({ username: "floor1", role: "support" });
+    let token = (await signIn("floor1")).data.token;
+    // Promoted to admin, the old session ends and the next sign in opens every screen.
+    let r = await api("PATCH", `/admin/users/${created.id}/`, { token: adminToken, body: { role: "admin" } });
+    assert.equal(r.data.role, "admin");
+    assert.equal((await api("GET", "/auth/me/", { token })).status, 401);
+    token = (await signIn("floor1")).data.token;
+    assert.equal((await api("GET", "/admin/users/", { token })).status, 200);
+    // Back to support.
+    await api("PATCH", `/admin/users/${created.id}/`, { token: adminToken, body: { role: "support" } });
+    token = (await signIn("floor1")).data.token;
+    assert.equal((await api("GET", "/admin/users/", { token })).status, 403);
+    // New password.
+    r = await api("PATCH", `/admin/users/${created.id}/`, { token: adminToken, body: { password: "Brand-new-pass-2" } });
+    assert.equal(r.status, 200);
+    assert.equal((await api("GET", "/auth/me/", { token })).status, 401);
+    assert.equal((await signIn("floor1")).status, 400);
+    token = (await signIn("floor1", "Brand-new-pass-2")).data.token;
+    // Disabled.
+    r = await api("PATCH", `/admin/users/${created.id}/`, { token: adminToken, body: { is_active: false } });
+    assert.equal(r.data.is_active, false);
+    assert.equal((await api("GET", "/auth/me/", { token })).status, 401);
+    assert.equal((await signIn("floor1", "Brand-new-pass-2")).status, 400);
+    await api("PATCH", `/admin/users/${created.id}/`, { token: adminToken, body: { is_active: true, full_name: "Renamed" } });
+    r = await signIn("floor1", "Brand-new-pass-2");
+    assert.equal(r.status, 200);
+    assert.equal(r.data.full_name, "Renamed");
+    // Nothing to change, or a bad value.
+    assert.equal((await api("PATCH", `/admin/users/${created.id}/`, { token: adminToken, body: {} })).status, 400);
+    assert.equal((await api("PATCH", `/admin/users/${created.id}/`, { token: adminToken, body: { role: "root" } })).status, 400);
+    assert.equal((await api("PATCH", "/admin/users/999999/", { token: adminToken, body: { role: "admin" } })).status, 404);
+  });
+
+  test("an admin cannot lock themselves or everyone out", async () => {
+    const me = (await api("GET", "/admin/users/", { token: adminToken })).data.find((u) => u.username === "benny");
+    let r = await api("PATCH", `/admin/users/${me.id}/`, { token: adminToken, body: { role: "support" } });
+    assert.equal(r.status, 400);
+    assert.deepEqual(r.data.role, ["You cannot change your own role."]);
+    r = await api("PATCH", `/admin/users/${me.id}/`, { token: adminToken, body: { is_active: false } });
+    assert.deepEqual(r.data.is_active, ["You cannot disable your own account."]);
+    r = await api("DELETE", `/admin/users/${me.id}/`, { token: adminToken });
+    assert.deepEqual(r.data.detail, ["You cannot delete your own account."]);
+    // Own name and password can be changed, the device stays signed in.
+    r = await api("PATCH", `/admin/users/${me.id}/`, { token: adminToken, body: { full_name: "Benny B" } });
+    assert.equal(r.status, 200);
+    assert.equal((await api("GET", "/auth/me/", { token: adminToken })).status, 200);
+    await query("UPDATE admin_users SET full_name = 'Benny' WHERE username = 'benny'");
+
+    // Another admin can disable or demote this one while an active admin is left, and not the last one.
+    const { data: second } = await addUser({ username: "floor2", role: "admin" });
+    const secondToken = (await signIn("floor2")).data.token;
+    try {
+      r = await api("PATCH", `/admin/users/${me.id}/`, { token: secondToken, body: { is_active: false } });
+      assert.equal(r.status, 200);
+      assert.equal((await api("GET", "/auth/me/", { token: adminToken })).status, 401);
+      // floor2 is now the only active admin, the guard stops anyone from removing the last one.
+      await query("UPDATE admin_users SET is_active = 0 WHERE role = 'admin' AND id <> ?", [second.id]);
+      r = await api("PATCH", `/admin/users/${second.id}/`, { token: secondToken, body: { role: "support" } });
+      assert.deepEqual(r.data.role, ["You cannot change your own role."]);
+      assert.equal(await count("admin_users", "role = 'admin' AND is_active = 1"), 1);
+    } finally {
+      await query("UPDATE admin_users SET is_active = 1");
+    }
+  });
+
+  test("an admin deletes a user", async () => {
+    const { data: created } = await addUser({ username: "floor1", role: "support" });
+    const token = (await signIn("floor1")).data.token;
+    assert.equal((await api("DELETE", `/admin/users/${created.id}/`, { token: adminToken })).status, 204);
+    assert.equal((await api("GET", "/auth/me/", { token })).status, 401);
+    assert.equal((await signIn("floor1")).status, 400);
+    assert.equal((await api("DELETE", `/admin/users/${created.id}/`, { token: adminToken })).status, 404);
   });
 });
 
@@ -504,12 +871,6 @@ describe("admin panel", () => {
     r = await api("GET", "/admin/attendees/?q=lopez", { token });
     assert.deepEqual(r.data.map((a) => [a.full_name, a.has_submitted]), [["Ana Lopez", true]]);
   });
-
-  test("CSV import is switched off", async () => {
-    const form = new FormData();
-    form.append("file", new Blob(["full_name\nJames Smith\n"], { type: "text/csv" }), "attendees.csv");
-    assert.equal((await api("POST", "/admin/attendees/import/", { token, form })).status, 404);
-  });
 });
 
 describe("lucky draw", () => {
@@ -597,8 +958,8 @@ describe("lucky draw", () => {
     }
     // the same entry cannot be revealed twice
     assert.equal((await api("POST", "/lucky-draw/reveal/", { token, body: { submission_id: s1 } })).status, 400);
-    // clearing the history puts winners back in the pool
-    await api("DELETE", "/lucky-draw/winners/");
+    // with the history emptied, the winners are back in the pool
+    await query("DELETE FROM lucky_draw_winners");
     assert.equal((await api("GET", "/lucky-draw/pool/")).data.count, 2);
   });
 
@@ -612,7 +973,12 @@ describe("lucky draw", () => {
     assert.equal(r.data.drawn_by, null);
     assert.equal(r.data.attempt_number, 1);
     assert.equal((await api("GET", "/lucky-draw/winners/")).data.length, 1);
-    assert.equal((await api("DELETE", "/lucky-draw/winners/")).status, 204);
+  });
+
+  test("winners cannot be deleted through the API", async () => {
+    // There is no route that clears the winner history, the method is refused for anyone.
+    assert.equal((await api("DELETE", "/lucky-draw/winners/")).status, 405);
+    assert.equal((await api("DELETE", "/lucky-draw/winners/", { token: await login("benny") })).status, 405);
   });
 
   test("empty pool", async () => {
@@ -750,7 +1116,7 @@ describe("event details", () => {
     assert.deepEqual(r.data.theme, { secondary: "#ff6600" });
     // testa has no agenda or LinkedIn link in events.json, so those two items are left out.
     assert.deepEqual(r.data.menu.map((m) => m.target), ["/registered-attendees", "/feedback-form", "/wifipassword", "website"]);
-    assert.ok(r.data.menu.every((m) => m.icon.startsWith("/images/common/menu/") && !("is_visible" in m)));
+    assert.ok(r.data.menu.every((m) => m.icon.startsWith("/common/images/menu/") && !("is_visible" in m)));
     const admin = await api("GET", "/admin/event-details/", { token });
     assert.equal(admin.status, 200);
     assert.equal(admin.data.name, "Test event a");
@@ -846,6 +1212,30 @@ describe("event details", () => {
     assert.equal(columns.length, 0);
     // A second run finds nothing to do.
     await db.withDatabase(EVENT_A.database, () => moveLinksIntoMenu());
+  });
+
+  test("migrate moves the old media paths to public/events and public/common", async () => {
+    const { movePublicMedia } = require("../src/eventDetails");
+    await api("GET", "/");
+    await query(
+      "UPDATE event_details SET logo = '/images/aiu26/aiu_logo.png', favicon = '/images/aiu26/favicon_aiu26.png', hero_video_mp4 = '/videos/aiu26/aiu_video.mp4', background = 'https://example.com/keep.png', venue_logo = '/uploads/testa/keep.png'"
+    );
+    await query("INSERT INTO menu_items (label, icon, target, sort_order, is_visible, created_at, updated_at) VALUES ('old icon', '/images/common/menu/wifi.svg', '/x', 1, 1, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))");
+    const run = () => db.withDatabase(EVENT_A.database, () => movePublicMedia());
+    await run();
+    const [row] = await query("SELECT logo, favicon, hero_video_mp4, background, venue_logo FROM event_details");
+    assert.deepEqual({ ...row }, {
+      logo: "/events/aiu26/images/logo.png",
+      favicon: "/events/aiu26/images/favicon.png",
+      hero_video_mp4: "/events/aiu26/videos/video.mp4",
+      background: "https://example.com/keep.png",
+      venue_logo: "/uploads/testa/keep.png",
+    });
+    const [item] = await query("SELECT icon FROM menu_items WHERE label = 'old icon'");
+    assert.equal(item.icon, "/common/images/menu/wifi.svg");
+    // A second run changes nothing.
+    await run();
+    assert.equal((await query("SELECT logo FROM event_details"))[0].logo, "/events/aiu26/images/logo.png");
   });
 
   test("deleting every menu item does not bring the defaults back", async () => {

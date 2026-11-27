@@ -29,12 +29,12 @@ const DETAIL_FIELDS = [
 // website link, anything else is a full URL. fromLinks items take their address from that key of the event's "links"
 // in events.json, and are left out when it has none.
 const DEFAULT_MENU = [
-  { label: "Explore the Agenda", icon: "/images/common/menu/agenda.svg", fromLinks: "agenda" },
-  { label: "Registered Attendees", icon: "/images/common/menu/attendees.svg", target: "/registered-attendees" },
-  { label: "Feedback Form", icon: "/images/common/menu/feedback.svg", target: "/feedback-form" },
-  { label: "Wi-Fi Password", icon: "/images/common/menu/wifi.svg", target: "/wifipassword" },
-  { label: "Connect on LinkedIn", icon: "/images/common/menu/linkedin.svg", fromLinks: "linkedin" },
-  { label: "Visit the Event Website", icon: "/images/common/menu/website.svg", target: "website" },
+  { label: "Explore the Agenda", icon: "/common/images/menu/agenda.svg", fromLinks: "agenda" },
+  { label: "Registered Attendees", icon: "/common/images/menu/attendees.svg", target: "/registered-attendees" },
+  { label: "Feedback Form", icon: "/common/images/menu/feedback.svg", target: "/feedback-form" },
+  { label: "Wi-Fi Password", icon: "/common/images/menu/wifi.svg", target: "/wifipassword" },
+  { label: "Connect on LinkedIn", icon: "/common/images/menu/linkedin.svg", fromLinks: "linkedin" },
+  { label: "Visit the Event Website", icon: "/common/images/menu/website.svg", target: "website" },
 ];
 
 /** The default menu for an event, with the agenda and LinkedIn addresses from events.json. */
@@ -60,7 +60,7 @@ function isHttpUrl(text) {
   }
 }
 
-/** A blank value, a full http(s) URL, or with allowPath a path on the site such as /images/dle26/logo.png. */
+/** A blank value, a full http(s) URL, or with allowPath a path on the site such as /events/aiu26/images/logo.png. */
 function cleanLink(value, { allowPath = false } = {}) {
   const text = v.string(value, { maxLength: 500, allowBlank: true });
   if (!text) return "";
@@ -200,6 +200,41 @@ async function moveLinksIntoMenu({ log = () => {} } = {}) {
   }
 }
 
+// Media moved to public/events/<code>/{images,videos}/ and public/common/images/, with the event name dropped from the
+// file names. Databases made before still hold the old paths. A path starting with "from" now starts with "to".
+// Remove this list and movePublicMedia once every database has run npm run migrate.
+const MOVED_MEDIA = [
+  ["/images/common/", "/common/images/"],
+  ["/images/aiu26/aiu_logo_fig.png", "/events/aiu26/images/logo_fig.png"],
+  ["/images/aiu26/aiu_logo.png", "/events/aiu26/images/logo.png"],
+  ["/images/aiu26/aiu_hero_poster.jpeg", "/events/aiu26/images/hero_poster.jpeg"],
+  ["/images/aiu26/aiu_pattern.png", "/events/aiu26/images/pattern.png"],
+  ["/images/aiu26/dlg_hotel.png", "/events/aiu26/images/venue_logo.png"],
+  ["/images/aiu26/dlg_wifi_qr.jpeg", "/events/aiu26/images/wifi_qr.jpeg"],
+  ["/images/aiu26/favicon_aiu26.png", "/events/aiu26/images/favicon.png"],
+  ["/videos/aiu26/aiu_video.mp4", "/events/aiu26/videos/video.mp4"],
+  ["/videos/aiu26/aiu_video.webm", "/events/aiu26/videos/video.webm"],
+];
+
+/** Rewrites the old media paths saved in the event details and the menu icons. Run by migrate, safe to run again. */
+async function movePublicMedia({ log = () => {} } = {}) {
+  const places = [
+    ...DETAIL_FIELDS.filter((f) => f.kind === "media").map((f) => ["event_details", f.column]),
+    ["menu_items", "icon"],
+  ];
+  let changed = 0;
+  for (const [from, to] of MOVED_MEDIA) {
+    for (const [table, column] of places) {
+      const r = await query(
+        `UPDATE \`${table}\` SET \`${column}\` = CONCAT(?, SUBSTRING(\`${column}\`, ?)) WHERE LEFT(\`${column}\`, ?) = ?`,
+        [to, from.length + 1, from.length, from]
+      );
+      changed += r.affectedRows;
+    }
+  }
+  if (changed) log(`moved ${changed} media path(s) to public/events and public/common.`);
+}
+
 // ------------------------------------------------------------------ Menu items
 function cleanTarget(value) {
   const text = v.string(value, { maxLength: 500, blankMessage: "Choose what the button opens." });
@@ -273,6 +308,7 @@ module.exports = {
   DEFAULT_MENU,
   loadDetailsRow,
   moveLinksIntoMenu,
+  movePublicMedia,
   detailsJson,
   mergeDetails,
   withEventDetails,

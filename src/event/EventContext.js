@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { Outlet, useParams } from "react-router-dom";
 import api, { mediaUrl, setEventCode } from "../feedback/api";
 
-// The event comes from the first part of the address, /dle26/feedback-form is event dle26.
+// The event comes from the first part of the address, /aiu26/feedback-form is event aiu26.
 // Its config (name, media, links, Wi-Fi, theme and the home page menu) is loaded once from the API. It is edited on
 // the admin Event Details page, which calls reload() after saving so the change shows without a page refresh.
 // media.favicon is the browser tab icon and theme.secondary the accent colour, both optional.
@@ -50,7 +50,7 @@ function resolveConfig(data) {
   return { ...data, media, menu };
 }
 
-/** Address inside the current event, eventPath("/feedback-form") -> "/dle26/feedback-form". */
+/** Address inside the current event, eventPath("/feedback-form") -> "/aiu26/feedback-form". */
 export function useEventPath() {
   const { code } = useEvent();
   return (path = "") => `/${code}${path}`;

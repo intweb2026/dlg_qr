@@ -14,18 +14,10 @@ const { eventSchedule } = require("./eventDates");
 const { loadSettings } = require("./models");
 const { collapseSpaces, isoDate } = require("./utils");
 
-const TIMEOUT_MS = 20000;
+// Timeouts and intervals are in config.js, timing.crmSync.
+const SYNC = config.timing.crmSync;
 // A reply split into pages ("next" links) is followed up to this many pages.
 const MAX_PAGES = 50;
-// While the first sync has not worked, because the CRM failed or has not published the list yet, visitors try again
-// at most this often.
-const RETRY_MS = 60 * 1000;
-// After the first sync, the list is fetched again once the last sync is this old.
-const REFRESH_MS = 24 * 60 * 60 * 1000;
-// A daily sync that failed is tried again after this long.
-const REFRESH_RETRY_MS = 60 * 60 * 1000;
-// Visits check whether a daily sync is due at most this often, so most visits make no database call.
-const CHECK_MS = 5 * 60 * 1000;
 
 // Per event code, { at, ok, error, result } of the last finished attempt, the sync running now, if any, and done once
 // the first sync is known to be saved.
@@ -86,7 +78,7 @@ async function getPage(url) {
   try {
     res = await fetch(url, {
       headers: { Accept: "application/json", "X-DATA-API-KEY": config.crmDataApiKey },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(SYNC.requestTimeout),
     });
   } catch (err) {
     throw new CrmSyncError(`The CRM could not be reached, ${err.message}`);
@@ -242,12 +234,12 @@ async function refreshUntil(event) {
  * over yet; a failed one waits an hour. The page never waits for it, it carries on with the saved list.
  */
 async function refreshIfDue(event, s) {
-  if (s.running || Date.now() - s.checkedAt < CHECK_MS) return;
+  if (s.running || Date.now() - s.checkedAt < SYNC.dueCheck) return;
   s.checkedAt = Date.now();
-  if (s.ok === false && s.at && Date.now() - s.at.getTime() < REFRESH_RETRY_MS) return;
+  if (s.ok === false && s.at && Date.now() - s.at.getTime() < SYNC.refreshRetry) return;
   const [row] = await query("SELECT crm_synced_at FROM form_settings WHERE id = 1");
   const syncedAt = row?.crm_synced_at ? new Date(isoDate(row.crm_synced_at)) : null;
-  if (!syncedAt || Date.now() - syncedAt.getTime() < REFRESH_MS) return;
+  if (!syncedAt || Date.now() - syncedAt.getTime() < SYNC.refreshAfter) return;
   const until = await refreshUntil(event);
   if (!until || Date.now() > until.getTime()) return;
   syncDelegates(event)
@@ -274,7 +266,7 @@ async function syncOnFirstVisit(event) {
       await refreshIfDue(event, s).catch((err) => console.error(`${event.code}: daily CRM sync check failed, ${err.message}`));
       return;
     }
-    if (s.at && Date.now() - s.at.getTime() < RETRY_MS) return;
+    if (s.at && Date.now() - s.at.getTime() < SYNC.firstSyncRetry) return;
   }
   await syncDelegates(event).catch((err) => {
     console.error(`${event.code}: CRM delegates sync failed, ${err.message}`);

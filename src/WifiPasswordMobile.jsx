@@ -31,8 +31,8 @@ export default function WifiPasswordMobile() {
       await navigator.clipboard.writeText(value);
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 1500);
-    } catch (error) {
-      console.error("Copy to clipboard failed:", error);
+    } catch {
+      // The browser refused the copy, nothing is logged and the tick is simply not shown.
     }
   };
 

@@ -3,9 +3,9 @@ const express = require("express");
 
 const { authenticate } = require("./auth");
 const config = require("./config");
-const { withDatabase } = require("./db");
+const { hasLogin, query, withDatabase } = require("./db");
 const { withEventDetails } = require("./eventDetails");
-const { getEvent } = require("./events");
+const { allEvents, getEvent } = require("./events");
 const routes = require("./routes");
 const { ValidationError } = require("./validation");
 
@@ -69,6 +69,21 @@ function errorHandler(err, req, res, next) {
 function createApp() {
   const app = express();
   app.disable("x-powered-by");
+  // The proxy in front of the API, see TRUST_PROXY in config.js.
+  app.set("trust proxy", config.trustProxy);
+  // For the host's health check. It sits before the host check because a health check calls the container by its own
+  // address. It answers 200 when every active event's database replies and 503 otherwise, and reveals nothing else.
+  app.get("/api/health", async (req, res) => {
+    try {
+      for (const e of allEvents()) {
+        if (e.active && hasLogin(e.database)) await withDatabase(e.database, () => query("SELECT 1"));
+      }
+      res.json({ status: "ok" });
+    } catch (err) {
+      console.error(`health check failed, ${err.message}`);
+      res.status(503).json({ status: "unavailable" });
+    }
+  });
   app.use(allowedHosts);
   app.use(cors({ origin: config.corsAllowedOrigins, credentials: true }));
   app.use(express.json({ limit: "2.5mb" }));

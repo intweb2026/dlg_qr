@@ -13,12 +13,12 @@
 // "timeZone": "America/Los_Angeles" in events.json, when set, is used instead. With no time zone known, the sync runs
 // until 36 hours after the last day starts in UTC, by then the day is over everywhere.
 
+const config = require("./config");
 const { endOfDayIn, startOfDayIn, timeZoneForLocation } = require("./timeZones");
 const { initialData } = require("./views/upcomingConferences");
 
-const TIMEOUT_MS = 5000;
-const CACHE_MS = 6 * 60 * 60 * 1000;
-const FAILURE_CACHE_MS = 10 * 60 * 1000;
+// Timeouts and cache lengths are in config.js, timing.eventDates.
+const TIMING = config.timing.eventDates;
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
@@ -26,10 +26,6 @@ const MONTHS = ["january", "february", "march", "april", "may", "june", "july", 
 const cache = new Map();
 // Event code to { at, ttl, location }, the same for the website's location.
 const locationCache = new Map();
-// Without a time zone, the last day is over everywhere this long after it starts in UTC.
-const NO_ZONE_GRACE_MS = 36 * 60 * 60 * 1000;
-// Without a time zone, the first day starts this long before it starts in UTC, in the earliest zone (UTC+14).
-const EARLIEST_ZONE_MS = 14 * 60 * 60 * 1000;
 
 /** The agenda API, "links.agendaApi", or <website>/api/agenda; null when the event has neither. */
 function agendaApiUrl(event) {
@@ -91,17 +87,17 @@ async function agendaDates(event) {
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": "event-feedback-form", Accept: "application/json" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(TIMING.requestTimeout),
     });
     if (!res.ok) throw new Error(`${url} answered ${res.status}`);
     const dates = datesFromAgenda(await res.json());
-    cache.set(event.code, { at: Date.now(), ttl: dates.end ? CACHE_MS : FAILURE_CACHE_MS, dates });
+    cache.set(event.code, { at: Date.now(), ttl: dates.end ? TIMING.cache : TIMING.failureCache, dates });
     return dates;
   } catch (err) {
     console.error(`${event.code}: event dates not read from the agenda, ${err.message}`);
     // Keep the last dates read, if any, and try again in 10 minutes.
     const dates = hit ? hit.dates : { start: null, end: null };
-    cache.set(event.code, { at: Date.now(), ttl: FAILURE_CACHE_MS, dates });
+    cache.set(event.code, { at: Date.now(), ttl: TIMING.failureCache, dates });
     return dates;
   }
 }
@@ -132,16 +128,16 @@ async function eventLocation(event) {
   try {
     const res = await fetch(website, {
       headers: { "User-Agent": "event-feedback-form", Accept: "text/html" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(TIMING.requestTimeout),
     });
     if (!res.ok) throw new Error(`${website} answered ${res.status}`);
     const location = locationFromData(initialData(await res.text()));
-    locationCache.set(event.code, { at: Date.now(), ttl: location ? CACHE_MS : FAILURE_CACHE_MS, location });
+    locationCache.set(event.code, { at: Date.now(), ttl: location ? TIMING.cache : TIMING.failureCache, location });
     return location;
   } catch (err) {
     console.error(`${event.code}: event location not read from the website, ${err.message}`);
     const location = hit ? hit.location : "";
-    locationCache.set(event.code, { at: Date.now(), ttl: FAILURE_CACHE_MS, location });
+    locationCache.set(event.code, { at: Date.now(), ttl: TIMING.failureCache, location });
     return location;
   }
 }
@@ -157,9 +153,9 @@ async function eventSchedule(event) {
   const location = event.timeZone ? "" : await eventLocation(event);
   const timeZone = event.timeZone || timeZoneForLocation(location);
   let until = null;
-  if (end) until = timeZone ? endOfDayIn(end, timeZone) : new Date(end.getTime() + NO_ZONE_GRACE_MS);
+  if (end) until = timeZone ? endOfDayIn(end, timeZone) : new Date(end.getTime() + TIMING.noZoneGrace);
   let opensAt = null;
-  if (start) opensAt = timeZone ? startOfDayIn(start, timeZone) : new Date(start.getTime() - EARLIEST_ZONE_MS);
+  if (start) opensAt = timeZone ? startOfDayIn(start, timeZone) : new Date(start.getTime() - TIMING.earliestZoneLead);
   return { start, end, location, timeZone: timeZone || null, opensAt, until };
 }
 

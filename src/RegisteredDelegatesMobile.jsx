@@ -5,8 +5,8 @@ import { useEvent, useEventPath } from "./event/EventContext";
 import api from "./feedback/api";
 
 // eslint-disable-next-line no-unused-vars -- used by the commented-out header below
-const backButtonBlack = "/images/common/back_button_black.png";
-const backButtonBlue = "/images/common/back_button_blue.png";
+const backButtonBlack = "/common/images/back_button_black.png";
+const backButtonBlue = "/common/images/back_button_blue.png";
 
 // The list comes live from the event's attendees table, walk-ins added on the feedback form are left out.
 export default function RegisteredDelegatesMobile() {

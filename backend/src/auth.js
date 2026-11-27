@@ -2,6 +2,7 @@ const crypto = require("crypto");
 
 const config = require("./config");
 const { query } = require("./db");
+const roles = require("./roles");
 
 const KEYWORD = "token";
 
@@ -21,20 +22,28 @@ async function authenticate(req, res, next) {
   if (parts.length !== 2) return authFailed(res, "Invalid token header.");
 
   const [row] = await query(
-    `SELECT t.key AS token, u.id, u.username, u.full_name, u.is_active
+    `SELECT t.key AS token, u.id, u.username, u.full_name, u.is_active, u.role
      FROM admin_tokens t JOIN admin_users u ON u.id = t.user_id
-     WHERE t.key = ?`,
-    [parts[1]]
+     WHERE t.key = ? AND t.created_at > DATE_SUB(UTC_TIMESTAMP(6), INTERVAL ? SECOND)`,
+    [parts[1], Math.floor(config.security.adminSessionLifetime / 1000)]
   );
   if (!row) return authFailed(res, "Your session has expired, sign in again.");
   if (!row.is_active) return authFailed(res, "This admin account is disabled.");
-  req.user = { id: row.id, username: row.username, full_name: row.full_name };
+  req.user = { id: row.id, username: row.username, full_name: row.full_name, role: row.role };
   req.token = row.token;
   return next();
 }
 
+/** Any signed in account, whatever its role. For the few routes a support user may use. */
+function requireStaff(req, res, next) {
+  if (!req.user) return authFailed(res, "Authentication credentials were not provided.");
+  return next();
+}
+
+/** Signed in with the admin role. Every admin route uses this unless it is meant for the support user too. */
 function requireAdmin(req, res, next) {
   if (!req.user) return authFailed(res, "Authentication credentials were not provided.");
+  if (req.user.role !== roles.ADMIN) return res.status(403).json({ detail: "Your role does not allow this." });
   return next();
 }
 
@@ -63,4 +72,4 @@ function requireAccessToken(req, res, next) {
   return next();
 }
 
-module.exports = { authenticate, requireAdmin, requireAccessToken };
+module.exports = { authenticate, requireAdmin, requireStaff, requireAccessToken };

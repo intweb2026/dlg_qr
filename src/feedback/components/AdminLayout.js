@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEvent, useEventPath } from "../../event/EventContext";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { homePage, SUPPORT } from "../utils/roles";
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -12,6 +13,7 @@ export default function AdminLayout() {
   const [open, setOpen] = useState(false);
   const EVENT_NAME = useEvent().config.name;
   const eventPath = useEventPath();
+  const isSupport = user?.role === SUPPORT;
 
   useEffect(() => setOpen(false), [location.pathname]);
 
@@ -19,18 +21,6 @@ export default function AdminLayout() {
     await logout();
     notify("You have signed out of the admin panel.", "info", { title: "Signed out" });
     navigate(eventPath("/admin/login"));
-  };
-
-  // Lucky draw opens the venue screen in full screen. Full screen has to be asked for inside the click,
-  // the route change keeps it since the page does not reload.
-  const openLuckyDraw = async (e) => {
-    e.preventDefault();
-    try {
-      await document.documentElement.requestFullscreen?.();
-    } catch {
-      notify("Full screen is not available in this browser.", "warning");
-    }
-    navigate(eventPath("/raffle-draw"));
   };
 
   const link = ({ isActive }) => `dlgfb-admin-link${isActive ? " dlgfb-active" : ""}`;
@@ -58,10 +48,16 @@ export default function AdminLayout() {
           </button>
           <div className={`dlgfb-admin-menu${open ? " dlgfb-show" : ""}`} id="admin-menu">
             <nav className="dlgfb-admin-links" aria-label="Admin">
-              <NavLink className={link} to={eventPath("/raffle-draw")} onClick={openLuckyDraw}>Raffle draw</NavLink>
-              <NavLink className={link} to={eventPath("/admin/event-details")}>Event Details</NavLink>
-              <NavLink className={link} to={eventPath("/admin/feedback-submission")}>Submissions</NavLink>
-              <NavLink className={link} to={eventPath("/admin/attendees")}>Attendees</NavLink>
+              {isSupport ? (
+                <NavLink className={link} to={eventPath("/admin/wifi")}>Wi-Fi</NavLink>
+              ) : (
+                <>
+                  <NavLink className={link} to={eventPath("/admin/event-details")}>Event Details</NavLink>
+                  <NavLink className={link} to={eventPath("/admin/feedback-submission")}>Submissions</NavLink>
+                  <NavLink className={link} to={eventPath("/admin/attendees")}>Attendees</NavLink>
+                  <NavLink className={link} to={eventPath("/admin/users")}>Users</NavLink>
+                </>
+              )}
             </nav>
             <div className="dlgfb-admin-user">
               <span className="dlgfb-admin-avatar" aria-hidden="true">{name.charAt(0).toUpperCase()}</span>
@@ -72,7 +68,12 @@ export default function AdminLayout() {
         </div>
       </header>
       <main className="dlgfb-container dlgfb-admin-main">
-        <Outlet />
+        {/* The support user only has the Wi-Fi screen, any other address takes them back to it. The API refuses the rest too. */}
+        {isSupport && location.pathname.replace(/\/+$/, "") !== eventPath("/admin/wifi") ? (
+          <Navigate to={eventPath(homePage(user.role))} replace />
+        ) : (
+          <Outlet />
+        )}
       </main>
     </div>
   );

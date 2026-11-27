@@ -4,7 +4,7 @@ import "./EventMobileMenu.css";
 import { useEvent, useEventPath } from "./event/EventContext";
 
 // eslint-disable-next-line no-unused-vars -- used by the commented-out menu below
-const forwardIcon = "/images/common/forward_icon.png";
+const forwardIcon = "/common/images/forward_icon.png";
 
 // The menu comes from the event config, set on the admin Event Details page. An item's target is a page of the
 // event (/feedback-form), "website" for the event's website link, or a full URL.

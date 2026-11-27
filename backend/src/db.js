@@ -5,7 +5,7 @@ const mysql = require("mysql2/promise");
 const config = require("./config");
 
 // Every event has its own MySQL database, and every database has its own login in databases.json,
-// { "feedback_db": { "host": "127.0.0.1", "port": 3306, "user": "root", "password": "..." } }.
+// { "feedback_aiu26": { "host": "127.0.0.1", "port": 3306, "user": "root", "password": "..." } }.
 // A request, script or test picks a database with withDatabase(), and query() and transaction()
 // then run against it without it being passed around.
 const current = new AsyncLocalStorage();
@@ -14,10 +14,11 @@ let logins = null;
 
 function readLogins() {
   if (!logins) {
+    const source = config.databasesJson ? "DATABASES_JSON" : config.databasesFile;
     try {
-      logins = JSON.parse(fs.readFileSync(config.databasesFile, "utf8"));
+      logins = JSON.parse(config.databasesJson || fs.readFileSync(config.databasesFile, "utf8"));
     } catch (err) {
-      throw new Error(`Cannot read the database logins in ${config.databasesFile}, ${err.message}`);
+      throw new Error(`Cannot read the database logins in ${source}, ${err.message}`);
     }
   }
   return logins;
@@ -26,9 +27,9 @@ function readLogins() {
 /** Host, port, user and password for a database name, from databases.json. */
 function loginFor(database) {
   const login = readLogins()[database];
-  if (!login) throw new Error(`No login for database ${database} in ${config.databasesFile}`);
+  if (!login) throw new Error(`No login for database ${database} in ${config.databasesJson ? "DATABASES_JSON" : config.databasesFile}`);
   const { host = "127.0.0.1", port = 3306, user, password = "" } = login;
-  if (!user) throw new Error(`The login for database ${database} in ${config.databasesFile} has no user`);
+  if (!user) throw new Error(`The login for database ${database} in ${config.databasesJson ? "DATABASES_JSON" : config.databasesFile} has no user`);
   return { host, port: Number(port), user, password };
 }
 

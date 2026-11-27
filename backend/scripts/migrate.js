@@ -1,6 +1,6 @@
 // Creates missing databases, tables, the form settings row and the default admins.
 // Usage: npm run migrate                   every event in backend/events
-//        npm run migrate -- --event dle26  one event
+//        npm run migrate -- --event aiu26  one event
 const { allEvents } = require("../src/events");
 const { migrate } = require("../src/migrate");
 const { eventArg, parseArgs, run } = require("./cli");

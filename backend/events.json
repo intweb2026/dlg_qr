@@ -1,26 +1,10 @@
 {
-  "dle26": {
-    "database": "feedback_db",
-    "event_code": "DLU - VV",
-    "active": false,
-    "media": {
-      "successIcon": "/images/common/checked.png"
-    },
-    "speakerReviews": {
-      "maxReviews": 3,
-      "titleMaxWords": 7
-    }
-  },
   "aiu26": {
-    "database": "feedback_agu26",
+    "database": "feedback_aiu26",
     "event_code": "AIU - AD",
     "active": true,
     "media": {
-      "successIcon": "/images/common/checked.png"
-    },
-    "speakerReviews": {
-      "maxReviews": 3,
-      "titleMaxWords": 7
+      "successIcon": "/common/images/checked.png"
     }
   }
 }

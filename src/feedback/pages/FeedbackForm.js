@@ -14,7 +14,7 @@ import { hasSubmittedOnDevice, markSubmittedOnDevice, readEntryHolder, readEntry
 // eslint-disable-next-line no-unused-vars -- used by the commented-out chips under the intro
 const REQUIRED_TOTAL = feedbackQuestions.filter((q) => q.required).length + 1; // plus the name
 
-const checkedIcon = "/images/common/checked.png" 
+const checkedIcon = "/common/images/checked.png" 
 
 const PANEL_ICONS = {
   closed: (

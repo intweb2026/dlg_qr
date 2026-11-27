@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 
-const { requireAccessToken, requireAdmin } = require("./auth");
+const { requireAccessToken, requireAdmin, requireStaff } = require("./auth");
 const os = require("os");
 
 const admin = require("./views/admin");
@@ -9,14 +9,12 @@ const auth = require("./views/auth");
 const eventDetails = require("./views/eventDetails");
 const luckyDraw = require("./views/luckyDraw");
 const pub = require("./views/public");
+const users = require("./views/users");
 const { upcomingConferences } = require("./views/upcomingConferences");
 const { speakerSessions } = require("./views/speakerSessions");
 const { suggestTestimonial } = require("./views/testimonial");
 
 const router = express.Router();
-// CSV attendee import, its route is switched off below.
-// eslint-disable-next-line no-unused-vars
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 5 } });
 // Event Details media, written to a temporary file since videos can be large, then moved into UPLOADS_DIR.
 const mediaUpload = multer({ dest: os.tmpdir(), limits: { fileSize: eventDetails.MAX_UPLOAD_BYTES, files: 1 } });
 
@@ -46,9 +44,13 @@ route("/feedback/submit/", { post: pub.feedbackSubmit });
 route("/feedback/suggest-testimonial/", { post: suggestTestimonial });
 // Admin auth
 route("/auth/login/", { post: auth.login });
-route("/auth/me/", { get: [requireAdmin, auth.me] });
-route("/auth/logout/", { post: [requireAdmin, auth.logout] });
-// Admin panel
+route("/auth/me/", { get: [requireStaff, auth.me] });
+route("/auth/logout/", { post: [requireStaff, auth.logout] });
+// Admin panel. requireAdmin lets the admin role in only. requireStaff also lets the support user in, it is used for the
+// Wi-Fi route below and nothing else.
+route("/admin/wifi/", { get: [requireStaff, eventDetails.getWifi], patch: [requireStaff, eventDetails.patchWifi] });
+route("/admin/users/", { get: [requireAdmin, users.list], post: [requireAdmin, users.create] });
+route("/admin/users/:pk/", { patch: [requireAdmin, users.patch], delete: [requireAdmin, users.remove] });
 route("/admin/settings/", { get: [requireAdmin, admin.getSettings], patch: [requireAdmin, admin.patchSettings] });
 route("/admin/submissions/", { get: [requireAdmin, admin.submissionList] });
 route("/admin/submissions/:pk/suspend/", { patch: [requireAdmin, admin.submissionSuspend] });
@@ -60,8 +62,6 @@ route("/admin/feedback-report/send/", { post: [requireAdmin, admin.feedbackRepor
 route("/admin/interested-attendees/", { get: [requireAccessToken, admin.interestedAttendees] });
 route("/admin/feedback-responses/", { get: [requireAccessToken, admin.feedbackResponses] });
 route("/admin/attendees/", { get: [requireAdmin, admin.attendeeList], post: [requireAdmin, admin.attendeeCreate] });
-// The CSV import is switched off, the attendee list comes from the CRM.
-// route("/admin/attendees/import/", { post: [requireAdmin, upload.any(), admin.attendeeImport] });
 route("/admin/attendees/sync/", { get: [requireAdmin, admin.attendeeSyncStatus], post: [requireAdmin, admin.attendeeSync] });
 route("/admin/attendees/:pk/", { patch: [requireAdmin, admin.attendeePatch], delete: [requireAdmin, admin.attendeeDelete] });
 // Event Details, the event's content and the home page menu
@@ -74,6 +74,6 @@ route("/lucky-draw/pool/", { get: luckyDraw.pool });
 route("/lucky-draw/spin/", { post: luckyDraw.spin });
 route("/lucky-draw/send-to-crm/", { post: luckyDraw.sendToCrm });
 route("/lucky-draw/reveal/", { post: luckyDraw.reveal });
-route("/lucky-draw/winners/", { get: luckyDraw.winnerList, delete: luckyDraw.winnerClear });
+route("/lucky-draw/winners/", { get: luckyDraw.winnerList });
 
 module.exports = router;

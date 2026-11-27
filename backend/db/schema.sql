@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS `admin_users` (
   `password` varchar(255) NOT NULL,
   `full_name` varchar(255) NOT NULL DEFAULT '',
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  -- admin opens every admin screen, support only the Wi-Fi screen. See src/roles.js.
+  `role` varchar(20) NOT NULL DEFAULT 'admin',
   `last_login` datetime(6) DEFAULT NULL,
   `created_at` datetime(6) NOT NULL,
   PRIMARY KEY (`id`),
@@ -91,7 +93,7 @@ CREATE TABLE IF NOT EXISTS `lucky_draw_winners` (
 
 -- The event's content shown on the site, a single row with id 1, edited on the admin Event Details page.
 -- Created from the event's entry in events.json the first time it is read. Blank values are left out of the site config.
--- Media values are site paths like /images/dle26/logo.png, full URLs, or /uploads/<code>/<file> for files uploaded
+-- Media values are site paths like /events/aiu26/images/logo.png, full URLs, or /uploads/<code>/<file> for files uploaded
 -- on the admin page, which the API serves at /api/uploads/.
 CREATE TABLE IF NOT EXISTS `event_details` (
   `id` int NOT NULL AUTO_INCREMENT,

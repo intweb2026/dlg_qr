@@ -4,6 +4,7 @@ import { useEvent, useEventPath } from "../../event/EventContext";
 import { errorMessage } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { homePage } from "../utils/roles";
 
 export default function AdminLogin() {
   const { user, login } = useAuth();
@@ -17,16 +18,16 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to={eventPath("/admin/raffle-draw")} replace />;
+  if (user) return <Navigate to={eventPath(homePage(user.role))} replace />;
 
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      await login(form.username.trim(), form.password);
+      const signedIn = await login(form.username.trim(), form.password);
       notify("You are signed in to the admin panel.", "success", { title: "Welcome back" });
-      navigate(location.state?.from || eventPath("/admin/raffle-draw"), { replace: true });
+      navigate(location.state?.from || eventPath(homePage(signedIn.role)), { replace: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -39,8 +40,6 @@ export default function AdminLogin() {
       <div className="dlgfb-login-wrap">
         <div className="dlgfb-login-intro">
           {logo && <img src={logo} alt="" className="dlgfb-login-logo" />}
-          <h1>Event Admin</h1>
-          <p className="dlgfb-login-intro-copy">Manage Feedback, Attendees and The Raffle Draw.</p>
         </div>
         <form className="dlgfb-login-card" onSubmit={submit} noValidate>
           <h2 className="dlgfb-h5 dlgfb-mb-1">Sign in</h2>

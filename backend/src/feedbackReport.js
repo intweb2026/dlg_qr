@@ -17,11 +17,10 @@ const { isoDate, padLengthFor } = require("./utils");
 // FEEDBACK_REPORT_TO. It is sent once per event, form_settings.report_sent_at records it, so a restart or a second
 // server does not send it again. An admin can download the PDF or send it again from the Feedback submissions page.
 
-const CHECK_MS = 60 * 60 * 1000; // how often the server looks for a report that is due
-const FIRST_CHECK_MS = 60 * 1000; // the first look, a minute after the server starts
+// How often the server looks for a report, and the window below, are in config.js, timing.feedbackReport.
+const TIMING = config.timing.feedbackReport;
 // A report is sent by itself only within this long of its time, so deploying long after an event does not email
 // old events out of the blue. Older ones are sent with the admin's Send now button.
-const AUTO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 const FONT_DIR = path.join(path.dirname(require.resolve("dejavu-fonts-ttf/package.json")), "ttf");
 const FONTS = { regular: path.join(FONT_DIR, "DejaVuSans.ttf"), bold: path.join(FONT_DIR, "DejaVuSans-Bold.ttf") };
@@ -290,7 +289,7 @@ async function sendIfDue(event) {
   if (!mailReady()) return false;
   const dueAt = await reportDueAt(event);
   const now = Date.now();
-  if (!dueAt || now < dueAt.getTime() || now - dueAt.getTime() > AUTO_WINDOW_MS) return false;
+  if (!dueAt || now < dueAt.getTime() || now - dueAt.getTime() > TIMING.autoWindow) return false;
   const settings = await m.loadSettings();
   if (settings.report_sent_at) return false;
   const claim = await query("UPDATE form_settings SET report_sent_at = UTC_TIMESTAMP(6) WHERE id = 1 AND report_sent_at IS NULL");
@@ -321,8 +320,8 @@ async function checkReports() {
 
 /** Starts the hourly check, from server.js. The timers do not keep the process alive. */
 function startReportTimer() {
-  setTimeout(checkReports, FIRST_CHECK_MS).unref();
-  setInterval(checkReports, CHECK_MS).unref();
+  setTimeout(checkReports, TIMING.firstCheck).unref();
+  setInterval(checkReports, TIMING.check).unref();
 }
 
 /** What the admin page shows. Runs inside the event's database. */
@@ -337,7 +336,7 @@ async function reportStatus(event) {
   } catch {
     /* not known */
   }
-  const late = dueAt && Date.now() - dueAt.getTime() > AUTO_WINDOW_MS;
+  const late = dueAt && Date.now() - dueAt.getTime() > TIMING.autoWindow;
   return {
     mail_ready: mailReady(),
     recipients: config.feedbackReportTo,
@@ -355,4 +354,4 @@ function setMailer(t) {
   transport = t;
 }
 
-module.exports = { setMailer, buildReportPdf, checkReports, emailReport, reportFileName, reportStatus, sendIfDue, startReportTimer, mailReady, AUTO_WINDOW_MS };
+module.exports = { setMailer, buildReportPdf, checkReports, emailReport, reportFileName, reportStatus, sendIfDue, startReportTimer, mailReady, AUTO_WINDOW_MS: TIMING.autoWindow };

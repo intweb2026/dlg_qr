@@ -35,7 +35,8 @@ export function eventKey(name) {
 export const tokenKey = () => eventKey("adminToken");
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000/api",
+  // No localhost fallback. npm start gets it from .env.development, a production build from the REACT_APP_API_URL variable.
+  baseURL: process.env.REACT_APP_API_URL,
   withCredentials: true,
 });
 
@@ -70,6 +71,7 @@ export function errorMessage(err, fallback = "Something went wrong, try again.")
   const data = err?.response?.data;
   if (!err?.response) return "Cannot reach the server, check that the backend is running.";
   if (typeof data === "string") return fallback;
+  if (Array.isArray(data?.detail)) return data.detail[0];
   if (data?.detail) return data.detail;
   if (data && typeof data === "object") {
     const first = Object.values(data)[0];

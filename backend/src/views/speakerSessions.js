@@ -3,13 +3,13 @@
 // with status "speaker" are sessions; the "day" entries name the days. The site not reachable, or no speaker
 // entries, gives an empty list and the form leaves the reviews out. Each title also gets a short one from Gemini.
 
+const config = require("../config");
 const { agendaApiUrl } = require("../eventDates");
 const { speakerReviewSettings } = require("../events");
 const { askGemini } = require("./testimonial");
 
-const CACHE_MS = 10 * 60 * 1000;
-const FAILURE_CACHE_MS = 60 * 1000;
-const TIMEOUT_MS = 5000;
+// Timeouts and cache lengths are in config.js, timing.speakerSessions.
+const TIMING = config.timing.speakerSessions;
 
 // Event code to { at, ttl, list }, so the agenda is fetched at most once per 10 minutes per event.
 const cache = new Map();
@@ -63,7 +63,7 @@ function sessionsFrom(agenda) {
 async function fetchSessions(url) {
   const res = await fetch(url, {
     headers: { "User-Agent": "event-feedback-form", Accept: "application/json" },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(TIMING.requestTimeout),
   });
   if (!res.ok) throw new Error(`${url} answered ${res.status}`);
   return sessionsFrom(await res.json());
@@ -189,13 +189,13 @@ async function speakerSessions(req, res) {
 
   try {
     const list = await withShortTitles(req.event, await fetchSessions(url));
-    cache.set(code, { at: Date.now(), ttl: CACHE_MS, list });
+    cache.set(code, { at: Date.now(), ttl: TIMING.cache, list });
     return res.json(list);
   } catch (err) {
     console.error(`Speaker sessions for ${code}: ${err.message}`);
     // Keep the last good list if there is one, and try the agenda again in a minute.
     const list = hit ? hit.list : [];
-    cache.set(code, { at: Date.now(), ttl: FAILURE_CACHE_MS, list });
+    cache.set(code, { at: Date.now(), ttl: TIMING.failureCache, list });
     return res.json(list);
   }
 }

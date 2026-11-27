@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 
-// Shown on the bare home page /, which has no event. Every real page starts with an event code, /dle26.
+// Shown on the bare home page /, which has no event. Every real page starts with an event code, /aiu26.
 export default function ServerError() {
   useEffect(() => {
     document.title = "500 Internal Server Error";
