@@ -1214,7 +1214,7 @@ describe("event details", () => {
     await db.withDatabase(EVENT_A.database, () => moveLinksIntoMenu());
   });
 
-  test("migrate moves the old media paths to public/events and public/common", async () => {
+  test("migrate moves the old media paths to frontend/public/events and frontend/public/common", async () => {
     const { movePublicMedia } = require("../src/eventDetails");
     await api("GET", "/");
     await query(

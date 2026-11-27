@@ -1,14 +1,14 @@
 {
-  "feedback_aiu26": {
+  "feedback_event1": {
     "host": "127.0.0.1",
     "port": 3306,
     "user": "root",
     "password": "your_mysql_password"
   },
-  "feedback_afs26": {
+  "feedback_event2": {
     "host": "db2.your-domain.com",
     "port": 3306,
-    "user": "afs26_user",
-    "password": "afs26_password"
+    "user": "event2_user",
+    "password": "event2_password"
   }
 }

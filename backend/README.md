@@ -4,27 +4,27 @@ Node.js (Express) API for the event site, the feedback form, the admin panel and
 
 ## Events
 
-Every event is one entry in `events.json`, keyed by its code. The code is the first part of every address, `/aiu26/feedback-form` on the site and `/api/events/aiu26/...` on the API.
+Every event is one entry in `events.json`, keyed by its code. The code is the first part of every address, `/<code>/feedback-form` on the site and `/api/events/<code>/...` on the API.
 
 - The key is the event code, lower case letters, digits and dashes.
 - `database` is the event's own MySQL database. Every event needs a different one. Its login is in `databases.json`, see below.
 - `active` set to `false` hides the event without deleting anything.
 - `media.successIcon` is the tick shown after feedback is sent.
-- The feedback form opens by itself at 12:00 AM of the event's first day where the event is held, and then never closes. The first day is the earliest day heading in the website's agenda and the time zone comes from the website's `event_Location`, the same as the CRM sync below. Before then the form says when it opens and the API refuses the attendee list and submissions with code `not_open`. Set `"eventStartDate": "2026-11-09"` or `"timeZone": "America/Los_Angeles"` on the event to give them yourself. When the first day cannot be told, the form is open. The admin Feedback submissions page has an "Open automatically when the event starts" switch (`form_open_auto` in `form_settings`, off by default, so the form is open unless an admin closes it). Turn it off and the form is open right away with no condition, the fallback if the automatic opening ever goes wrong. Any error while working out the opening time also leaves the form open. The same panel has Open form and Close form. Close form (`form_closed` in `form_settings`) shuts the form whatever the date, attendees see that it is closed and the API refuses with code `closed`, until an admin opens it again. Open form undoes a close, or before the event starts turns the automatic opening off. The raffle draw never closes the form. Run `npm run migrate` once to add the columns to existing databases.
-- The day after an event's last day, at 12:00 AM where it is held, the server emails one PDF with every submission (the attendee's details and their answers to every question, suspended ones marked) to `FEEDBACK_REPORT_TO`, default `linq-web@iq-hub.com`. The server looks every hour, sends it once per event (`form_settings.report_sent_at`), tries again an hour later when the send fails, and only sends by itself within 7 days of that time, so an old event is not emailed after a late deploy. Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` and `MAIL_FROM`, see `.env.example`. The admin Feedback submissions page shows when it goes out, downloads the PDF and has Send now as the backup. Only active events are sent.
+- The feedback form opens by itself at 12:00 AM of the event's first day where the event is held, and then never closes. The first day is the earliest day heading in the website's agenda and the time zone comes from the website's `event_Location`, the same as the CRM sync below. Before then the form says when it opens and the API refuses the attendee list and submissions with code `not_open`. Set `"eventStartDate": "YYYY-MM-DD"` or `"timeZone": "Area/City"` (an IANA time zone name) on the event to give them yourself. When the first day cannot be told, the form is open. The admin Feedback submissions page has an "Open automatically when the event starts" switch (`form_open_auto` in `form_settings`, off by default, so the form is open unless an admin closes it). Turn it off and the form is open right away with no condition, the fallback if the automatic opening ever goes wrong. Any error while working out the opening time also leaves the form open. The same panel has Open form and Close form. Close form (`form_closed` in `form_settings`) shuts the form whatever the date, attendees see that it is closed and the API refuses with code `closed`, until an admin opens it again. Open form undoes a close, or before the event starts turns the automatic opening off. The raffle draw never closes the form. Run `npm run migrate` once to add the columns to existing databases.
+- The day after an event's last day, at 12:00 AM where it is held, the server emails one PDF with every submission (the attendee's details and their answers to every question, suspended ones marked) to the addresses in `FEEDBACK_REPORT_TO`, a comma separated list set in the environment, with no default. The server looks every hour, sends it once per event (`form_settings.report_sent_at`), tries again an hour later when the send fails, and only sends by itself within 7 days of that time, so an old event is not emailed after a late deploy. Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` and `MAIL_FROM`, see `.env.example`. The admin Feedback submissions page shows when it goes out, downloads the PDF and has Send now as the backup. Only active events are sent.
 - `speakerReviews` is optional, `{ "maxReviews": 3, "titleMaxWords": 7 }` by default. `maxReviews` is how many speaker sessions an attendee can review in all, whatever the day (1 to 50), checked by the form and again on submit. `titleMaxWords` is the most words in the AI shortened session titles (3 to 20). The agenda is read from `links.agendaApi`, or `<website link>/api/agenda` when that is not set.
-- `event_code` is the event's code in the iQ Hub CRM, such as `"AIU - AD"`. The registered attendee list is copied from the CRM's registered delegates API for this code, using `CRM_DATA_API_KEY` from `.env`. See "Attendees from the CRM" below.
+- `event_code` is the event's code in the CRM, for example `"ABC - XY"`. The registered attendee list is copied from the CRM's registered delegates API for this code, using `CRM_DATA_API_KEY` from `.env`. See "Attendees from the CRM" below.
 - The name, tagline, colour, media, links and Wi-Fi are set on the admin Event Details page, see below. They can still be written here for a new event, and are then copied to the page the first time.
 - The entry, with the Event Details in place, is sent to the site by `GET /api/events/<code>/`. The database name is never sent. Do not put passwords or private keys in an event entry, the site shows its contents.
 
 ```json
 {
-  "aiu26": { "database": "feedback_aiu26", "active": true, "media": { "successIcon": "/common/images/checked.png" } },
-  "afs26": { "database": "feedback_afs26", "media": { "successIcon": "/common/images/checked.png" } }
+  "event1": { "database": "feedback_event1", "active": true, "media": { "successIcon": "/common/images/checked.png" } },
+  "event2": { "database": "feedback_event2", "media": { "successIcon": "/common/images/checked.png" } }
 }
 ```
 
-Copy the `aiu26` entry as a starting point.
+Copy the first entry as a starting point.
 
 ## Event Details in the admin panel
 
@@ -39,7 +39,7 @@ Images and videos uploaded on the page are saved in `UPLOADS_DIR`, `backend/uplo
 The attendee list is no longer imported from a CSV; it comes from the CRM. The delegates are copied into the event's `attendees` table, because the feedback form, the submissions and the lucky draw all point at an attendee row.
 
 - The first visitor to the site starts the first sync, and the Registered Attendees page and the feedback form wait for it. The time and count are saved in `form_settings` (`crm_synced_at`, `crm_synced_count`), so restarts and redeploys do not fetch it again straight away.
-- After that the list is fetched again every 24 hours until the event's last day is over, so late registrations reach the form. A visit starts it in the background once the last sync is 24 hours old. The last day is the latest day heading in the website's agenda (the same `/api/agenda` the session question uses). The sync stops at 11:59 PM of that day where the event is held: the time zone comes from the website's `event_Location`, so "Anaheim, California, USA" stops at 11:59 PM Pacific time, not Indian time. Set `"eventEndDate": "2026-11-10"` or `"timeZone": "America/Los_Angeles"` on the event in `events.json` to give them yourself. With no time zone known, the sync runs until 36 hours after the last day starts in UTC. When the last day cannot be told, there is no daily sync.
+- After that the list is fetched again every 24 hours until the event's last day is over, so late registrations reach the form. A visit starts it in the background once the last sync is 24 hours old. The last day is the latest day heading in the website's agenda (the same `/api/agenda` the session question uses). The sync stops at 11:59 PM of that day where the event is held: the time zone comes from the website's `event_Location`, so a location such as "City, State, Country" stops at 11:59 PM in that place's time zone, not the server's. Set `"eventEndDate": "YYYY-MM-DD"` or `"timeZone": "Area/City"` on the event in `events.json` to give them yourself. With no time zone known, the sync runs until 36 hours after the last day starts in UTC. When the last day cannot be told, there is no daily sync.
 - If the CRM fails, or has no delegates for the code yet, nothing is saved and a visit at least a minute later tries again.
 - To fetch the list again, an admin presses **Sync now** on the admin **Attendees** page.
 - Run `npm run migrate` after deploying this change, it adds the two `form_settings` columns.
@@ -53,8 +53,8 @@ The attendee list is no longer imported from a CSV; it comes from the CRM. The d
 
 ```json
 {
-  "feedback_aiu26": { "host": "127.0.0.1", "port": 3306, "user": "root", "password": "..." },
-  "feedback_afs26": { "host": "db2.your-domain.com", "port": 3306, "user": "afs26_user", "password": "..." }
+  "feedback_event1": { "host": "127.0.0.1", "port": 3306, "user": "root", "password": "..." },
+  "feedback_event2": { "host": "db2.your-domain.com", "port": 3306, "user": "event2_user", "password": "..." }
 }
 ```
 

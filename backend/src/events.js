@@ -2,8 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const { isTimeZone } = require("./timeZones");
 
-// Every event is one entry in backend/events.json, keyed by the event code, { "aiu26": { ... }, "afs26": { ... } }.
-// The code is the first part of every address, /aiu26/feedback-form on the site and /api/events/aiu26/... on the API.
+// Every event is one entry in backend/events.json, keyed by the event code, { "event1": { ... }, "event2": { ... } }.
+// The code is the first part of every address, /<code>/feedback-form on the site and /api/events/<code>/... on the API.
 // "database" is the event's own MySQL database. Everything else in the entry is sent to the site as the event config.
 // The name, tagline, colour, media, links and Wi-Fi only fill the event's Event Details the first time, after that the
 // admin page's values are used, see eventDetails.js.

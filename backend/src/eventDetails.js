@@ -200,7 +200,7 @@ async function moveLinksIntoMenu({ log = () => {} } = {}) {
   }
 }
 
-// Media moved to public/events/<code>/{images,videos}/ and public/common/images/, with the event name dropped from the
+// Media moved to frontend/public/events/<code>/{images,videos}/ and frontend/public/common/images/, with the event name dropped from the
 // file names. Databases made before still hold the old paths. A path starting with "from" now starts with "to".
 // Remove this list and movePublicMedia once every database has run npm run migrate.
 const MOVED_MEDIA = [
@@ -232,7 +232,7 @@ async function movePublicMedia({ log = () => {} } = {}) {
       changed += r.affectedRows;
     }
   }
-  if (changed) log(`moved ${changed} media path(s) to public/events and public/common.`);
+  if (changed) log(`moved ${changed} media path(s) to frontend/public/events and frontend/public/common.`);
 }
 
 // ------------------------------------------------------------------ Menu items

@@ -1,5 +1,5 @@
 // Question text for the saved feedback_data keys, in the order of the form. Keep in step with
-// src/feedback/config/feedbackQuestions.js on the frontend.
+// frontend/src/feedback/config/feedbackQuestions.js.
 const QUESTIONS = [
   ["conference_thoughts", "Could you share a brief testimonial?"],
   ["industry_challenges", "What are the biggest challenges facing your industry?"],

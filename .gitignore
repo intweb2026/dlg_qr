@@ -1,11 +1,9 @@
 node_modules
-build
 .DS_Store
-npm-debug.log*
+*.log
 
-# Feedback app. backend/.gitignore also covers the backend entries.
+# Backend entries. backend/.gitignore also covers them.
 backend/.env
 backend/venv/
 __pycache__/
 backend/events.json
-.gitignore
