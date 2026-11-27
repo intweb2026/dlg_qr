@@ -55,6 +55,7 @@ export default function AdminLayout() {
                   <NavLink className={link} to={eventPath("/admin/event-details")}>Event Details</NavLink>
                   <NavLink className={link} to={eventPath("/admin/feedback-submission")}>Submissions</NavLink>
                   <NavLink className={link} to={eventPath("/admin/attendees")}>Attendees</NavLink>
+                  <NavLink className={link} to={eventPath("/admin/logbook")}>Logbook</NavLink>
                   <NavLink className={link} to={eventPath("/admin/users")}>Users</NavLink>
                 </>
               )}

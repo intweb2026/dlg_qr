@@ -85,7 +85,8 @@ function createApp() {
     }
   });
   app.use(allowedHosts);
-  app.use(cors({ origin: config.corsAllowedOrigins, credentials: true }));
+  // Content-Disposition is exposed so the site, on another address, can read the file name of the report PDF download.
+  app.use(cors({ origin: config.corsAllowedOrigins, credentials: true, exposedHeaders: ["Content-Disposition"] }));
   app.use(express.json({ limit: "2.5mb" }));
   app.use("/api/uploads", serveUploads());
   app.use("/api/events/:eventCode", resolveEvent, authenticate, routes);

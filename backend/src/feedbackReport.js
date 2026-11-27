@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 
 const nodemailer = require("nodemailer");
@@ -10,6 +11,7 @@ const { withEventDetails } = require("./eventDetails");
 const { allEvents } = require("./events");
 const { feedbackList, questionLabel } = require("./feedbackQuestions");
 const m = require("./models");
+const logbook = require("./logbook");
 const { isoDate, padLengthFor } = require("./utils");
 
 // The feedback submissions report. The day after the event's last day, at 12:00 AM where the event is held, every
@@ -25,7 +27,7 @@ const TIMING = config.timing.feedbackReport;
 const FONT_DIR = path.join(path.dirname(require.resolve("dejavu-fonts-ttf/package.json")), "ttf");
 const FONTS = { regular: path.join(FONT_DIR, "DejaVuSans.ttf"), bold: path.join(FONT_DIR, "DejaVuSans-Bold.ttf") };
 
-const COLORS = { ink: "#111827", muted: "#6b7280", line: "#e5e7eb", band: "#f3f4f6", accent: "#1d4ed8", bad: "#b91c1c" };
+const COLORS = { band_dark: "#0f172a", ink: "#111827", muted: "#6b7280", line: "#e5e7eb", band: "#f3f4f6", accent: "#1d4ed8", bad: "#b91c1c" };
 
 const EXTRA_LABELS = new Set(
   ["conference_thoughts_original", "conference_thoughts_version", "conference_thoughts_consent"].map(questionLabel)
@@ -168,6 +170,82 @@ function drawSubmission(doc, s, { pad, timeZone, width }) {
   doc.moveDown(1);
 }
 
+const LOGO_MAX_BYTES = 5 * 1024 * 1024;
+const LOGO_FETCH_TIMEOUT = 5000;
+const LOGO_BOX = { width: 170, height: 52 }; // the logo is scaled down to fit this, in points
+const BAND_PADDING = 22; // space above and below the logo in the header band
+
+// The PDF library draws PNG and JPEG only, checked by the first bytes of the file, whatever its name says.
+function isPngOrJpeg(buf) {
+  return buf.length > 8 && ((buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) || (buf[0] === 0xff && buf[1] === 0xd8));
+}
+
+/**
+ * The event's logo as an image Buffer for the report header, or null. The logo is a file uploaded on the Event Details
+ * page (/uploads/<code>/<name>, read from UPLOADS_DIR), a full URL, or a path of the site such as /events/<code>/images/logo.png,
+ * fetched from the first address in CORS_ALLOWED_ORIGINS. Anything else, a failed fetch, a file that is not a PNG or JPEG
+ * or is too large gives null, and the report is made without a logo. It never stops the report.
+ */
+async function loadLogo(event) {
+  try {
+    const value = String(event.media?.logo || "").trim();
+    if (!value) return null;
+    let buf;
+    const uploaded = value.match(/^\/uploads\/([A-Za-z0-9_-]+)\/([A-Za-z0-9][A-Za-z0-9._-]*)$/);
+    if (uploaded) {
+      // Only the event's own folder is read.
+      if (uploaded[1] !== event.code) return null;
+      buf = await fs.promises.readFile(path.join(config.uploadsDir, uploaded[1], uploaded[2]));
+    } else {
+      const base = config.corsAllowedOrigins[0];
+      const url = /^https?:\/\//i.test(value) ? value : value.startsWith("/") && base ? `${base.replace(/\/+$/, "")}${value}` : null;
+      if (!url) return null;
+      const res = await fetch(url, { signal: AbortSignal.timeout(LOGO_FETCH_TIMEOUT) });
+      if (!res.ok) return null;
+      buf = Buffer.from(await res.arrayBuffer());
+    }
+    return buf.length <= LOGO_MAX_BYTES && isPngOrJpeg(buf) ? buf : null;
+  } catch (err) {
+    console.error(`${event.code}: report logo not used, ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * The numbers and the raffle winners shown in the report and in the email. Runs inside the event's database.
+ *   total          every attendee on the list, registered or not
+ *   registered     the delegates copied from the CRM
+ *   notRegistered  the walk-ins, who typed a name that was not on the list when they sent feedback
+ *   submissions    feedback submissions, suspended ones included, with how many are active and suspended
+ *   notSubmitted   attendees with no submission
+ *   winners        the raffle draw winners in the order they were drawn, with their entry number, padded to pad digits
+ */
+async function reportSummary(pad) {
+  const [a] = await query(
+    `SELECT COUNT(*) AS total, COALESCE(SUM(a.is_walk_in = 0), 0) AS registered, COALESCE(SUM(a.is_walk_in = 1), 0) AS not_registered,
+            COALESCE(SUM(s.id IS NULL), 0) AS not_submitted
+     FROM attendees a LEFT JOIN feedback_submissions s ON s.attendee_id = a.attendee_id`
+  );
+  const [f] = await query("SELECT COUNT(*) AS total, COALESCE(SUM(is_suspended = 0), 0) AS active, COALESCE(SUM(is_suspended = 1), 0) AS suspended FROM feedback_submissions");
+  const winners = (await query(`${m.WINNER_SELECT} ORDER BY w.drawn_at, w.id`)).map(m.winnerJson).map((w) => ({
+    name: w.attendee_name,
+    company: w.company_name || "",
+    entry: String(w.submission_id).padStart(pad, "0"),
+    drawnAt: w.drawn_at,
+    draw: w.attempt_number,
+  }));
+  return {
+    total: Number(a.total),
+    registered: Number(a.registered),
+    notRegistered: Number(a.not_registered),
+    submissions: Number(f.total),
+    active: Number(f.active),
+    suspended: Number(f.suspended),
+    notSubmitted: Number(a.not_submitted),
+    winners,
+  };
+}
+
 /** Every submission of the event, suspended ones included, as a PDF Buffer. Runs inside the event's database. */
 async function buildReportPdf(event) {
   const rows = (await query(`${m.SUBMISSION_SELECT} ORDER BY s.id`)).map(m.submissionJson);
@@ -179,7 +257,7 @@ async function buildReportPdf(event) {
   }
   const timeZone = schedule.timeZone || null;
   const pad = padLengthFor(Math.max(0, ...rows.map((r) => r.id)));
-  const suspended = rows.filter((r) => r.is_suspended).length;
+  const summary = await reportSummary(pad);
   const name = event.name || event.code;
 
   const doc = new PDFDocument({
@@ -199,24 +277,76 @@ async function buildReportPdf(event) {
 
   const left = doc.page.margins.left;
   const width = doc.page.width - left - doc.page.margins.right;
-  doc.font("bold").fontSize(20).fillColor(COLORS.ink).text(name, left, doc.y, { width });
-  doc.font("regular").fontSize(12).fillColor(COLORS.muted).text("Feedback submissions report", { width });
+  // The header of the first page is a dark band across the top, the event's logo on the left and the report title on
+  // the right. Event logos are made for a dark site header and are often white, so the band keeps them readable. The
+  // event name is written only when there is no logo, or it could not be drawn, and then the header is plain text.
+  let drewLogo = false;
+  const logo = await loadLogo(event);
+  if (logo) {
+    try {
+      const image = doc.openImage(logo);
+      const scale = Math.min(LOGO_BOX.height / image.height, LOGO_BOX.width / image.width, 1);
+      const w = image.width * scale;
+      const h = image.height * scale;
+      const bandHeight = h + 2 * BAND_PADDING;
+      doc.rect(0, 0, doc.page.width, bandHeight).fill(COLORS.band_dark);
+      doc.image(logo, left, BAND_PADDING, { width: w, height: h });
+      doc.font("bold").fontSize(15).fillColor("#ffffff");
+      doc.text("Feedback submissions report", left + w + 20, (bandHeight - doc.currentLineHeight()) / 2, {
+        width: width - w - 20,
+        align: "right",
+        lineBreak: false,
+      });
+      doc.x = left;
+      doc.y = bandHeight + 24;
+      drewLogo = true;
+    } catch (err) {
+      console.error(`${event.code}: report logo not drawn, ${err.message}`);
+    }
+  }
+  if (!drewLogo) {
+    doc.font("bold").fontSize(20).fillColor(COLORS.ink).text(name, left, doc.y, { width });
+    doc.font("regular").fontSize(12).fillColor(COLORS.muted).text("Feedback submissions report", left, doc.y, { width });
+  }
   doc.moveDown(0.8);
   const facts = [
     ["Event dates", [schedule.start, schedule.end].filter(Boolean).map((d) => d.toISOString().slice(0, 10)).join(" to ")],
     ["Location", schedule.location || ""],
-    ["Submissions", `${rows.length} in all, ${rows.length - suspended} active, ${suspended} suspended`],
+    ["Total attendees", String(summary.total)],
+    ["Registered attendees", String(summary.registered)],
+    ["Not registered attendees", String(summary.notRegistered)],
+    ["Submissions", `${summary.submissions} in all, ${summary.active} active, ${summary.suspended} suspended`],
+    ["Not submitted", String(summary.notSubmitted)],
     ["Times shown in", timeZone || "UTC"],
     ["Generated", venueTime(new Date().toISOString(), timeZone)],
   ].filter(([, value]) => value);
   for (const [label, value] of facts) {
     const y = doc.y;
-    doc.font("bold").fontSize(10).fillColor(COLORS.muted).text(label, left, y, { width: 110 });
-    doc.font("regular").fontSize(10).fillColor(COLORS.ink).text(value, left + 115, y, { width: width - 115 });
+    doc.font("bold").fontSize(10).fillColor(COLORS.muted).text(label, left, y, { width: 175, lineBreak: false });
+    doc.font("regular").fontSize(10).fillColor(COLORS.ink).text(value, left + 180, y, { width: width - 180 });
     doc.moveDown(0.15);
   }
   doc.moveDown(0.8);
   doc.moveTo(left, doc.y).lineTo(left + width, doc.y).lineWidth(1.2).strokeColor(COLORS.ink).stroke();
+  doc.moveDown(1.2);
+
+  // The raffle draw winners, in the order they were drawn.
+  doc.font("bold").fontSize(12).fillColor(COLORS.ink).text("Raffle draw winners", left, doc.y, { width });
+  doc.moveDown(0.4);
+  if (!summary.winners.length) {
+    doc.font("regular").fontSize(10).fillColor(COLORS.muted).text("No winner has been drawn.", left, doc.y, { width });
+  }
+  summary.winners.forEach((w, i) => {
+    ensureSpace(doc, 18);
+    doc.font("bold").fontSize(10).fillColor(COLORS.ink).text(`${i + 1}. ${w.name}`, left, doc.y, { width, continued: true });
+    doc.font("regular").fillColor(COLORS.muted).text(
+      `${w.company ? `, ${w.company}` : ""}   Entry ${w.entry}, drawn ${venueTime(w.drawnAt, timeZone)}`,
+      { width }
+    );
+    doc.moveDown(0.2);
+  });
+  doc.moveDown(1);
+  doc.moveTo(left, doc.y).lineTo(left + width, doc.y).lineWidth(0.7).strokeColor(COLORS.line).stroke();
   doc.moveDown(1.2);
 
   if (!rows.length) doc.font("regular").fontSize(11).fillColor(COLORS.muted).text("No feedback was submitted for this event.", left, doc.y);
@@ -233,11 +363,50 @@ async function buildReportPdf(event) {
     doc.page.margins.bottom = bottom;
   }
   doc.end();
-  return { pdf: await done, count: rows.length };
+  return { pdf: await done, count: rows.length, timeZone, summary };
 }
 
-function reportFileName(event) {
-  return `${event.code}-feedback-submissions-${new Date().toISOString().slice(0, 10)}.pdf`;
+// The time stamp in the file name, 2026-11-27_14-30, in the event's time zone like every other time in the app, or in
+// UTC when the zone is not known.
+function fileStamp(date, timeZone) {
+  const make = (zone) =>
+    Object.fromEntries(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: zone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      })
+        .formatToParts(date)
+        .map((part) => [part.type, part.value])
+    );
+  let p;
+  try {
+    p = make(timeZone || "UTC");
+  } catch {
+    p = make("UTC");
+  }
+  return `${p.year}-${p.month}-${p.day}_${p.hour}-${p.minute}`;
+}
+
+/**
+ * The PDF's file name, for the email attachment and the admin download alike,
+ * <event_name>_feedback_submission_<date and time in the event's time zone>_(<submission count>).pdf
+ * The event name keeps its letters and digits, spaces become underscores and anything a file name cannot hold is dropped.
+ */
+function reportFileName(event, count, { date = new Date(), timeZone = null } = {}) {
+  const name =
+    String(event.name || event.code)
+      .normalize("NFKD")
+      .replace(/[^\x20-\x7e]/g, "")
+      .trim()
+      .replace(/\s+/g, "_")
+      .replace(/[^A-Za-z0-9._-]/g, "")
+      .replace(/^[._-]+|[._-]+$/g, "") || event.code;
+  return `${name}_feedback_submission_${fileStamp(date, timeZone)}_(${count}).pdf`;
 }
 
 // ------------------------------------------------------------------ Email
@@ -255,21 +424,74 @@ function mailer() {
   return transport;
 }
 
-/** Builds the PDF and emails it. Throws when it cannot be sent. Runs inside the event's database. */
-async function emailReport(event) {
+const escapeHtml = (value) =>
+  String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** The email's plain text and HTML, the counts and the raffle winners. The full report is the attached PDF. */
+function emailBody(name, summary, timeZone) {
+  const lines = [
+    ["Total attendees", summary.total],
+    ["Registered attendees", summary.registered],
+    ["Not registered attendees", summary.notRegistered],
+    ["Submissions", summary.submissions],
+    ["Not submitted", summary.notSubmitted],
+  ];
+  const winner = (w, i) => `${i + 1}. ${w.name}${w.company ? `, ${w.company}` : ""}, entry ${w.entry}, drawn ${venueTime(w.drawnAt, timeZone)}`;
+  const text =
+    `${name}, feedback submissions report\n\n` +
+    lines.map(([label, value]) => `${label.padEnd(26)}${value}`).join("\n") +
+    "\n\nRaffle draw winners\n" +
+    (summary.winners.length ? summary.winners.map(winner).join("\n") : "No winner has been drawn.") +
+    "\n\nThe full report, with every submission, is attached as a PDF.\n" +
+    "This report is sent by the feedback form the day after the event ends.";
+  const html =
+    `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827">` +
+    `<h2 style="margin:0 0 12px">${escapeHtml(name)}, feedback submissions report</h2>` +
+    `<table cellpadding="6" cellspacing="0" style="border-collapse:collapse">` +
+    lines.map(([label, value]) => `<tr><td style="border-bottom:1px solid #e5e7eb">${escapeHtml(label)}</td><td style="border-bottom:1px solid #e5e7eb;text-align:right"><strong>${value}</strong></td></tr>`).join("") +
+    `</table>` +
+    `<h3 style="margin:18px 0 6px">Raffle draw winners</h3>` +
+    (summary.winners.length
+      ? `<ol style="margin:0;padding-left:20px">${summary.winners.map((w) => `<li>${escapeHtml(w.name)}${w.company ? `, ${escapeHtml(w.company)}` : ""}, entry ${escapeHtml(w.entry)}, drawn ${escapeHtml(venueTime(w.drawnAt, timeZone))}</li>`).join("")}</ol>`
+      : `<p style="margin:0">No winner has been drawn.</p>`) +
+    `<p style="margin:18px 0 0;color:#6b7280">The full report, with every submission, is attached as a PDF.<br>This report is sent by the feedback form the day after the event ends.</p>` +
+    `</div>`;
+  return { text, html };
+}
+
+/**
+ * Builds the PDF and emails it. Throws when it cannot be sent. Runs inside the event's database. by says what started it
+ * for the logbook, "automatic" for the day after the event, or the admin who pressed Send now.
+ */
+async function emailReport(event, by = "automatic") {
   if (!mailReady()) throw new Error("Email is not set up, set SMTP_HOST and FEEDBACK_REPORT_TO on the server.");
-  const { pdf, count } = await buildReportPdf(event);
-  const name = event.name || event.code;
-  await mailer().sendMail({
-    from: config.mailFrom || config.smtpUser,
-    to: config.feedbackReportTo.join(", "),
-    subject: `${name}: feedback submissions report (${count})`,
-    text:
-      `Attached are all ${count} feedback submission${count === 1 ? "" : "s"} for ${name}, ` +
-      "each with the attendee's details and their answers to every question.\n\n" +
-      "This report is sent by the feedback form the day after the event ends.",
-    attachments: [{ filename: reportFileName(event), content: pdf, contentType: "application/pdf" }],
-  });
+  const elapsed = logbook.stopwatch();
+  const to = config.feedbackReportTo.join(", ");
+  const logged = { kind: "email", target: to, method: "SMTP", by };
+  let count = 0;
+  try {
+    const built = await buildReportPdf(event);
+    count = built.count;
+    const name = event.name || event.code;
+    const filename = reportFileName(event, count, { timeZone: built.timeZone });
+    const info = await mailer().sendMail({
+      from: config.mailFrom || config.smtpUser,
+      to,
+      subject: `${name}: feedback submissions report (${count})`,
+      ...emailBody(name, built.summary, built.timeZone),
+      attachments: [{ filename, content: built.pdf, contentType: "application/pdf" }],
+    });
+    await logbook.record({
+      ...logged,
+      ok: true,
+      ms: elapsed(),
+      summary: `Report with ${count} submission${count === 1 ? "" : "s"} sent, ${filename}`,
+      response: info && typeof info === "object" && !Array.isArray(info) ? { messageId: info.messageId, accepted: info.accepted, rejected: info.rejected, response: info.response } : null,
+    });
+  } catch (err) {
+    await logbook.record({ ...logged, ok: false, ms: elapsed(), summary: count ? `Report with ${count} submission${count === 1 ? "" : "s"} not sent` : "Report not sent", error: err.message });
+    throw err;
+  }
   await query("UPDATE form_settings SET report_sent_at = UTC_TIMESTAMP(6), report_sent_count = ? WHERE id = 1", [count]);
   lastErrors.delete(event.code);
   return count;
@@ -354,4 +576,4 @@ function setMailer(t) {
   transport = t;
 }
 
-module.exports = { setMailer, buildReportPdf, checkReports, emailReport, reportFileName, reportStatus, sendIfDue, startReportTimer, mailReady, AUTO_WINDOW_MS: TIMING.autoWindow };
+module.exports = { setMailer, buildReportPdf, emailBody, checkReports, emailReport, reportFileName, reportStatus, sendIfDue, startReportTimer, mailReady, AUTO_WINDOW_MS: TIMING.autoWindow };

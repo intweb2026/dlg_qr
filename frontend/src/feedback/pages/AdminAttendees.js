@@ -3,6 +3,7 @@ import api, { errorMessage, padId } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Pagination, { pageCount, pageSlice } from "../components/Pagination";
 import { useToast } from "../context/ToastContext";
+import { useEventTime } from "../utils/eventTime";
 
 const EMPTY = { full_name: "", company_name: "", email: "" };
 
@@ -14,6 +15,7 @@ export default function AdminAttendees() {
   const [form, setForm] = useState(EMPTY);
   // eslint-disable-next-line no-unused-vars -- used by the Add an attendee panel, commented out in the JSX below
   const [saving, setSaving] = useState(false);
+  const eventTime = useEventTime();
   const [sync, setSync] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [page, setPage] = useState(1);
@@ -131,15 +133,11 @@ export default function AdminAttendees() {
                   : <>
                       CRM event code <strong>{sync.event_code}</strong>.{" "}
                       {sync.synced_at
-                        ? `${sync.synced_count} delegates copied on ${new Date(sync.synced_at).toLocaleString()}. Press Sync now to fetch the list again.`
+                        ? `${sync.synced_count} delegates copied on ${eventTime(sync.synced_at)}. Press Sync now to fetch the list again.`
                         : "Not copied yet. The first visitor to the site fetches the list, or press Sync now."}{" "}
                       {/* The daily sync, from the second day on, until the event's last day is over. */}
                       {sync.refresh_active
-                        ? `The list is fetched again every 24 hours until ${new Date(sync.refresh_until).toLocaleString()}${
-                            sync.time_zone
-                              ? `, 11:59 PM of the last day in ${sync.location || sync.time_zone} (${new Date(sync.refresh_until).toLocaleString(undefined, { timeZone: sync.time_zone, dateStyle: "medium", timeStyle: "short" })} there)`
-                              : ""
-                          }.`
+                        ? `The list is fetched again every 24 hours until ${eventTime(sync.refresh_until)}, 11:59 PM of the last day${sync.location ? ` in ${sync.location}` : ""}.`
                         : sync.refresh_until
                           ? "The event is over, the daily sync has stopped."
                           : "The event's last day could not be read from the agenda, so there is no daily sync."}

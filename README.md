@@ -28,7 +28,7 @@ The bare home page `/` shows a "500 Internal Server Error" page. An unknown code
 
 ## Events
 
-Each event is one entry in `backend/events.json`, keyed by its code, with its name, media, links and Wi-Fi, and the name of its own MySQL database. See `backend/README.md` to add an event.
+Each event is one entry in `backend/events.json`, keyed by its code, with the name of its own MySQL database and its CRM code. The event's name, colour, media, links, Wi-Fi and home menu are kept in that database and edited in the admin panel on the Event Details page. See `backend/README.md` to add an event and `DEPLOYMENT.md` to deploy.
 
 The home menu and the feedback questions are the same for every event. Change them in `frontend/src/EventMobileMenu.jsx` and `frontend/src/feedback/config/feedbackQuestions.js`.
 

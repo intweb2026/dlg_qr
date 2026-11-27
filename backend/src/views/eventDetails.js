@@ -5,6 +5,7 @@ const path = require("path");
 const config = require("../config");
 const { query } = require("../db");
 const details = require("../eventDetails");
+const { refreshEventDates } = require("../eventDates");
 const uploads = require("../uploads");
 const v = require("../validation");
 const wifiQr = require("../wifiQr");
@@ -24,6 +25,8 @@ async function saveDetailsAndQr(event, data) {
   const { wifiQr: ignored, ...fields } = data;
   const before = await details.loadDetailsRow(event);
   let row = await details.saveDetails(event, fields);
+  // The event dates are read from the website, so a changed website link reads them from the new site at once.
+  if (row.website_url !== before.website_url) await refreshEventDates(await details.withEventDetails(event), "website link changed");
   // Anything the code is made from, the network name, password, security or hidden setting.
   const changed = ["wifi_network", "wifi_password", "wifi_security", "wifi_hidden"].some((column) => row[column] !== before[column]);
   if (!changed && !(await wifiQr.isMissing(event.code, row))) return { row, qrUpdated: null };

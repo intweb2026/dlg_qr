@@ -3,6 +3,7 @@
 // Without GEMINI_API_KEY the endpoint answers 503 and the form keeps the original text.
 
 const config = require("../config");
+const logbook = require("../logbook");
 
 // The model and API address come from config.js (GEMINI_MODEL, GEMINI_API_URL). When Google answers that the model
 // is overloaded or it cannot be reached, the backup models below are tried in turn, so a busy model does not stop the
@@ -49,26 +50,43 @@ Rules:
  */
 async function askModel(model, apiKey, text, prompt = {}) {
   const { system = SYSTEM, intro = "Attendee's note:", schema = RESPONSE_SCHEMA, temperature = 0.4, maxOutputTokens = 400 } = prompt;
-  const res = await fetch(`${API_URL}/${encodeURIComponent(model)}:generateContent`, {
+  const elapsed = logbook.stopwatch();
+  const logged = {
+    kind: "gemini",
+    target: `${API_URL}/${encodeURIComponent(model)}:generateContent`,
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: "user", parts: [{ text: `${intro}\n${text}` }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: schema,
-        temperature,
-        maxOutputTokens,
-      },
-    }),
-  });
+    summary: `${prompt.label || "Testimonial suggestion"}, ${model}`,
+    by: "feedback form",
+  };
+  let res;
+  try {
+    res = await fetch(logged.target, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: `${intro}\n${text}` }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: schema,
+          temperature,
+          maxOutputTokens,
+        },
+      }),
+    });
+  } catch (err) {
+    await logbook.record({ ...logged, ok: false, ms: elapsed(), error: err.message });
+    throw err;
+  }
   if (!res.ok) {
     const err = new Error(`Gemini ${model} answered ${res.status}, ${(await res.text()).slice(0, 300)}`);
     err.status = res.status;
+    // The attendee's text and the AI's answer are not kept in the log, only whether the call worked.
+    await logbook.record({ ...logged, ok: false, status: res.status, ms: elapsed(), error: err.message });
     throw err;
   }
+  await logbook.record({ ...logged, ok: true, status: res.status, ms: elapsed() });
   return res.json();
 }
 

@@ -132,3 +132,27 @@ CREATE TABLE IF NOT EXISTS `menu_items` (
   PRIMARY KEY (`id`),
   KEY `menu_items_sort_order_idx` (`sort_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Everything this app sends out or asks of another service, newest first in the admin Logbook page. One row per
+-- attempt, see src/logbook.js. Secrets and attendees' answers are never stored, only a short summary and the other
+-- side's reply cut to a short length. Rows older than timing.logbook.keepFor are deleted.
+CREATE TABLE IF NOT EXISTS `logbook` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  -- crm_webhook, crm_sync, email or gemini
+  `kind` varchar(30) NOT NULL,
+  -- The address called, or the people an email went to.
+  `target` varchar(500) NOT NULL DEFAULT '',
+  `method` varchar(10) NOT NULL DEFAULT '',
+  `ok` tinyint(1) NOT NULL DEFAULT 0,
+  `http_status` int DEFAULT NULL,
+  `duration_ms` int unsigned DEFAULT NULL,
+  `summary` varchar(500) NOT NULL DEFAULT '',
+  `response` text,
+  `error` varchar(1000) NOT NULL DEFAULT '',
+  -- What started it, for example "lucky draw spin", "automatic" or "admin benny".
+  `triggered_by` varchar(150) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  KEY `logbook_created_idx` (`created_at`),
+  KEY `logbook_kind_idx` (`kind`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

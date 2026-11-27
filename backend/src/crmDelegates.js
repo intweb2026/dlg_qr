@@ -10,8 +10,9 @@
 // location, see eventDates.js. An admin can still press Sync now on the Attendees page at any time, also after.
 const config = require("./config");
 const { query, transaction } = require("./db");
-const { eventSchedule } = require("./eventDates");
+const { eventSchedule, refreshEventDates } = require("./eventDates");
 const { loadSettings } = require("./models");
+const logbook = require("./logbook");
 const { collapseSpaces, isoDate } = require("./utils");
 
 // Timeouts and intervals are in config.js, timing.crmSync.
@@ -73,7 +74,9 @@ function listFrom(body) {
   return null;
 }
 
-async function getPage(url) {
+async function getPage(url, by = "") {
+  const elapsed = logbook.stopwatch();
+  const logged = { kind: "crm_sync", target: url, method: "GET", by };
   let res;
   try {
     res = await fetch(url, {
@@ -81,6 +84,7 @@ async function getPage(url) {
       signal: AbortSignal.timeout(SYNC.requestTimeout),
     });
   } catch (err) {
+    await logbook.record({ ...logged, ok: false, ms: elapsed(), error: `The CRM could not be reached, ${err.message}` });
     throw new CrmSyncError(`The CRM could not be reached, ${err.message}`);
   }
   const text = await res.text();
@@ -88,23 +92,35 @@ async function getPage(url) {
   try {
     body = JSON.parse(text);
   } catch (err) {
+    await logbook.record({ ...logged, ok: false, status: res.status, ms: elapsed(), error: "The reply is not JSON.", response: text });
     throw new CrmSyncError(`The CRM answered ${res.status} with a reply that is not JSON.`);
   }
   if (!res.ok) {
     const detail = body && typeof body.detail === "string" ? `, ${body.detail}` : "";
+    await logbook.record({ ...logged, ok: false, status: res.status, ms: elapsed(), error: `The CRM answered ${res.status}${detail}`, response: body });
     throw new CrmSyncError(`The CRM answered ${res.status}${detail}`);
   }
+  // The delegates themselves are not kept in the log, only how many came.
+  const found = listFrom(body);
+  await logbook.record({
+    ...logged,
+    ok: Boolean(found),
+    status: res.status,
+    ms: elapsed(),
+    summary: found ? `${found.length} delegate${found.length === 1 ? "" : "s"} received` : "",
+    error: found ? "" : "The reply has no list of delegates.",
+  });
   return body;
 }
 
 /** Every delegate the CRM has for the event, without duplicates. */
-async function fetchDelegates(event) {
+async function fetchDelegates(event, by = "") {
   const first = new URL(config.crmDataApiUrl);
   first.searchParams.set("event_code", event.event_code);
   const items = [];
   let url = first.href;
   for (let page = 0; url && page < MAX_PAGES; page += 1) {
-    const body = await getPage(url);
+    const body = await getPage(url, by);
     const list = listFrom(body);
     if (!list) throw new CrmSyncError("The CRM reply has no list of delegates.");
     items.push(...list);
@@ -203,14 +219,17 @@ async function applyDelegates(delegates) {
  * Fetches the event's delegates and saves them. Calls made while a sync is running share it. Throws CrmSyncError
  * when the event cannot sync or the CRM fails, the attendee list is then left as it was.
  */
-function syncDelegates(event) {
+function syncDelegates(event, by = "") {
   const s = eventState(event.code);
   if (s.running) return s.running;
   s.running = (async () => {
     try {
+      // The event's dates are read again with the delegates, so they stay in step with the CRM and a changed date takes
+      // effect at once. It never fails the sync, a failed read keeps the dates last read.
+      await refreshEventDates(event, by || "CRM sync");
       const reason = syncDisabledReason(event);
       if (reason) throw new CrmSyncError(reason);
-      const { delegates, unnamed } = await fetchDelegates(event);
+      const { delegates, unnamed } = await fetchDelegates(event, by);
       const result = { fetched: delegates.length, skipped: unnamed, ...(await applyDelegates(delegates)) };
       Object.assign(s, { at: new Date(), ok: true, error: null, result, done: s.done || delegates.length > 0 });
       return result;
@@ -242,7 +261,7 @@ async function refreshIfDue(event, s) {
   if (!syncedAt || Date.now() - syncedAt.getTime() < SYNC.refreshAfter) return;
   const until = await refreshUntil(event);
   if (!until || Date.now() > until.getTime()) return;
-  syncDelegates(event)
+  syncDelegates(event, "daily sync")
     .then((r) => console.log(`${event.code}: daily CRM delegates sync, ${r.fetched} fetched, ${r.created} added, ${r.removed} removed`))
     .catch((err) => console.error(`${event.code}: daily CRM delegates sync failed, ${err.message}`));
 }
@@ -268,7 +287,7 @@ async function syncOnFirstVisit(event) {
     }
     if (s.at && Date.now() - s.at.getTime() < SYNC.firstSyncRetry) return;
   }
-  await syncDelegates(event).catch((err) => {
+  await syncDelegates(event, "first visit to the site").catch((err) => {
     console.error(`${event.code}: CRM delegates sync failed, ${err.message}`);
   });
 }

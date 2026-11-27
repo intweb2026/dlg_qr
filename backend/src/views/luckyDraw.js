@@ -4,6 +4,7 @@ const config = require("../config");
 const { query } = require("../db");
 const { feedbackResponsesPayload } = require("./admin");
 const m = require("../models");
+const logbook = require("../logbook");
 const { padLengthFor, toInt, truthy } = require("../utils");
 
 // Lucky draw, public so the /lucky-draw page works without signing in.
@@ -46,12 +47,22 @@ async function spin(req, res) {
 async function sendToCrm(req, res) {
   if (!config.sendFeedbackSubmissionToCrm || !config.crmWebhookUrl || !config.crmApiKey) return res.json({ sent: false, reason: "disabled" });
   const payload = await feedbackResponsesPayload(req.event);
+  const elapsed = logbook.stopwatch();
+  const logged = {
+    kind: "crm_webhook",
+    target: config.crmWebhookUrl,
+    method: "POST",
+    summary: `${payload.count} feedback response${payload.count === 1 ? "" : "s"} sent`,
+    by: req.user ? `admin ${req.user.username}` : "lucky draw spin",
+  };
   try {
     const crm = await postToCrm(payload);
+    await logbook.record({ ...logged, ok: crm.ok, status: crm.status, ms: elapsed(), response: crm.body });
     if (!crm.ok) console.error(`CRM webhook answered ${crm.status}`);
     // The CRM's own status and reply, and the payload that was sent, so they can be read in the Network tab.
     return res.json({ sent: crm.ok, crm_status: crm.status, crm_response: crm.body, payload });
   } catch (err) {
+    await logbook.record({ ...logged, ok: false, ms: elapsed(), error: err.message });
     console.error(`CRM webhook failed: ${err.message}`);
     return res.status(502).json({ sent: false, crm_status: null, detail: `The CRM could not be reached, ${err.message}`, payload });
   }

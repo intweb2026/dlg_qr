@@ -1,6 +1,7 @@
 const { syncOnFirstVisit } = require("../crmDelegates");
 const { formState, notOpenJson, stateJson } = require("../formOpening");
 const { query, transaction } = require("../db");
+const { eventTimeZone } = require("../eventDates");
 const { menuItems } = require("../eventDetails");
 const { publicConfig, speakerReviewSettings } = require("../events");
 const { ALIAS_COMPANY, ALIAS_NAME, attendeeLookupJson, getAttendee } = require("../models");
@@ -14,13 +15,16 @@ async function eventConfig(req, res) {
   // Every page loads the config, so the first visitor starts the one CRM sync. It runs in the background, the
   // attendee lists below wait for it.
   syncOnFirstVisit(req.event).catch((err) => console.error(`${req.event.code}: CRM delegates sync failed, ${err.message}`));
-  const [items, state] = await Promise.all([menuItems({ visibleOnly: true }), formState(req.event)]);
+  // The event's time zone, which every time in the admin panel is shown in. A slow website does not hold the page up, the
+  // zone is then left out and the next load has it.
+  const slow = new Promise((resolve) => setTimeout(resolve, 2000, null).unref());
+  const [items, state, zone] = await Promise.all([menuItems({ visibleOnly: true }), formState(req.event), Promise.race([eventTimeZone(req.event), slow])]);
   const menu = items.map(({ is_visible, ...item }) => item);
   // The Wi-Fi network, password and QR code are left out, the Wi-Fi page loads them from /wifi/ when it is opened.
   const { wifi, ...config } = publicConfig(req.event);
   const { wifiQr, ...media } = config.media || {};
   // Whether the feedback form is open, closed by an admin, or waiting for the event's first day, see formOpening.js.
-  res.json({ ...config, media, menu, ...stateJson(state) });
+  res.json({ ...config, media, menu, ...stateJson(state), event_time_zone: zone });
 }
 
 /** The Wi-Fi network, password and QR code, only for the Wi-Fi password page. */

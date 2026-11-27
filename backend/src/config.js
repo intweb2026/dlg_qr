@@ -61,7 +61,7 @@ const timing = {
   // The event website's agenda and location, see eventDates.js.
   eventDates: {
     requestTimeout: 5 * SECOND,
-    cache: 6 * HOUR, // a good answer is reused this long
+    cache: DAY, // a good answer is reused this long, the CRM sync reads it again with the delegates, see crmDelegates.js
     failureCache: 10 * MINUTE, // a failed or empty answer is reused this long
     noZoneGrace: 36 * HOUR, // without a time zone, the last day is over everywhere this long after it starts in UTC
     earliestZoneLead: 14 * HOUR, // without a time zone, the first day starts this long before it starts in UTC (UTC+14)
@@ -71,6 +71,10 @@ const timing = {
     check: HOUR, // how often the server looks for a report that is due
     firstCheck: MINUTE, // the first look, after the server starts
     autoWindow: 7 * DAY, // a report is sent by itself only within this long of its time
+  },
+  // The logbook of calls to the CRM, email and Gemini, see logbook.js.
+  logbook: {
+    keepFor: 90 * DAY, // rows older than this are deleted
   },
   // Uploaded media, see uploads.js.
   uploads: {

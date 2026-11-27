@@ -3,7 +3,6 @@ import api, { errorMessage, eventKey, padId } from "../api";
 import SlotMachine from "../components/SlotMachine";
 import Confetti from "../components/Confetti";
 import NameScramble from "../components/NameScramble";
-import ConfirmDialog from "../components/ConfirmDialog";
 import { useToast } from "../context/ToastContext";
 
 // Survives a page refresh, so a landed number or a finished draw is never lost mid-event.
@@ -189,7 +188,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
 
   const poolEmpty = !pool || pool.count === 0;
   const outOfSpins = maxSpins > 0 && attempts >= maxSpins;
-  const [confirmSpin, setConfirmSpin] = useState(false);
   const canSpin = !poolEmpty && !outOfSpins && phase === "idle";
   const canReveal = phase === "landed";
   // A new draw starts only once this one is finished. The second case covers a spin cut off by a
@@ -461,11 +459,11 @@ export default function LuckyDraw({ autoFullscreen = false }) {
           )}
         </div>
 
-        {/* The same big Spin button for every draw, "Spin Again" once it has spun. After a reveal it asks first, so a
-            winner is not replaced by a mis-click. */}
+        {/* The same big Spin button for every draw, "Spin Again" once it has spun. Spin Again starts the next draw at once,
+            with no question first. */}
         <div className="dlgfb-draw-controls">
           {canStartNew && (
-            <button className="dlgfb-btn dlgfb-btn-draw dlgfb-btn-lg" onClick={() => setConfirmSpin(true)} disabled={poolEmpty}>
+            <button className="dlgfb-btn dlgfb-btn-draw dlgfb-btn-lg" onClick={spinNext} disabled={poolEmpty}>
               Spin Again
             </button>
           )}
@@ -490,22 +488,6 @@ export default function LuckyDraw({ autoFullscreen = false }) {
             </button>
           )}
         </div>
-
-        {/* Inside the stage, so the dialog still shows in full screen */}
-        {confirmSpin && (
-          <ConfirmDialog
-            title="Spin again"
-            confirmLabel="Spin Again"
-            tone="primary"
-            onConfirm={() => {
-              setConfirmSpin(false);
-              spinNext();
-            }}
-            onCancel={() => setConfirmSpin(false)}
-          >
-             Do you want to spin again?
-          </ConfirmDialog>
-        )}
 
         {/* {phase === "revealed" && <p className="dlgfb-draw-note">This draw is finished. Start the next draw for the next prize.</p>} */}
       </section>

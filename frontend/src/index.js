@@ -21,6 +21,7 @@ const LuckyDrawStandalone = feedbackPage("LuckyDrawStandalone");
 const AdminHome = feedbackPage("AdminHome");
 const AdminWifi = feedbackPage("AdminWifi");
 const AdminUsers = feedbackPage("AdminUsers");
+const AdminLogbook = feedbackPage("AdminLogbook");
 const AdminAttendees = feedbackPage("AdminAttendees");
 const AdminEventDetails = feedbackPage("AdminEventDetails");
 const NotFound = feedbackPage("NotFound");
@@ -52,6 +53,7 @@ function App() {
             <Route index element={load(AdminHome)} />
             <Route path="wifi" element={load(AdminWifi)} />
             <Route path="users" element={load(AdminUsers)} />
+            <Route path="logbook" element={load(AdminLogbook)} />
             <Route path="feedback-submission" element={load(AdminSubmissions)} />
             <Route path="attendees" element={load(AdminAttendees)} />
             <Route path="event-details" element={load(AdminEventDetails)} />

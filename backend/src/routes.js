@@ -58,6 +58,11 @@ route("/admin/submissions/:pk/suspend/", { patch: [requireAdmin, admin.submissio
 route("/admin/feedback-report/", { get: [requireAdmin, admin.feedbackReportStatus] });
 route("/admin/feedback-report/pdf/", { get: [requireAdmin, admin.feedbackReportPdf] });
 route("/admin/feedback-report/send/", { post: [requireAdmin, admin.feedbackReportSend] });
+// The event's dates and where they come from, and the Refresh now button
+route("/admin/event-dates/", { get: [requireAdmin, admin.eventDatesStatus] });
+route("/admin/event-dates/refresh/", { post: [requireAdmin, admin.eventDatesRefresh] });
+// Everything sent to the CRM, email and Gemini, with the answer and the time
+route("/admin/logbook/", { get: [requireAdmin, admin.logbookList] });
 // CRM export, opened by the one EXPORT_ACCESS_TOKEN bearer token, not by an admin login.
 route("/admin/interested-attendees/", { get: [requireAccessToken, admin.interestedAttendees] });
 route("/admin/feedback-responses/", { get: [requireAccessToken, admin.feedbackResponses] });

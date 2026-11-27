@@ -15,6 +15,7 @@ const ADDED_COLUMNS = [
   ["event_details", "wifi_security", "varchar(10) NOT NULL DEFAULT 'WPA'", "wifi_password"],
   ["event_details", "wifi_hidden", "tinyint(1) NOT NULL DEFAULT 0", "wifi_security"],
   ["admin_users", "role", "varchar(20) NOT NULL DEFAULT 'admin'", "is_active"],
+  ["attendees", "is_walk_in", "tinyint(1) NOT NULL DEFAULT 0", "company_name"],
   ["feedback_submissions", "userAliesName", "varchar(255) NOT NULL DEFAULT ''", "feedback_data"],
   ["feedback_submissions", "userComapnyAliesName", "varchar(255) NOT NULL DEFAULT ''", "userAliesName"],
   ["form_settings", "crm_synced_at", "datetime(6) DEFAULT NULL", "spin_duration_seconds"],
@@ -24,6 +25,13 @@ const ADDED_COLUMNS = [
   ["form_settings", "report_sent_count", "int unsigned DEFAULT NULL", "report_sent_at"],
   ["form_settings", "form_closed", "tinyint(1) NOT NULL DEFAULT 0", "form_open_auto"],
 ];
+
+// [old table, new table, [old index, new index]...], tables that were renamed. The old table keeps its rows. This runs before
+// db/schema.sql, which would otherwise make an empty table under the new name.
+const RENAMED_TABLES = [["outbound_log", "logbook", [["outbound_log_created_idx", "logbook_created_idx"], ["outbound_log_kind_idx", "logbook_kind_idx"]]]];
+
+// [table, index, columns], indexes of db/schema.sql that an older table made before them does not have.
+const ADDED_INDEXES = [["attendees", "attendees_is_walk_in_idx", "`is_walk_in`"]];
 
 // [table, column] no longer used, dropped from databases made before they were removed from db/schema.sql.
 const DROPPED_COLUMNS = [["event_details", "venue_name"]];
@@ -41,6 +49,20 @@ async function migrate(event, { log = () => {} } = {}) {
   }
 
   await withDatabase(event.database, async () => {
+    for (const [from, to, indexes] of RENAMED_TABLES) {
+      const tables = await query("SELECT TABLE_NAME AS name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (?, ?)", [from, to]);
+      const names = tables.map((t) => t.name);
+      if (!names.includes(from) || names.includes(to)) continue;
+      await query(`RENAME TABLE \`${from}\` TO \`${to}\``);
+      for (const [oldIndex, newIndex] of indexes) {
+        const found = await query(
+          "SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?",
+          [to, oldIndex]
+        );
+        if (found.length) await query(`ALTER TABLE \`${to}\` RENAME INDEX \`${oldIndex}\` TO \`${newIndex}\``);
+      }
+      log(`${event.code}: renamed table ${from} to ${to}.`);
+    }
     const sql = fs.readFileSync(SCHEMA, "utf8").replace(/^\s*--.*$/gm, "");
     for (const statement of sql.split(";").map((s) => s.trim()).filter(Boolean)) {
       await query(statement);
@@ -54,6 +76,15 @@ async function migrate(event, { log = () => {} } = {}) {
       if (found.length) continue;
       await query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition} AFTER \`${after}\``);
       log(`${event.code}: added ${table}.${column}.`);
+    }
+    for (const [table, index, columns] of ADDED_INDEXES) {
+      const found = await query(
+        "SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?",
+        [table, index]
+      );
+      if (found.length) continue;
+      await query(`ALTER TABLE \`${table}\` ADD INDEX \`${index}\` (${columns})`);
+      log(`${event.code}: added index ${index} on ${table}.`);
     }
     for (const [table, column] of DROPPED_COLUMNS) {
       const found = await query(

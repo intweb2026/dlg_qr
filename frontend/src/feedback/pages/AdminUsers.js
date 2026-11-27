@@ -4,6 +4,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { useEventTime } from "../utils/eventTime";
 import { ADMIN, ROLE_LABELS, SUPPORT } from "../utils/roles";
 
 const ROLE_HELP = {
@@ -113,6 +114,7 @@ function UserModal({ user, self, onClose, onSaved }) {
 
 export default function AdminUsers() {
   const notify = useToast();
+  const eventTime = useEventTime();
   const { user: me } = useAuth();
   const [list, setList] = useState(null);
   const [editing, setEditing] = useState(null); // null closed, "new", or a user
@@ -186,7 +188,7 @@ export default function AdminUsers() {
                 <td data-label="Full name">{u.full_name || "---"}</td>
                 <td data-label="Role"><span className={`dlgfb-badge ${u.role === ADMIN ? "dlgfb-badge-active" : "dlgfb-badge-self-registered"}`}>{ROLE_LABELS[u.role] || u.role}</span></td>
                 <td data-label="Status">{u.is_active ? <span className="dlgfb-badge dlgfb-badge-active">Active</span> : <span className="dlgfb-badge dlgfb-badge-suspended">Disabled</span>}</td>
-                <td data-label="Last sign in">{u.last_login ? new Date(u.last_login).toLocaleString() : "Never"}</td>
+                <td data-label="Last sign in">{u.last_login ? eventTime(u.last_login) : "Never"}</td>
                 <td className="dlgfb-text-right dlgfb-actions-cell">
                   <button className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-light dlgfb-mr-2" onClick={() => setEditing(u)}>Edit</button>
                   <button className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-outline-danger" disabled={isMe(u)} title={isMe(u) ? "You cannot delete your own account" : undefined}

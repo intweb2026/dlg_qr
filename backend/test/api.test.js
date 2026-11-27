@@ -71,7 +71,7 @@ after(async () => {
 
 beforeEach(async () => {
   for (const q of [query, queryB]) {
-    for (const table of ["lucky_draw_winners", "feedback_submissions", "attendees", "admin_tokens"]) {
+    for (const table of ["lucky_draw_winners", "feedback_submissions", "attendees", "admin_tokens", "logbook"]) {
       await q(`DELETE FROM ${table}`);
     }
     await q("UPDATE form_settings SET form_status = 'active', max_spin_attempts = 0, spin_duration_seconds = 5");
@@ -616,6 +616,9 @@ describe("user roles", () => {
       ["GET", "/admin/feedback-report/"],
       ["GET", "/admin/feedback-report/pdf/"],
       ["POST", "/admin/feedback-report/send/", {}],
+      ["GET", "/admin/logbook/"],
+      ["GET", "/admin/event-dates/"],
+      ["POST", "/admin/event-dates/refresh/", {}],
       ["GET", "/admin/attendees/"],
       ["POST", "/admin/attendees/", { full_name: "X" }],
       ["GET", "/admin/attendees/sync/"],
@@ -1485,9 +1488,101 @@ describe("feedback submissions report", () => {
     const res = await fetch(`${root}/testa/admin/feedback-report/pdf/`, { headers: { Authorization: `Token ${token}` } });
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("content-type"), "application/pdf");
-    assert.match(res.headers.get("content-disposition"), /testa-feedback-submissions-\d{4}-\d{2}-\d{2}\.pdf/);
+    assert.match(res.headers.get("content-disposition"), /filename="[^"]+_feedback_submission_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_\(1\)\.pdf"/);
     assert.equal(Buffer.from(await res.arrayBuffer()).subarray(0, 5).toString(), "%PDF-");
     assert.equal((await fetch(`${root}/testa/admin/feedback-report/pdf/`)).status, 401);
+  });
+
+  test("the report file name is event name, feedback_submission, date and time in the event's zone, and the count", () => {
+    const at = (iso, timeZone) => ({ date: new Date(iso), timeZone });
+    // 2026-11-27 18:30 UTC is 10:30 in Los Angeles in winter, 11:30 in summer (2026-07-01), and 00:00 the next day in Kolkata.
+    assert.equal(report.reportFileName({ code: "x", name: "Agri AI Summit 2026" }, 25, at("2026-11-27T18:30:00Z", "America/Los_Angeles")), "Agri_AI_Summit_2026_feedback_submission_2026-11-27_10-30_(25).pdf");
+    assert.equal(report.reportFileName({ code: "x", name: "A/B: Café \"Expo\"" }, 0, at("2026-07-01T18:30:00Z", "America/Los_Angeles")), "AB_Cafe_Expo_feedback_submission_2026-07-01_11-30_(0).pdf");
+    assert.equal(report.reportFileName({ code: "x", name: "Summit" }, 4, at("2026-11-27T18:30:00Z", "Asia/Kolkata")), "Summit_feedback_submission_2026-11-28_00-00_(4).pdf");
+    // No zone known, or a bad one, gives UTC.
+    assert.equal(report.reportFileName({ code: "evt1", name: "" }, 3, at("2026-11-27T09:05:00Z", null)), "evt1_feedback_submission_2026-11-27_09-05_(3).pdf");
+    assert.equal(report.reportFileName({ code: "evt1", name: "" }, 3, at("2026-11-27T09:05:00Z", "Not/AZone")), "evt1_feedback_submission_2026-11-27_09-05_(3).pdf");
+  });
+
+  test("the file name of the download and the email follows the event's time zone", async () => {
+    const token = await login("benny");
+    const tail = (name) => name.slice(name.indexOf("_feedback_submission_"));
+    const stamp = (timeZone) => tail(report.reportFileName({ code: "x", name: "" }, 0, { timeZone }));
+    EVENT_A.timeZone = "Pacific/Kiritimati"; // UTC+14, never the same date and hour as UTC
+    try {
+      const before = stamp("Pacific/Kiritimati");
+      const res = await fetch(`${root}/testa/admin/feedback-report/pdf/`, { headers: { Authorization: `Token ${token}` } });
+      const after = stamp("Pacific/Kiritimati");
+      const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition"))[1];
+      assert.ok([before, after].includes(tail(name)), `${name} is not in the event's zone`);
+      assert.notEqual(tail(name), stamp("UTC"));
+    } finally {
+      delete EVENT_A.timeZone;
+    }
+  });
+
+  test("the event's logo is drawn in the report header, and a missing or bad logo changes nothing", async () => {
+    const fs = require("fs");
+    const path = require("path");
+    const folder = path.join(config.uploadsDir, "testa");
+    fs.mkdirSync(folder, { recursive: true });
+    const png = await require("qrcode").toBuffer("logo", { width: 120 });
+    fs.writeFileSync(path.join(folder, "logo-test.png"), png);
+    fs.writeFileSync(path.join(folder, "logo-test.svg"), "<svg xmlns='http://www.w3.org/2000/svg'/>");
+    const build = async (logo) => {
+      const { pdf } = await db.withDatabase(EVENT_A.database, () => report.buildReportPdf({ ...EVENT_A, media: { logo } }));
+      assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
+      return pdf.toString("latin1").includes("/Subtype /Image");
+    };
+    try {
+      assert.equal(await build("/uploads/testa/logo-test.png"), true);
+      assert.equal(await build(""), false);
+      assert.equal(await build("/uploads/testa/logo-test.svg"), false); // not a PNG or JPEG
+      assert.equal(await build("/uploads/testa/missing.png"), false); // file gone
+      assert.equal(await build("/uploads/testb/logo-test.png"), false); // another event's folder
+      assert.equal(await build("/uploads/testa/../logo-test.png"), false);
+    } finally {
+      fs.rmSync(path.join(folder, "logo-test.png"), { force: true });
+      fs.rmSync(path.join(folder, "logo-test.svg"), { force: true });
+    }
+  });
+
+  test("the email and the PDF give the attendee counts and the raffle winners", async () => {
+    const registered = await createAttendee("Priya Sharma", "priya@example.com", "Shell");
+    await createAttendee("Not Yet", "noty@example.com", "BP"); // registered, no submission
+    await createAttendee("Third Person", "third@example.com", "Esso"); // registered, no submission
+    const sub1 = await createSubmission(registered);
+    const walk = await query("INSERT INTO attendees (full_name, email, company_name, is_walk_in, created_at) VALUES ('Walk In', 'walk@example.com', 'Acme', 1, UTC_TIMESTAMP(6))");
+    const sub2 = await createSubmission(walk.insertId);
+    await query("UPDATE feedback_submissions SET is_suspended = 1 WHERE id = ?", [sub2]);
+    await query("INSERT INTO lucky_draw_winners (submission_id, attempt_number, drawn_at) VALUES (?, 1, UTC_TIMESTAMP(6))", [sub1]);
+    const built = await db.withDatabase(EVENT_A.database, () => report.buildReportPdf({ ...EVENT_A, name: "Summit" }));
+    const s = built.summary;
+    assert.deepEqual(
+      [s.total, s.registered, s.notRegistered, s.submissions, s.active, s.suspended, s.notSubmitted],
+      [4, 3, 1, 2, 1, 1, 2]
+    );
+    assert.equal(s.winners.length, 1);
+    assert.deepEqual([s.winners[0].name, s.winners[0].company, s.winners[0].draw], ["Priya Sharma", "Shell", 1]);
+    assert.match(s.winners[0].entry, /^\d+$/);
+    // The email carries them, as plain text and as HTML.
+    const token = await login("benny");
+    assert.equal((await api("POST", "/admin/feedback-report/send/", { token })).status, 200);
+    const mail = sent[sent.length - 1];
+    assert.match(mail.text, /Total attendees\s+4/);
+    assert.match(mail.text, /Registered attendees\s+3/);
+    assert.match(mail.text, /Not registered attendees\s+1/);
+    assert.match(mail.text, /Submissions\s+2/);
+    assert.match(mail.text, /Not submitted\s+2/);
+    assert.match(mail.text, /Raffle draw winners\n1\. Priya Sharma, Shell, entry \d+, drawn /);
+    assert.ok(!mail.text.includes("Attached are all"));
+    assert.match(mail.html, /Raffle draw winners/);
+    assert.match(mail.html, /<strong>4<\/strong>/);
+    // No winner yet.
+    await query("DELETE FROM lucky_draw_winners");
+    assert.match((await db.withDatabase(EVENT_A.database, () => report.buildReportPdf(EVENT_A))).summary.winners.length === 0 ? "none" : "some", /none/);
+    assert.equal((await api("POST", "/admin/feedback-report/send/", { token })).status, 200);
+    assert.match(sent[sent.length - 1].text, /No winner has been drawn\./);
   });
 
   test("the day after the event ends it is emailed once, with the PDF", async () => {
@@ -1502,6 +1597,7 @@ describe("feedback submissions report", () => {
     assert.deepEqual(sent[0].to, config.feedbackReportTo.join(", "));
     assert.equal(sent[0].attachments[0].contentType, "application/pdf");
     assert.equal(sent[0].attachments[0].content.subarray(0, 5).toString(), "%PDF-");
+    assert.match(sent[0].attachments[0].filename, /_feedback_submission_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}_\(\d+\)\.pdf$/);
     const [row] = await query("SELECT report_sent_at, report_sent_count FROM form_settings WHERE id = 1");
     assert.ok(row.report_sent_at);
     assert.equal(row.report_sent_count, await count("feedback_submissions"));
@@ -1885,5 +1981,297 @@ describe("CRM registered delegates", () => {
     assert.equal(r.data.reason, "CRM_DATA_API_KEY is not set in the backend .env.");
     await api("GET", "/registered-attendees/");
     assert.equal(requests.length, 0);
+  });
+});
+
+describe("logbook", () => {
+  const report = require("../src/feedbackReport");
+  let hook;
+  let hookStatus = 200;
+  let token;
+  const logOf = async (query_ = "") => (await api("GET", `/admin/logbook/${query_}`, { token })).data;
+
+  before(async () => {
+    hook = http.createServer((req, res) => {
+      req.resume();
+      res.writeHead(hookStatus, { "Content-Type": "application/json" }).end(JSON.stringify({ received: true }));
+    });
+    await new Promise((resolve) => hook.listen(0, "127.0.0.1", resolve));
+    config.sendFeedbackSubmissionToCrm = true;
+    config.crmWebhookUrl = `http://127.0.0.1:${hook.address().port}/webhook/`;
+    config.crmApiKey = "secret-crm-key";
+    config.smtpHost = "smtp.test";
+  });
+
+  after(() => {
+    hook.close();
+    config.sendFeedbackSubmissionToCrm = false;
+    config.crmWebhookUrl = "";
+    config.crmApiKey = "";
+    config.smtpHost = "";
+    report.setMailer(null);
+  });
+
+  beforeEach(async () => {
+    token = await login("benny");
+    hookStatus = 200;
+  });
+
+  test("the CRM post is logged with its status and reply, and never with the key", async () => {
+    const a = await createAttendee("Priya Sharma", "priya@example.com", "Shell");
+    await createSubmission(a);
+    assert.equal((await api("POST", "/lucky-draw/send-to-crm/")).status, 200);
+    hookStatus = 500;
+    await api("POST", "/lucky-draw/send-to-crm/");
+    const { results } = await logOf("?kind=crm_webhook");
+    assert.equal(results.length, 2);
+    const [failed, worked] = results; // newest first
+    assert.deepEqual([worked.ok, worked.http_status, worked.method, worked.triggered_by], [true, 200, "POST", "lucky draw spin"]);
+    assert.match(worked.summary, /^1 feedback response sent$/);
+    assert.match(worked.response, /received/);
+    assert.ok(worked.target.endsWith("/webhook/"));
+    assert.ok(Number.isInteger(worked.duration_ms));
+    assert.match(worked.created_at, /^\d{4}-\d{2}-\d{2}T/);
+    assert.deepEqual([failed.ok, failed.http_status], [false, 500]);
+    // No key and no attendee answers in the log.
+    const text = JSON.stringify(results);
+    assert.ok(!text.includes("secret-crm-key"));
+    assert.ok(!text.includes("priya@example.com"));
+  });
+
+  test("a CRM that cannot be reached is logged with the error", async () => {
+    const saved = config.crmWebhookUrl;
+    config.crmWebhookUrl = "http://127.0.0.1:1/webhook/";
+    try {
+      assert.equal((await api("POST", "/lucky-draw/send-to-crm/")).status, 502);
+    } finally {
+      config.crmWebhookUrl = saved;
+    }
+    const { results } = await logOf("?kind=crm_webhook&ok=0");
+    assert.equal(results.length, 1);
+    assert.equal(results[0].http_status, null);
+    assert.ok(results[0].error.length > 0);
+  });
+
+  test("the report email is logged when sent and when it fails, with who started it", async () => {
+    const sent = [];
+    report.setMailer({ sendMail: async (message) => (sent.push(message), { messageId: "<id-1@test>", accepted: ["a@b.c"], rejected: [] }) });
+    assert.equal((await api("POST", "/admin/feedback-report/send/", { token })).status, 200);
+    report.setMailer({ sendMail: async () => { throw new Error("SMTP down"); } });
+    assert.equal((await api("POST", "/admin/feedback-report/send/", { token })).status, 502);
+    const { results } = await logOf("?kind=email");
+    assert.equal(results.length, 2);
+    const [failed, worked] = results;
+    assert.deepEqual([worked.ok, worked.method, worked.triggered_by], [true, "SMTP", "admin benny"]);
+    assert.match(worked.summary, /^Report with \d+ submissions? sent, .+_feedback_submission_.+\.pdf$/);
+    assert.match(worked.response, /id-1@test/);
+    assert.equal(worked.target, config.feedbackReportTo.join(", "));
+    assert.deepEqual([failed.ok, failed.error], [false, "SMTP down"]);
+  });
+
+  test("the log is for admins, newest first, and can be filtered and paged", async () => {
+    assert.equal((await api("GET", "/admin/logbook/")).status, 401);
+    await api("POST", "/lucky-draw/send-to-crm/");
+    await api("POST", "/lucky-draw/send-to-crm/");
+    await api("POST", "/lucky-draw/send-to-crm/");
+    const all = await logOf();
+    assert.deepEqual(all.kinds, ["crm_webhook", "crm_sync", "email", "gemini", "event_dates"]);
+    assert.ok(all.results.length >= 3);
+    assert.deepEqual(all.results.map((r) => r.id), [...all.results.map((r) => r.id)].sort((x, y) => y - x));
+    const first = await logOf("?limit=2");
+    assert.equal(first.results.length, 2);
+    assert.equal(first.has_more, true);
+    const second = await logOf(`?limit=2&before=${first.next_before}`);
+    assert.ok(second.results.every((r) => r.id < first.next_before));
+    assert.equal((await logOf("?kind=gemini")).results.length, 0);
+  });
+
+  test("a CRM delegates sync is logged with how many delegates came, not who", async () => {
+    const crm = require("../src/crmDelegates");
+    const crmServer = http.createServer((req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify([{ full_name: "Hidden Person", email: "hidden@example.com" }, { full_name: "Other" }]));
+    });
+    await new Promise((resolve) => crmServer.listen(0, "127.0.0.1", resolve));
+    const saved = config.crmDataApiUrl;
+    config.crmDataApiUrl = `http://127.0.0.1:${crmServer.address().port}/api/data/registered_delegates/`;
+    config.crmDataApiKey = "data-key-1";
+    EVENT_A.event_code = "AIU - AD";
+    crm.resetSyncState();
+    try {
+      assert.equal((await api("POST", "/admin/attendees/sync/", { token })).status, 200);
+    } finally {
+      crmServer.close();
+      config.crmDataApiUrl = saved;
+      config.crmDataApiKey = "";
+      delete EVENT_A.event_code;
+      crm.resetSyncState();
+    }
+    const { results } = await logOf("?kind=crm_sync");
+    assert.equal(results.length, 1);
+    assert.deepEqual([results[0].ok, results[0].http_status, results[0].summary, results[0].triggered_by], [true, 200, "2 delegates received", "admin benny"]);
+    assert.ok(!JSON.stringify(results).includes("hidden@example.com"));
+    assert.ok(!JSON.stringify(results).includes("data-key-1"));
+  });
+});
+
+describe("event dates refresh", () => {
+  const dates = require("../src/eventDates");
+  const crm = require("../src/crmDelegates");
+  let site;
+  let agenda;
+  let agendaStatus = 200;
+  let hits = 0;
+  let token;
+
+  const day = (heading) => ({ status: "day", heading });
+
+  before(async () => {
+    site = http.createServer((req, res) => {
+      if (req.url.startsWith("/api/agenda")) {
+        hits += 1;
+        return res.writeHead(agendaStatus, { "Content-Type": "application/json" }).end(JSON.stringify(agenda));
+      }
+      if (req.url.startsWith("/api/data/")) return res.writeHead(200, { "Content-Type": "application/json" }).end("[]");
+      return res.writeHead(404).end();
+    });
+    await new Promise((resolve) => site.listen(0, "127.0.0.1", resolve));
+  });
+
+  after(() => {
+    site.close();
+    delete EVENT_A.links;
+    delete EVENT_A.timeZone;
+    delete EVENT_A.event_code;
+    config.crmDataApiKey = "";
+    dates.resetEventDates();
+    crm.resetSyncState();
+  });
+
+  beforeEach(async () => {
+    token = await login("benny");
+    agendaStatus = 200;
+    hits = 0;
+    agenda = [day("MONDAY, NOVEMBER 9, 2026"), day("TUESDAY, NOVEMBER 10, 2026")];
+    EVENT_A.links = { agendaApi: `http://127.0.0.1:${site.address().port}/api/agenda` };
+    EVENT_A.timeZone = "America/Los_Angeles";
+    dates.resetEventDates();
+    crm.resetSyncState();
+  });
+
+  const info = async () => (await api("GET", "/admin/event-dates/", { token })).data;
+
+  test("the admin panel gets the dates, where they came from and the times that follow", async () => {
+    assert.equal((await api("GET", "/admin/event-dates/")).status, 401);
+    const d = await info();
+    assert.deepEqual([d.start, d.end, d.time_zone], ["2026-11-09", "2026-11-10", "America/Los_Angeles"]);
+    assert.deepEqual(d.sources, { start: "website", end: "website", time_zone: "setting" });
+    assert.equal(d.form_opens_at, "2026-11-09T08:00:00.000Z"); // 12:00 AM in Los Angeles
+    assert.equal(d.sync_until, "2026-11-11T07:59:59.999Z"); // 11:59 PM on the last day
+    assert.equal(d.report_due_at, "2026-11-11T08:00:00.000Z");
+    assert.equal(d.readable, true);
+    assert.ok(d.read_at && d.next_read_at && d.error === null);
+    // The next read is a day after the last one.
+    assert.ok(Math.abs(new Date(d.next_read_at) - new Date(d.read_at) - 24 * 3600 * 1000) < 5000);
+  });
+
+  test("the site config carries the event's time zone, which the admin panel shows every time in", async () => {
+    const r = await api("GET", "/");
+    assert.equal(r.status, 200);
+    assert.equal(r.data.event_time_zone, "America/Los_Angeles");
+    delete EVENT_A.timeZone;
+    dates.resetEventDates();
+    assert.equal((await api("GET", "/")).data.event_time_zone, null); // no website, nothing to take it from
+  });
+
+  test("the dates are read once a day, and again when refreshed", async () => {
+    await info();
+    await info();
+    assert.equal(hits, 1);
+    agenda = [day("MONDAY, NOVEMBER 9, 2026"), day("FRIDAY, NOVEMBER 13, 2026")];
+    assert.equal((await info()).end, "2026-11-10"); // still the saved dates
+    const r = await api("POST", "/admin/event-dates/refresh/", { token });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.end, "2026-11-13");
+    assert.equal(hits, 2);
+    assert.equal((await info()).sync_until, "2026-11-14T07:59:59.999Z");
+  });
+
+  test("the delegates sync reads the dates again with them, Sync now included", async () => {
+    await info();
+    agenda = [day("MONDAY, NOVEMBER 16, 2026"), day("TUESDAY, NOVEMBER 17, 2026")];
+    config.crmDataApiUrl = `http://127.0.0.1:${site.address().port}/api/data/registered_delegates/`;
+    config.crmDataApiKey = "key";
+    EVENT_A.event_code = "AIU - AD";
+    assert.equal((await api("POST", "/admin/attendees/sync/", { token })).status, 200);
+    assert.deepEqual([(await info()).start, (await info()).end], ["2026-11-16", "2026-11-17"]);
+    const { results } = (await api("GET", "/admin/logbook/?kind=event_dates", { token })).data;
+    assert.ok(results.some((r) => r.triggered_by === "admin benny" && r.ok && /^Agenda dates 2026-11-16 to 2026-11-17$/.test(r.summary)));
+  });
+
+  test("a failed read keeps the dates last read and says why", async () => {
+    await info();
+    agendaStatus = 500;
+    const r = (await api("POST", "/admin/event-dates/refresh/", { token })).data;
+    assert.deepEqual([r.start, r.end], ["2026-11-09", "2026-11-10"]);
+    assert.match(r.error, /answered 500/);
+    const { results } = (await api("GET", "/admin/logbook/?kind=event_dates&ok=0", { token })).data;
+    assert.equal(results.length, 1);
+    assert.equal(results[0].http_status, 500);
+    // The next read works and clears the error.
+    agendaStatus = 200;
+    assert.equal((await api("POST", "/admin/event-dates/refresh/", { token })).data.error, null);
+  });
+
+  test("saving a new website link reads the dates from that site at once", async () => {
+    delete EVENT_A.links; // no agendaApi, the agenda is <website>/api/agenda
+    dates.resetEventDates();
+    assert.equal((await info()).readable, false);
+    agenda = [day("MONDAY, NOVEMBER 23, 2026"), day("TUESDAY, NOVEMBER 24, 2026")];
+    const r = await api("PATCH", "/admin/event-details/", { token, body: { website: `http://127.0.0.1:${site.address().port}/` } });
+    assert.equal(r.status, 200, JSON.stringify(r.data));
+    const d = await info();
+    assert.deepEqual([d.start, d.end, d.readable], ["2026-11-23", "2026-11-24", true]);
+    assert.ok(hits >= 1);
+    await api("PATCH", "/admin/event-details/", { token, body: { website: "" } });
+  });
+
+  test("dates set in events.json are shown as settings, and an event without a website has nothing to read", async () => {
+    EVENT_A.eventStartDate = "2026-12-01";
+    EVENT_A.eventEndDate = "2026-12-02";
+    try {
+      const d = await info();
+      assert.deepEqual([d.start, d.end, d.sources.start, d.sources.end], ["2026-12-01", "2026-12-02", "setting", "setting"]);
+    } finally {
+      delete EVENT_A.eventStartDate;
+      delete EVENT_A.eventEndDate;
+    }
+    delete EVENT_A.links;
+    dates.resetEventDates();
+    const none = await info();
+    assert.deepEqual([none.start, none.end, none.readable, none.read_at], [null, null, false, null]);
+  });
+});
+
+describe("logbook table rename", () => {
+  test("migrate renames a table made under the earlier name and keeps its rows", async () => {
+    const [{ n: before }] = await query("SELECT COUNT(*) AS n FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'outbound_log'");
+    assert.equal(before, 0);
+    await query("DROP TABLE logbook");
+    await query(`CREATE TABLE outbound_log (
+      id bigint NOT NULL AUTO_INCREMENT, created_at datetime(6) NOT NULL, kind varchar(30) NOT NULL, target varchar(500) NOT NULL DEFAULT '',
+      method varchar(10) NOT NULL DEFAULT '', ok tinyint(1) NOT NULL DEFAULT 0, http_status int DEFAULT NULL, duration_ms int unsigned DEFAULT NULL,
+      summary varchar(500) NOT NULL DEFAULT '', response text, error varchar(1000) NOT NULL DEFAULT '', triggered_by varchar(150) NOT NULL DEFAULT '',
+      PRIMARY KEY (id), KEY outbound_log_created_idx (created_at), KEY outbound_log_kind_idx (kind, id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci`);
+    await query("INSERT INTO outbound_log (created_at, kind, summary, ok) VALUES (UTC_TIMESTAMP(6), 'email', 'kept row', 1)");
+    await migrate(EVENT_A);
+    const gone = await query("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'outbound_log'");
+    assert.equal(gone.length, 0);
+    assert.deepEqual((await query("SELECT summary FROM logbook")).map((r) => r.summary), ["kept row"]);
+    const indexes = (await query("SELECT DISTINCT INDEX_NAME AS name FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'logbook'")).map((r) => r.name).sort();
+    assert.deepEqual(indexes, ["PRIMARY", "logbook_created_idx", "logbook_kind_idx"]);
+    // A second run changes nothing.
+    await migrate(EVENT_A);
+    assert.equal((await query("SELECT COUNT(*) AS n FROM logbook"))[0].n, 1);
   });
 });

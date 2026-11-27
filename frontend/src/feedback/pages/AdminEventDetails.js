@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useEvent, useEventPath } from "../../event/EventContext";
 import api, { errorMessage, mediaUrl } from "../api";
+import EventDatesPanel from "../components/EventDatesPanel";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Modal from "../components/Modal";
 import { useToast } from "../context/ToastContext";
@@ -623,6 +624,8 @@ export default function AdminEventDetails() {
           View home page
         </a>
       </div>
+
+      <EventDatesPanel reloadKey={saved.website} />
 
       <form onSubmit={save} noValidate>
         {SECTIONS.map((section) => (

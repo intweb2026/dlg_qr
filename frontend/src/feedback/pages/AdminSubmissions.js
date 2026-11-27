@@ -5,13 +5,10 @@ import Modal from "../components/Modal";
 import Pagination, { pageCount, pageSlice } from "../components/Pagination";
 import { orderedAnswers, questionLabel, ratingScale } from "../config/feedbackQuestions";
 import { useToast } from "../context/ToastContext";
+import { useEventTime } from "../utils/eventTime";
 
 const MIN_SPIN_SECONDS = 1;
 const MAX_SPIN_SECONDS = 60;
-
-function formatDate(iso) {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-}
 
 function formatAnswer(val) {
   if (typeof val === "number") {
@@ -39,19 +36,10 @@ function SpeakerReviewList({ reviews }) {
   );
 }
 
-/** "Mon, Nov 9, 2026, 12:00 AM", the opening time as it is where the event is held. */
-function venueTime(iso, timeZone) {
-  const options = { dateStyle: "medium", timeStyle: "short" };
-  try {
-    return new Date(iso).toLocaleString(undefined, timeZone ? { ...options, timeZone } : options);
-  } catch {
-    return new Date(iso).toLocaleString(undefined, options);
-  }
-}
-
 /** Whether the feedback form opens by itself when the event starts, or is open with no condition. */
 function FormOpeningPanel({ cfg, onSaved }) {
   const notify = useToast();
+  const eventTime = useEventTime();
   const [saving, setSaving] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
 
@@ -81,7 +69,7 @@ function FormOpeningPanel({ cfg, onSaved }) {
 
   // The open switch turned on: undoes a close, or, before the event starts, turns the automatic opening off so it opens now.
   const openForm = () =>
-    save(cfg.form_closed ? { form_closed: false } : { form_open_auto: false }, "Form opened", "Attendees can send feedback now.");
+    save(cfg.form_closed ? { form_closed: false } : { form_open_auto: false }, "Form opened", "Attendees can submit feedback now.");
 
   const closeForm = async () => {
     if (await save({ form_closed: true }, "Form closed", "Attendees see that the form is closed until you open it again.")) {
@@ -98,11 +86,11 @@ function FormOpeningPanel({ cfg, onSaved }) {
     state = "open";
     // Open with the automatic opening off needs no explanation, so no line is shown.
     if (!cfg.form_open_auto) status = "";
-    else if (cfg.feedback_opens_at) status = `Open since ${venueTime(cfg.feedback_opens_at, cfg.time_zone)} at the venue.`;
+    else if (cfg.feedback_opens_at) status = `Open since ${eventTime(cfg.feedback_opens_at)}.`;
     else status = "Open now. The event's first day could not be read, so the form opened by default.";
   } else {
     state = "waiting";
-    status = `Opens ${venueTime(cfg.feedback_opens_at, cfg.time_zone)} at the venue${cfg.time_zone ? ` (${cfg.time_zone})` : ""}.`;
+    status = `Opens ${eventTime(cfg.feedback_opens_at)}.`;
   }
   const label = { open: "Open", closed: "Closed", waiting: "Not open yet" }[state];
 
@@ -114,7 +102,7 @@ function FormOpeningPanel({ cfg, onSaved }) {
         {label}
       </p>
       {status && <p className="dlgfb-text-muted dlgfb-form-opening-note">{status}</p>}
-      {/* On: attendees can send feedback. Off: closed, after a confirm. */}
+      {/* On: attendees can submit feedback. Off: closed, after a confirm. */}
       <label className="dlgfb-switch">
         <input
           type="checkbox"
@@ -144,7 +132,7 @@ function FormOpeningPanel({ cfg, onSaved }) {
           onConfirm={closeForm}
           onCancel={() => setConfirmClose(false)}
         >
-          Attendees will not be able to send feedback until you open it again. Feedback already sent is kept.
+          Attendees will not be able to submit feedback until you open it again. Feedback already sent is kept.
         </ConfirmDialog>
       )}
     </div>
@@ -157,6 +145,7 @@ function FormOpeningPanel({ cfg, onSaved }) {
  */
 function ReportPanel() {
   const notify = useToast();
+  const eventTime = useEventTime();
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(""); // "", "download" or "send"
 
@@ -197,11 +186,11 @@ function ReportPanel() {
   };
 
   if (!status) return null;
-  const when = (iso) => venueTime(iso, status.time_zone);
+  const when = (iso) => eventTime(iso);
   let text;
-  if (status.sent_at) text = `Sent ${when(status.sent_at)} at the venue, with ${status.sent_count ?? 0} submissions.`;
+  if (status.sent_at) text = `Sent ${when(status.sent_at)}, with ${status.sent_count ?? 0} submission${status.sent_count === 1 ? "" : "s"}.`;
   else if (!status.sends_at) text = "The event's last day could not be read, so it will not be sent by itself. Use Send now.";
-  else if (new Date(status.sends_at) > new Date()) text = `Sends by itself on ${when(status.sends_at)} at the venue, the day after the event ends.`;
+  else if (new Date(status.sends_at) > new Date()) text = `Sends by itself on ${when(status.sends_at)}, the day after the event ends.`;
   else if (status.auto) text = "Due now, it goes out within the hour.";
   else text = "Not sent, the event ended more than a week ago. Use Send now.";
 
@@ -316,6 +305,7 @@ function SettingsPanel() {
 
 export default function AdminSubmissions() {
   const notify = useToast();
+  const eventTime = useEventTime();
   const [data, setData] = useState({ results: [], stats: { total: 0, active: 0, suspended: 0 }, pad_length: 2 });
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -425,7 +415,7 @@ export default function AdminSubmissions() {
                 {/* The name and company confirmed on the form, used for the lucky draw. */}
                 <td data-label="Display name" className="dlgfb-font-weight-bold">{s.alias_name}</td>
                 <td data-label="Display company">{s.company_alias_name || "Not listed"}</td>
-                <td data-label="Submitted" className="dlgfb-text-nowrap">{formatDate(s.created_at)}</td>
+                <td data-label="Submitted" className="dlgfb-text-nowrap">{eventTime(s.created_at)}</td>
                 <td data-label="Status">
                   <span className={`dlgfb-badge ${s.is_suspended ? "dlgfb-badge-suspended" : "dlgfb-badge-active"}`}>
                     {s.is_suspended ? "Suspended" : "Active"}
@@ -459,7 +449,7 @@ export default function AdminSubmissions() {
             ))}
           </dl>
           <p className="dlgfb-small dlgfb-text-muted dlgfb-mb-0">
-            Display name {viewing.alias_name}, {viewing.company_alias_name || "no company"}. Submitted {formatDate(viewing.created_at)}
+            Display name {viewing.alias_name}, {viewing.company_alias_name || "no company"}. Submitted {eventTime(viewing.created_at)}
           </p>
         </Modal>
       )}

@@ -1,7 +1,7 @@
 // Everything the feedback form and admin need, loaded as one separate bundle the first time one of
 // their routes is opened (see src/index.js). Visitors who only use the event pages never download it.
-import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useEventPath } from "../event/EventContext";
 import { useAuth } from "./context/AuthContext";
 import { homePage } from "./utils/roles";
@@ -16,6 +16,7 @@ export { default as AdminSubmissions } from "./pages/AdminSubmissions";
 export { LuckyDraw };
 export { default as AdminAttendees } from "./pages/AdminAttendees";
 export { default as AdminEventDetails } from "./pages/AdminEventDetails";
+export { default as AdminLogbook } from "./pages/AdminLogbook";
 export { default as AdminUsers } from "./pages/AdminUsers";
 export { default as AdminWifi } from "./pages/AdminWifi";
 export { default as NotFound } from "./pages/NotFound";
@@ -46,7 +47,36 @@ function prefersReducedMotion() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
+const ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+/** `length` random letters and digits. */
+function randomText(length) {
+  const bytes = new Uint8Array(length);
+  (window.crypto || window.msCrypto).getRandomValues(bytes);
+  return Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join("");
+}
+
+/**
+ * A long random look-alike query string, 5 to 8 keys such as ?x4f=q8w3...&m2k=7ab1..., each with a random name and a value
+ * of 20 to 32 characters. It carries no meaning and nothing reads it.
+ */
+function randomQuery() {
+  const count = 5 + Math.floor(Math.random() * 4); // 5 to 8
+  const params = new URLSearchParams();
+  while (params.size < count) params.set(randomText(2 + Math.floor(Math.random() * 3)), randomText(20 + Math.floor(Math.random() * 13)));
+  return `?${params.toString()}`;
+}
+
 export function LuckyDrawStandalone() {
+  // Opening /raffle-draw lands on /raffle-draw?x4f=...&m2k=...&..., 5 to 8 long random keys that only make the address harder to read or
+  // pass on by hand. It is not a security measure, the draw API is public. A refresh keeps the same query, and replace
+  // keeps the plain address out of the Back button.
+  const { search } = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!search) navigate({ search: randomQuery() }, { replace: true });
+  }, [search, navigate]);
+
   const [entered, setEntered] = useState(() => !!document.fullscreenElement);
   const [entering, setEntering] = useState(false);
 

@@ -4,6 +4,8 @@ const { query } = require("../db");
 const { formState, stateJson } = require("../formOpening");
 const { feedbackList } = require("../feedbackQuestions");
 const m = require("../models");
+const logbook = require("../logbook");
+const { eventDatesInfo, refreshEventDates } = require("../eventDates");
 const { escapeLike, padLengthFor, truthy } = require("../utils");
 const v = require("../validation");
 
@@ -265,10 +267,10 @@ async function feedbackReportStatus(req, res) {
 
 /** The PDF itself, so an admin can check it or keep a copy. */
 async function feedbackReportPdf(req, res) {
-  const { pdf } = await report.buildReportPdf(req.event);
+  const { pdf, count, timeZone } = await report.buildReportPdf(req.event);
   res.set({
     "Content-Type": "application/pdf",
-    "Content-Disposition": `attachment; filename="${report.reportFileName(req.event)}"`,
+    "Content-Disposition": `attachment; filename="${report.reportFileName(req.event, count, { timeZone })}"`,
     "Content-Length": pdf.length,
   });
   res.end(pdf);
@@ -277,7 +279,7 @@ async function feedbackReportPdf(req, res) {
 /** Send now, the backup when the automatic email did not go out, or to send it again. */
 async function feedbackReportSend(req, res) {
   try {
-    const count = await report.emailReport(req.event);
+    const count = await report.emailReport(req.event, `admin ${req.user.username}`);
     return res.json({ ...(await report.reportStatus(req.event)), sent: count });
   } catch (err) {
     console.error(`${req.event.code}: feedback report not sent, ${err.message}`);
@@ -285,10 +287,28 @@ async function feedbackReportSend(req, res) {
   }
 }
 
+// ==================================================================
+// Event dates, read from the event website and refreshed with the delegates, see eventDates.js
+// ==================================================================
+async function eventDatesStatus(req, res) {
+  res.json(await eventDatesInfo(req.event));
+}
+
+async function eventDatesRefresh(req, res) {
+  res.json(await refreshEventDates(req.event, `admin ${req.user.username}`));
+}
+
+// ==================================================================
+// Logbook, everything sent to or asked of another service, see logbook.js
+// ==================================================================
+async function logbookList(req, res) {
+  res.json({ kinds: logbook.KINDS, ...(await logbook.list(req.query)) });
+}
+
 /** Fetches the registered delegates from the CRM now, the admin page's Sync now button. */
 async function attendeeSync(req, res) {
   try {
-    const result = await crm.syncDelegates(req.event);
+    const result = await crm.syncDelegates(req.event, `admin ${req.user.username}`);
     return res.json({ ...(await crm.syncStatus(req.event)), result });
   } catch (err) {
     if (!(err instanceof crm.CrmSyncError)) throw err;
@@ -315,6 +335,9 @@ module.exports = {
   attendeeSync,
   attendeeSyncStatus,
   feedbackReportStatus,
+  logbookList,
+  eventDatesStatus,
+  eventDatesRefresh,
   feedbackReportPdf,
   feedbackReportSend,
 };
