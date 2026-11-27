@@ -23,6 +23,9 @@ const DETAIL_FIELDS = [
   { key: "website", column: "website_url", group: "links", kind: "url" },
   { key: "network", column: "wifi_network", group: "wifi", kind: "text", max: 255 },
   { key: "password", column: "wifi_password", group: "wifi", kind: "text", max: 255 },
+  // How the Wi-Fi QR code joins the network, see wifiQr.js. WPA covers WPA, WPA2 and WPA3, nopass is an open network.
+  { key: "security", column: "wifi_security", group: "wifi", kind: "choice", choices: ["WPA", "WEP", "nopass"], fallback: "WPA" },
+  { key: "hidden", column: "wifi_hidden", group: "wifi", kind: "bool" },
 ];
 
 // The menu every event starts with. A target starting with / is a page of the event, "website" opens the event's
@@ -70,6 +73,11 @@ function cleanLink(value, { allowPath = false } = {}) {
 }
 
 function cleanDetail(field, value) {
+  if (field.kind === "choice") return v.choice(value, field.choices);
+  if (field.kind === "bool") {
+    if (typeof value !== "boolean") throw new v.FieldError("Must be a valid boolean.");
+    return value;
+  }
   if (field.kind === "media") return cleanLink(value, { allowPath: true });
   if (field.kind === "url") return cleanLink(value);
   if (field.kind === "color") {
@@ -89,7 +97,9 @@ function seedValues(event) {
   const values = {};
   for (const f of DETAIL_FIELDS) {
     const raw = f.group ? event?.[f.group]?.[f.key] : event?.[f.key];
-    values[f.column] = typeof raw === "string" ? raw.trim() : "";
+    if (f.kind === "bool") values[f.column] = raw === true ? 1 : 0;
+    else if (f.kind === "choice") values[f.column] = f.choices.includes(raw) ? raw : f.fallback;
+    else values[f.column] = typeof raw === "string" ? raw.trim() : "";
   }
   if (!values.name) values.name = event?.code || "";
   return values;
@@ -125,7 +135,12 @@ async function loadDetailsRow(event) {
 
 /** The admin page's flat shape, { name, tagline, secondary, logo, ..., password, updated_at }. */
 function detailsJson(row) {
-  const json = Object.fromEntries(DETAIL_FIELDS.map((f) => [f.key, row[f.column] ?? ""]));
+  const json = Object.fromEntries(
+    DETAIL_FIELDS.map((f) => [
+      f.key,
+      f.kind === "bool" ? Boolean(row[f.column]) : f.kind === "choice" ? row[f.column] || f.fallback : row[f.column] ?? "",
+    ])
+  );
   json.updated_at = isoDate(row.updated_at);
   return json;
 }
@@ -167,7 +182,7 @@ async function saveDetails(event, data) {
   if (fields.length) {
     await query(
       `UPDATE event_details SET ${fields.map((f) => `\`${f.column}\` = ?`).join(", ")}, updated_at = UTC_TIMESTAMP(6) WHERE id = 1`,
-      fields.map((f) => values[f.key])
+      fields.map((f) => (typeof values[f.key] === "boolean" ? Number(values[f.key]) : values[f.key]))
     );
   }
   const [row] = await query("SELECT * FROM event_details WHERE id = 1");

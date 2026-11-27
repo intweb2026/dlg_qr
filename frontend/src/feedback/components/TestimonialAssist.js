@@ -36,7 +36,7 @@ function saveLeft(left) {
  * Polish, which needs at least 3 words. The polished wording replaces the text in the box, and the text it replaced
  * is kept, so Roll back puts it back; each press of Roll back undoes one Polish. Everything is kept in the form's
  * answers, so a refresh keeps it:
- *   assist  { status, basis, polished, history }  status is idle, loading, unavailable or limit; basis is the text being
+ *   assist  { status, basis, polished, history }  status is idle, loading or limit; basis is the text being
  *           polished; polished is the last polished wording, Polish stays disabled while the box still holds it; history is the texts replaced by Polish, oldest first, so history[0] is the attendee's own words.
  *   consent "Yes" or "No", the answer to the marketing question under the box.
  */
@@ -69,11 +69,12 @@ export function testimonialHelper(q, answers, setAnswers) {
           return { ...a, [q.key]: data.suggestion, [assistKey]: { status: "idle", history: [...past, String(a[q.key] || "")], polished: data.suggestion } };
         });
       })
-      // No key, busy, declined or out of attempts: the text stays as typed.
+      // No key, Gemini busy or failing, declined, or out of attempts: the text stays as typed. Nothing is shown about a
+      // failure, the attendee just sees Polish ready again. Only running out of the 5 polishes is told.
       .catch((err) => {
         const data = err?.response?.data || {};
         if (Number.isInteger(data.remaining)) saveLeft(data.remaining);
-        const status = data.code === "limit_reached" ? "limit" : "unavailable";
+        const status = data.code === "limit_reached" ? "limit" : "idle";
         setAssist((cur) => (cur.basis === basis ? { ...cur, status } : cur));
       });
   };
@@ -174,13 +175,12 @@ export function RollBackButton({ helper }) {
   );
 }
 
-/** The note when Polish could not run, and the marketing question with Yes and No under the box. */
+/** The note when all the polishes are used, and the marketing question with Yes and No under the box. */
 export default function TestimonialAssist({ q, helper }) {
   const { assist, consent, setConsent } = helper;
   const name = `${q.key}_consent`;
   return (
     <>
-      {assist.status === "unavailable" && <p className="dlgfb-testimonial-note">Polish is not available right now, your own words will be used.</p>}
       {assist.status === "limit" && <p className="dlgfb-testimonial-note">You have used all {SUGGESTION_LIMIT} polishes, your own words will be used.</p>}
 
       {q.consentLabel && (

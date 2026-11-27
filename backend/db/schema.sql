@@ -111,6 +111,9 @@ CREATE TABLE IF NOT EXISTS `event_details` (
   `website_url` varchar(500) NOT NULL DEFAULT '',
   `wifi_network` varchar(255) NOT NULL DEFAULT '',
   `wifi_password` varchar(255) NOT NULL DEFAULT '',
+  -- WPA (WPA, WPA2 and WPA3), WEP or nopass for an open network, and 1 for a hidden network, used for the Wi-Fi QR code.
+  `wifi_security` varchar(10) NOT NULL DEFAULT 'WPA',
+  `wifi_hidden` tinyint(1) NOT NULL DEFAULT 0,
   `updated_at` datetime(6) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

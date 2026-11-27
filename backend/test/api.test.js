@@ -584,13 +584,13 @@ describe("user roles", () => {
     assert.ok(!fs.existsSync(file(first)));
     assert.equal((await api("GET", "/admin/wifi/", { token })).data.qr, r.data.qr);
 
-    // A picture an admin uploaded is replaced in the settings but the file itself is never deleted.
+    // A picture an admin uploaded is replaced too, and its file is deleted with it.
     const custom = "/uploads/testa/abc123-0123456789ab.png";
     fs.writeFileSync(file(custom), "custom");
     await query("UPDATE event_details SET wifi_qr = ?", [custom]);
     r = await api("PATCH", "/admin/wifi/", { token, body: { password: "third-pass-3" } });
     assert.match(r.data.qr, pattern);
-    assert.ok(fs.existsSync(file(custom)));
+    assert.ok(!fs.existsSync(file(custom)));
 
     // No network name leaves nothing to scan.
     const last = r.data.qr;
@@ -1152,7 +1152,10 @@ describe("event details", () => {
     assert.deepEqual(r.data.links, { website: "https://example.com/" });
     // The Wi-Fi details are not in the config every page loads, only in /wifi/ for the Wi-Fi page.
     assert.equal(r.data.wifi, undefined);
-    assert.deepEqual((await api("GET", "/wifi/")).data, { network: "EventWiFi", password: "secret1", qr: "" });
+    // Saving the network made its QR code.
+    const wifi = (await api("GET", "/wifi/")).data;
+    assert.deepEqual({ network: wifi.network, password: wifi.password }, { network: "EventWiFi", password: "secret1" });
+    assert.match(wifi.qr, /^\/uploads\/testa\/wifi-qr-[0-9a-f]{12}\.png$/);
     await api("PATCH", "/admin/event-details/", { token, body: { secondary: "" } });
     assert.equal((await api("GET", "/")).data.theme, undefined);
     // Another event keeps its own details.
@@ -1244,10 +1247,184 @@ describe("event details", () => {
     assert.deepEqual((await api("GET", "/")).data.menu, []);
   });
 
+  describe("uploaded files are replaced, not kept as copies", () => {
+    const upload = async (name = "a.png") => {
+      const form = new FormData();
+      form.append("kind", "image");
+      form.append("file", new Blob([`${name}-${Math.random()}`]), name);
+      const r = await api("POST", "/admin/uploads/", { token, form });
+      assert.equal(r.status, 201);
+      return r.data.url;
+    };
+    const disk = (url) => path.join(UPLOADS_DIR, url.replace(/^\/uploads\//, ""));
+    const exists = (url) => fs.existsSync(disk(url));
+    const patch = (body) => api("PATCH", "/admin/event-details/", { token, body });
+
+    test("replacing or removing a media field deletes the old file", async () => {
+      const a = await upload();
+      assert.equal((await patch({ logo: a })).status, 200);
+      assert.ok(exists(a));
+      const b = await upload();
+      assert.ok(exists(a), "an upload waiting to be saved does not delete the one in use");
+      await patch({ logo: b });
+      assert.ok(!exists(a));
+      assert.ok(exists(b));
+      await patch({ logo: "" });
+      assert.ok(!exists(b));
+    });
+
+    test("a file two fields hold stays until the last one lets go", async () => {
+      const c = await upload();
+      await patch({ logo: c, venueLogo: c });
+      await patch({ logo: "" });
+      assert.ok(exists(c));
+      await patch({ venueLogo: "" });
+      assert.ok(!exists(c));
+    });
+
+    test("a menu icon follows the same rule, also when the item is deleted", async () => {
+      const d = await upload();
+      const item = (await api("POST", "/admin/menu-items/", { token, body: { label: "Icon test", icon: d, target: "/x" } })).data;
+      const e = await upload();
+      await api("PATCH", `/admin/menu-items/${item.id}/`, { token, body: { icon: e } });
+      assert.ok(!exists(d));
+      assert.ok(exists(e));
+      assert.equal((await api("DELETE", `/admin/menu-items/${item.id}/`, { token })).status, 204);
+      assert.ok(!exists(e));
+    });
+
+    test("an upload nobody saved is kept for a while, then deleted on the next save", async () => {
+      const fresh = await upload();
+      const stale = await upload();
+      const old = new Date(Date.now() - 2 * 3600 * 1000);
+      fs.utimesSync(disk(stale), old, old);
+      await patch({ tagline: "Any save runs the cleanup" });
+      assert.ok(exists(fresh));
+      assert.ok(!exists(stale));
+    });
+
+    test("the Wi-Fi QR code follows the details saved on the Event Details page", async () => {
+      const qrOf = async () => (await api("GET", "/admin/event-details/", { token })).data.wifiQr;
+      const pattern = /^\/uploads\/testa\/wifi-qr-[0-9a-f]{12}\.png$/;
+
+      // Saving a network and password makes the code, with nothing to click.
+      let r = await patch({ network: "AdminNet", password: "admin-pass-1" });
+      assert.equal(r.data.qr_updated, true);
+      assert.match(r.data.wifiQr, pattern);
+      const first = r.data.wifiQr;
+      assert.ok(exists(first));
+
+      // A save that does not touch the network or the password leaves the code, and says nothing about it.
+      r = await patch({ tagline: "Nothing to do with Wi-Fi" });
+      assert.equal(r.data.qr_updated, null);
+      assert.equal(r.data.wifiQr, first);
+
+      // A new password makes a new code, the earlier file is deleted.
+      r = await patch({ password: "admin-pass-2" });
+      assert.equal(r.data.qr_updated, true);
+      assert.notEqual(r.data.wifiQr, first);
+      assert.ok(exists(r.data.wifiQr));
+      assert.ok(!exists(first));
+      const second = r.data.wifiQr;
+
+      // A page cannot choose the code, one sent is ignored, so an old page cannot put back an old picture.
+      r = await patch({ tagline: "Stale page", wifiQr: first });
+      assert.equal(r.status, 200);
+      assert.equal(r.data.wifiQr, second);
+      r = await patch({ wifiQr: "https://example.com/other.png" });
+      assert.equal(await qrOf(), second);
+
+      // A code whose file has gone, for example after a redeploy wiped the disk, is made again on the next save.
+      fs.rmSync(disk(second));
+      r = await patch({ tagline: "After the disk was wiped" });
+      assert.equal(r.data.qr_updated, true);
+      assert.ok(exists(r.data.wifiQr));
+
+      // No network name leaves nothing to scan.
+      const last = r.data.wifiQr;
+      r = await patch({ network: "" });
+      assert.equal(r.data.wifiQr, "");
+      assert.ok(!exists(last));
+    });
+
+    test("the security type and the hidden setting go into the Wi-Fi QR code", async () => {
+      const wifiQr = require("../src/wifiQr");
+      // The text phones read. WPA is the default, WEP and open networks are written as chosen, H:true only when hidden.
+      assert.equal(wifiQr.payload({ network: "Net", password: "pw" }), "WIFI:T:WPA;S:Net;P:pw;;");
+      assert.equal(wifiQr.payload({ network: "Net", password: "pw", security: "WEP" }), "WIFI:T:WEP;S:Net;P:pw;;");
+      assert.equal(wifiQr.payload({ network: "Net", password: "pw", hidden: true }), "WIFI:T:WPA;S:Net;P:pw;H:true;;");
+      assert.equal(wifiQr.payload({ network: "Net", password: "pw", security: "nopass" }), "WIFI:T:nopass;S:Net;;");
+      assert.equal(wifiQr.payload({ network: "Net", password: "", security: "WPA", hidden: true }), "WIFI:T:nopass;S:Net;H:true;;");
+
+      // New events start as a visible WPA network.
+      let r = await api("GET", "/admin/event-details/", { token });
+      assert.equal(r.data.security, "WPA");
+      assert.equal(r.data.hidden, false);
+
+      r = await patch({ network: "HiddenNet", password: "pw-hidden-1" });
+      const plain = r.data.wifiQr;
+      assert.equal(r.data.qr_updated, true);
+
+      // Each setting changes the code, and nothing else about the details changes with it.
+      r = await patch({ hidden: true });
+      assert.equal(r.data.qr_updated, true);
+      assert.equal(r.data.hidden, true);
+      assert.notEqual(r.data.wifiQr, plain);
+      const hiddenQr = r.data.wifiQr;
+      assert.ok(!exists(plain));
+      r = await patch({ security: "WEP" });
+      assert.equal(r.data.qr_updated, true);
+      assert.equal(r.data.security, "WEP");
+      assert.notEqual(r.data.wifiQr, hiddenQr);
+      assert.ok(!exists(hiddenQr));
+
+      // Saving the same values again leaves the code alone.
+      r = await patch({ security: "WEP", hidden: true });
+      assert.equal(r.data.qr_updated, null);
+
+      // Both are checked.
+      r = await patch({ security: "WPA3" });
+      assert.equal(r.status, 400);
+      assert.deepEqual(r.data, { security: ['"WPA3" is not a valid choice.'] });
+      r = await patch({ hidden: "yes" });
+      assert.equal(r.status, 400);
+      assert.deepEqual(r.data, { hidden: ["Must be a valid boolean."] });
+
+      // The support user's Wi-Fi screen changes the network and password only, the two settings stay as the admin set them.
+      const support = await api("POST", "/admin/users/", { token, body: { username: "floorqr", password: "Floor-pass-1", role: "support" } });
+      assert.equal(support.status, 201);
+      try {
+        const supportToken = (await api("POST", "/auth/login/", { body: { username: "floorqr", password: "Floor-pass-1" } })).data.token;
+        r = await api("PATCH", "/admin/wifi/", { token: supportToken, body: { password: "pw-by-support-2", security: "nopass", hidden: false } });
+        assert.equal(r.status, 200);
+        const after = (await api("GET", "/admin/event-details/", { token })).data;
+        assert.equal(after.password, "pw-by-support-2");
+        assert.equal(after.security, "WEP");
+        assert.equal(after.hidden, true);
+        assert.ok(exists(after.wifiQr));
+      } finally {
+        await query("DELETE FROM admin_users WHERE username = 'floorqr'");
+      }
+    });
+
+    test("only the event's own uploaded files are ever deleted", async () => {
+      // Other events, web addresses, site paths and paths that climb out of the folder are left alone.
+      fs.mkdirSync(path.join(UPLOADS_DIR, "testb"), { recursive: true });
+      const other = "/uploads/testb/keep.png";
+      fs.writeFileSync(disk(other), "other event");
+      const old = new Date(Date.now() - 2 * 3600 * 1000);
+      fs.utimesSync(disk(other), old, old);
+      await patch({ logo: "/uploads/testa/../testb/keep.png", favicon: "https://example.com/f.png", heroPoster: "/events/testa/images/p.png" });
+      await patch({ logo: "", favicon: "", heroPoster: "" });
+      assert.ok(exists(other));
+    });
+  });
+
   test("uploads are checked and served", async () => {
-    const send = (name, content, kind) => {
+    const send = (name, content, kind, ext) => {
       const form = new FormData();
       if (kind) form.append("kind", kind);
+      if (ext) form.append("ext", ext);
       form.append("file", new Blob([content]), name);
       return api("POST", "/admin/uploads/", { token, form });
     };
@@ -1262,6 +1439,16 @@ describe("event details", () => {
     assert.equal((await send("clip.mp4", "x", "image")).status, 400);
     assert.equal((await send("run.exe", "x")).status, 400);
     assert.equal((await send("clip.webm", "x", "video")).data.kind, "video");
+
+    // A video field that takes one format refuses the other, whichever the file picker allowed.
+    r = await send("clip.webm", "x", "video", ".mp4");
+    assert.equal(r.status, 400);
+    assert.deepEqual(r.data, { detail: "Upload a .mp4 file." });
+    r = await send("clip.MP4", "x", "video", ".mp4");
+    assert.equal(r.status, 201);
+    assert.match(r.data.url, /\.mp4$/);
+    assert.equal((await send("clip.mp4", "x", "video", ".webm")).status, 400);
+    assert.equal((await send("clip.webm", "x", "video", ".webm")).status, 201);
   });
 });
 

@@ -12,6 +12,8 @@ const SCHEMA = path.join(__dirname, "..", "db", "schema.sql");
 
 // [table, column, definition, after], kept the same as db/schema.sql.
 const ADDED_COLUMNS = [
+  ["event_details", "wifi_security", "varchar(10) NOT NULL DEFAULT 'WPA'", "wifi_password"],
+  ["event_details", "wifi_hidden", "tinyint(1) NOT NULL DEFAULT 0", "wifi_security"],
   ["admin_users", "role", "varchar(20) NOT NULL DEFAULT 'admin'", "is_active"],
   ["feedback_submissions", "userAliesName", "varchar(255) NOT NULL DEFAULT ''", "feedback_data"],
   ["feedback_submissions", "userComapnyAliesName", "varchar(255) NOT NULL DEFAULT ''", "userAliesName"],

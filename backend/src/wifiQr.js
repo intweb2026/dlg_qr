@@ -5,11 +5,11 @@ const QRCode = require("qrcode");
 
 const config = require("./config");
 
-// The Wi-Fi QR code made by the server, so it follows the network and password when the support user changes them.
-// It is the same code the admin Event Details page makes, the standard Wi-Fi text phones read when the camera scans it,
-//   WIFI:T:WPA;S:<network>;P:<password>;;   with \ ; , : and " escaped by a backslash.
-// The server cannot know a hidden network or a WEP network, so it makes a WPA code, or an open one when there is no
-// password. An admin can still make a different one on the Event Details page, which stays until the next change.
+// The Wi-Fi QR code made by the server, so it follows the network when the admin or the support user changes it.
+// It is the standard Wi-Fi text phones read when the camera scans it,
+//   WIFI:T:WPA;S:<network>;P:<password>;H:true;;   with  ; , : and " escaped by a backslash.
+// T is the security the admin chose on the Event Details page, WPA (WPA, WPA2 and WPA3), WEP or nopass for an open
+// network, and H:true is written only for a hidden network. A blank password is always an open network.
 
 const PREFIX = "wifi-qr-";
 
@@ -17,9 +17,12 @@ function escape(text) {
   return String(text).replace(/([\\;,:"])/g, "\\$1");
 }
 
-function payload({ network, password }) {
-  if (!password) return `WIFI:T:nopass;S:${escape(network)};;`;
-  return `WIFI:T:WPA;S:${escape(network)};P:${escape(password)};;`;
+function payload({ network, password, security = "WPA", hidden = false }) {
+  const open = !password || security === "nopass";
+  const parts = [`T:${open ? "nopass" : security}`, `S:${escape(network)}`];
+  if (!open) parts.push(`P:${escape(password)}`);
+  if (hidden) parts.push("H:true");
+  return `WIFI:${parts.join(";")};;`;
 }
 
 /**
@@ -27,8 +30,8 @@ function payload({ network, password }) {
  * /uploads/aiu26/wifi-qr-1a2b3c4d5e6f.png. The name comes from the content, so the same details give the same file and a
  * browser never shows an older picture for new details.
  */
-async function writeWifiQr(eventCode, { network, password }) {
-  const text = payload({ network, password });
+async function writeWifiQr(eventCode, { network, password, security, hidden }) {
+  const text = payload({ network, password, security, hidden });
   const name = `${PREFIX}${crypto.createHash("sha256").update(text).digest("hex").slice(0, 12)}.png`;
   const dir = path.join(config.uploadsDir, eventCode);
   await fs.promises.mkdir(dir, { recursive: true });
@@ -40,13 +43,19 @@ async function writeWifiQr(eventCode, { network, password }) {
   return `/uploads/${eventCode}/${name}`;
 }
 
-/** Deletes an earlier code this module made. Files an admin uploaded, whatever their name, are never touched. */
-async function removeWifiQr(eventCode, sitePath) {
-  const prefix = `/uploads/${eventCode}/${PREFIX}`;
-  if (typeof sitePath !== "string" || !sitePath.startsWith(prefix)) return;
-  const name = sitePath.slice(`/uploads/${eventCode}/`.length);
-  if (!/^wifi-qr-[0-9a-f]{12}\.png$/.test(name)) return;
-  await fs.promises.rm(path.join(config.uploadsDir, eventCode, name), { force: true });
+/**
+ * True when the event has a network name but no usable QR code, none saved or an uploaded one whose file is gone, for
+ * example after a redeploy wiped the disk. A path in the site or a web address is not checked.
+ */
+async function isMissing(eventCode, row) {
+  if (!row.wifi_network) return false;
+  if (!row.wifi_qr) return true;
+  const prefix = `/uploads/${eventCode}/`;
+  if (!row.wifi_qr.startsWith(prefix)) return false;
+  const name = row.wifi_qr.slice(prefix.length);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) return false;
+  return fs.promises.access(path.join(config.uploadsDir, eventCode, name)).then(() => false, () => true);
 }
 
-module.exports = { payload, writeWifiQr, removeWifiQr };
+module.exports = { payload, writeWifiQr, isMissing };
+

@@ -72,6 +72,10 @@ const timing = {
     firstCheck: MINUTE, // the first look, after the server starts
     autoWindow: 7 * DAY, // a report is sent by itself only within this long of its time
   },
+  // Uploaded media, see uploads.js.
+  uploads: {
+    orphanGrace: HOUR, // a file nothing holds is deleted once it is this old, so an upload waiting to be saved is kept
+  },
   // The speaker sessions read from the agenda API, see views/speakerSessions.js.
   speakerSessions: {
     requestTimeout: 5 * SECOND,

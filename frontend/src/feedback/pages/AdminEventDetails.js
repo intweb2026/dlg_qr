@@ -24,13 +24,15 @@ const SECTIONS = [
     help: "Upload a file, or enter a site path such as /events/aiu26/images/logo.png or a full URL.",
     media: true,
     fields: [
+      // Images first, then the videos. A video field takes one format only, extension and mime are what its file picker
+      // and the API accept.
       { key: "logo", label: "Logo", accept: "image", help: "Home page and admin sign in." },
       { key: "favicon", label: "Favicon", accept: "image", help: "Browser tab icon, a square PNG or ICO." },
-      { key: "heroVideoMp4", label: "Hero video, MP4", accept: "video", help: "Home page background video." },
-      { key: "heroVideoWebm", label: "Hero video, WebM", accept: "video", help: "Smaller copy of the hero video, used first where it plays." },
       { key: "heroPoster", label: "Hero poster", accept: "image", help: "Shown while the hero video loads." },
       { key: "background", label: "Background", accept: "image", help: "Background of the Attendees and Wi-Fi pages." },
       { key: "venueLogo", label: "Venue logo", accept: "image", help: "Wi-Fi page." },
+      { key: "heroVideoMp4", label: "Hero video, MP4", accept: "video", extension: ".mp4", mime: "video/mp4", help: "Home page background video. MP4 files only." },
+      { key: "heroVideoWebm", label: "Hero video, WebM", accept: "video", extension: ".webm", mime: "video/webm", help: "Smaller copy of the hero video, used first where it plays. WebM files only." },
     ],
   },
   {
@@ -40,11 +42,22 @@ const SECTIONS = [
     fields: [
       { key: "network", label: "Network name" },
       { key: "password", label: "Password" },
+      {
+        key: "security",
+        label: "Security",
+        type: "select",
+        options: [
+          ["WPA", "WPA, WPA2 or WPA3 (most networks)"],
+          ["WEP", "WEP (old networks)"],
+          ["nopass", "None, an open network"],
+        ],
+      },
+      { key: "hidden", label: "Hidden network", type: "checkbox" },
     ],
   },
 ];
 
-// wifiQr has no input, it is set by the Generate QR code button in the Wi-Fi card.
+// wifiQr has no input and is never sent, the server makes the Wi-Fi QR code again when the network or password is saved.
 const FIELD_KEYS = [...SECTIONS.flatMap((s) => s.fields.map((f) => f.key)), "wifiQr"];
 const DEFAULT_ACCENT = "#278dff";
 const ACCEPT = { image: "image/*,.ico,.svg", video: "video/mp4,video/webm,.mp4,.webm" };
@@ -90,6 +103,9 @@ function toWebsiteUrl(domain) {
 /** The form's values from the API, with the website as its domain. */
 function pick(data) {
   const values = Object.fromEntries(FIELD_KEYS.map((k) => [k, data?.[k] ?? ""]));
+  // The two Wi-Fi settings are not text, a choice that defaults to WPA and a yes or no.
+  values.security = data?.security || "WPA";
+  values.hidden = Boolean(data?.hidden);
   values.website = toDomain(values.website);
   return values;
 }
@@ -111,6 +127,28 @@ function TextField({ id, field, value, error, onChange }) {
           <input id={id} className={`dlgfb-form-control${invalid}`} value={value} placeholder={DEFAULT_ACCENT} maxLength={7}
             onChange={(e) => onChange(e.target.value)} />
         </div>
+        {error && <div className="dlgfb-invalid-feedback dlgfb-d-block">{error}</div>}
+      </>
+    );
+  }
+  if (field.type === "select") {
+    return (
+      <>
+        <select id={id} className={`dlgfb-custom-select${invalid}`} value={value} onChange={(e) => onChange(e.target.value)}>
+          {field.options.map(([optionValue, optionLabel]) => (
+            <option key={optionValue} value={optionValue}>{optionLabel}</option>
+          ))}
+        </select>
+        {error && <div className="dlgfb-invalid-feedback dlgfb-d-block">{error}</div>}
+      </>
+    );
+  }
+  if (field.type === "checkbox") {
+    return (
+      <>
+        <label className="dlgfb-ed-check" htmlFor={id}>
+          <input id={id} type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
+        </label>
         {error && <div className="dlgfb-invalid-feedback dlgfb-d-block">{error}</div>}
       </>
     );
@@ -159,8 +197,14 @@ function MediaField({ id, field, value, error, onChange, dark = false }) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    // The file picker already filters by type, but "All files" can be chosen in it, so the extension is checked here too.
+    if (field.extension && !file.name.toLowerCase().endsWith(field.extension)) {
+      notify(`Choose a ${field.extension} file. ${file.name} is not one.`, "warning", { title: "Wrong file type" });
+      return;
+    }
     const body = new FormData();
     body.append("kind", field.accept);
+    if (field.extension) body.append("ext", field.extension);
     body.append("file", file);
     setProgress(0);
     try {
@@ -198,118 +242,10 @@ function MediaField({ id, field, value, error, onChange, dark = false }) {
           {value && progress === null && (
             <button type="button" className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-light" onClick={() => onChange("")}>Remove</button>
           )}
-          <input ref={fileRef} type="file" hidden accept={ACCEPT[field.accept]} onChange={upload} />
+          <input ref={fileRef} type="file" hidden accept={field.extension ? `${field.mime},${field.extension}` : ACCEPT[field.accept]} onChange={upload} />
         </div>
       </div>
     </div>
-  );
-}
-
-// ------------------------------------------------------------------ Wi-Fi QR code
-// The same code wifiqrcode.com makes, the standard Wi-Fi text phones read when the camera scans it,
-// WIFI:T:WPA;S:<network>;P:<password>;H:true;; with \ ; , : and " escaped by a backslash.
-const WIFI_SECURITY = [
-  ["WPA", "WPA, WPA2 or WPA3"],
-  ["WEP", "WEP"],
-  ["nopass", "None, an open network"],
-];
-
-function wifiEscape(text) {
-  return String(text).replace(/([\\;,:"])/g, "\\$1");
-}
-
-function wifiPayload({ network, password, security, hidden }) {
-  const parts = [`T:${security}`, `S:${wifiEscape(network)}`];
-  if (security !== "nopass") parts.push(`P:${wifiEscape(password)}`);
-  if (hidden) parts.push("H:true");
-  return `WIFI:${parts.join(";")};;`;
-}
-
-/** Shows the QR code for the network, and on Use uploads it as a PNG and hands back its address. */
-function WifiQrModal({ network, password, onClose, onUse }) {
-  const notify = useToast();
-  const [security, setSecurity] = useState(password ? "WPA" : "nopass");
-  const [hidden, setHidden] = useState(false);
-  const [image, setImage] = useState("");
-  const [busy, setBusy] = useState(false);
-  const needsPassword = security !== "nopass" && !password;
-
-  useEffect(() => {
-    let cancelled = false;
-    setImage("");
-    if (needsPassword) return undefined;
-    import("qrcode")
-      .then((QRCode) =>
-        QRCode.toDataURL(wifiPayload({ network, password, security, hidden }), { width: 1024, margin: 2, errorCorrectionLevel: "M" })
-      )
-      .then((url) => !cancelled && setImage(url))
-      .catch(() => !cancelled && notify("The QR code could not be made, try again.", "danger"));
-    return () => {
-      cancelled = true;
-    };
-  }, [network, password, security, hidden, needsPassword, notify]);
-
-  const use = async () => {
-    setBusy(true);
-    try {
-      const blob = await (await fetch(image)).blob();
-      const body = new FormData();
-      body.append("kind", "image");
-      const name = network.replace(/[^A-Za-z0-9_-]+/g, "-").slice(0, 40) || "network";
-      body.append("file", blob, `wifi-qr-${name}.png`);
-      const { data } = await api.post("/admin/uploads/", body);
-      notify("Save the changes to show the new QR code on the Wi-Fi page.", "success", { title: "QR code ready" });
-      onUse(data.url);
-    } catch (err) {
-      notify(errorMessage(err), "danger", { title: "Upload failed" });
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal
-      title="Wi-Fi QR code"
-      onClose={() => !busy && onClose()}
-      footer={
-        <>
-          <button type="button" className="dlgfb-btn dlgfb-btn-light" disabled={busy} onClick={onClose}>Cancel</button>
-          <button type="button" className="dlgfb-btn dlgfb-btn-primary" disabled={busy || !image} onClick={use}>
-            {busy && <span className="dlgfb-spinner-border dlgfb-spinner-border-sm dlgfb-mr-2" aria-hidden="true" />}
-            Use this QR code
-          </button>
-        </>
-      }
-    >
-      <div className="dlgfb-ed-qr">
-        <div className="dlgfb-ed-qr-image">
-          {image ? (
-            <img src={image} alt={`QR code to join ${network}`} />
-          ) : (
-            <span>{needsPassword ? "Enter the password first" : "Making the QR code"}</span>
-          )}
-        </div>
-        <div className="dlgfb-ed-qr-fields">
-          <p className="dlgfb-mb-2">
-            Network <strong>{network}</strong>
-            <br />
-            Password <strong>{security === "nopass" ? "none" : password || "not set"}</strong>
-          </p>
-          <div className="dlgfb-form-group">
-            <label className="dlgfb-ed-label" htmlFor="qr-security">Security</label>
-            <select id="qr-security" className="dlgfb-custom-select" value={security} onChange={(e) => setSecurity(e.target.value)}>
-              {WIFI_SECURITY.map(([value, name]) => <option key={value} value={value}>{name}</option>)}
-            </select>
-          </div>
-          <label className="dlgfb-ed-check dlgfb-mb-2">
-            <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />
-            <span>Hidden network</span>
-          </label>
-          <small className="dlgfb-form-text dlgfb-text-muted">
-            Uses the network name and password from the form. Scan it with a phone camera to check it joins before using it.
-          </small>
-        </div>
-      </div>
-    </Modal>
   );
 }
 
@@ -585,7 +521,6 @@ export default function AdminEventDetails() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState(null);
-  const [qrOpen, setQrOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -641,7 +576,12 @@ export default function AdminEventDetails() {
       setSaved(pick(data));
       setForm(pick(data));
       setErrors({});
-      notify("The event pages now show the new details.", "success", { title: "Event details saved" });
+      notify(
+        data.qr_updated ? "The event pages now show the new details, and the Wi-Fi QR code was made again." : "The event pages now show the new details.",
+        "success",
+        { title: "Event details saved" }
+      );
+      if (data.qr_updated === false) notify("The Wi-Fi QR code could not be made. Save again to retry.", "warning", { title: "QR code not updated" });
       reload();
     } catch (err) {
       const fields = fieldErrors(err);
@@ -712,22 +652,13 @@ export default function AdminEventDetails() {
             {section.wifiQr && (
               <div className="dlgfb-ed-qr-row">
                 <div className="dlgfb-ed-preview dlgfb-ed-qr-current">
-                  {form.wifiQr ? <img src={mediaUrl(form.wifiQr)} alt="Current Wi-Fi QR code" /> : <span>No QR code</span>}
+                  {saved.wifiQr ? <img key={saved.wifiQr} src={mediaUrl(saved.wifiQr)} alt="Current Wi-Fi QR code" /> : <span>No QR code</span>}
                 </div>
                 <div className="dlgfb-ed-qr-actions">
                   <span className="dlgfb-ed-label dlgfb-mb-0">Wi-Fi QR code</span>
                   <small className="dlgfb-text-muted">
-                    Shown on the Wi-Fi page. Generate it again after changing the network name or password.
+                    Made again by itself from the network name, password, security and hidden setting whenever you save a change to any of them.
                   </small>
-                  <div className="dlgfb-ed-media-actions">
-                    <button type="button" className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-outline-primary" disabled={!form.network.trim()}
-                      title={form.network.trim() ? undefined : "Enter the network name first"} onClick={() => setQrOpen(true)}>
-                      {form.wifiQr ? "Generate again" : "Generate QR code"}
-                    </button>
-                    {form.wifiQr && (
-                      <button type="button" className="dlgfb-btn dlgfb-btn-sm dlgfb-btn-light" onClick={() => set("wifiQr")("")}>Remove</button>
-                    )}
-                  </div>
                 </div>
               </div>
             )}
@@ -749,18 +680,6 @@ export default function AdminEventDetails() {
           </button>
         </div>
       </form>
-
-      {qrOpen && (
-        <WifiQrModal
-          network={form.network.trim()}
-          password={form.password}
-          onClose={() => setQrOpen(false)}
-          onUse={(url) => {
-            set("wifiQr")(url);
-            setQrOpen(false);
-          }}
-        />
-      )}
 
       <MenuItems items={menu} links={{ website: toWebsiteUrl(saved.website) }} onChanged={loadMenu} />
     </>
